@@ -16,7 +16,7 @@ AR488 is Licenced under the GNU Public licence.
 #include <avr/interrupt.h>
 
 // Firmware version
-#define FWVER "AR488 GPIB controller, version 0.45.10, 27/01/2019"
+#define FWVER "AR488 GPIB controller, version 0.45.11, 12/02/2019"
 
 
 // Debug options
@@ -410,9 +410,9 @@ void loop() {
  */
 void initAR488() {
   // Set default values
-  AR488 = {0xCC,false,false,2,0,1,0,0,0,1200,0,NULL};
+  AR488 = {0xCC,false,false,2,0,1,0,0,0,1200,0,'\0'};
 
-  // Clear version variable
+  // Clear version string variable
   memset(AR488.vstr, '\0', 48);
 }
 
@@ -1958,7 +1958,7 @@ bool gpibSendStatus(){
 /*
  * Send a series of characters as data to the GPIB bus
  */
-bool gpibSendData(char *data, uint8_t dsize){
+void gpibSendData(char *data, uint8_t dsize){
 
   // If lon is turned on we cannot send data so exit
   if (isRO) return;
