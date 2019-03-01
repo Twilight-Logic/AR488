@@ -16,7 +16,7 @@ AR488 is Licenced under the GNU Public licence.
 #include <avr/interrupt.h>
 
 // Firmware version
-#define FWVER "AR488 GPIB controller, version 0.45.11, 12/02/2019"
+#define FWVER "AR488 GPIB controller, version 0.46.01, 01/03/2019"
 
 
 // Debug options
@@ -147,23 +147,24 @@ const int LED = 13;
  * GPIB BUS commands
  */
 // Universal Multiline commands (apply to all devices)
-#define LLO 0x11
-#define DCL 0x14
-#define PPU 0x15
-#define SPE 0x18
-#define SPD 0x19
-#define UNL 0x3F
-#define TAD 0x40
-#define PPE 0x60
-#define PPD 0x70
-#define UNT 0x5F
+
+#define GC_LLO 0x11
+#define GC_DCL 0x14
+#define GC_PPU 0x15
+#define GC_SPE 0x18
+#define GC_SPD 0x19
+#define GC_UNL 0x3F
+#define GC_TAD 0x40
+#define GC_PPE 0x60
+#define GC_PPD 0x70
+#define GC_UNT 0x5F
 // Address commands
-#define LAD 0x20
+#define GC_LAD 0x20
 // Addressed commands
-#define GTL 0x01
-#define SDC 0x04
-#define PPC 0x05
-#define GET 0x08
+#define GC_GTL 0x01
+#define GC_SDC 0x04
+#define GC_PPC 0x05
+#define GC_GET 0x08
 
 
 /*
@@ -244,11 +245,13 @@ bool isVerb = false;
 uint8_t lnRdy = 0;      // Line ready to process
 
 // GPIB data receive flags
-bool isAuto = false;    // Auto read mode?
+//bool isAuto = false;    // Auto read mode?
 bool isReading = false; // Is a GPIB read in progress?
 bool aRead = false;     // GPIB data read in progress
 bool rEoi = false;      // read eoi requested
 bool rEbt = false;      // read with specified terminator character
+bool isQuery = false;   // Direct instrument command is a query
+uint8_t aMode = 0;      // Auto read mode: 0=off; 1=Prologix; 2=on query (CMD?); 3=continuous;
 uint8_t tranBrk = 0;    // transmission break on 1=++, 2=EOI, 3=ATN 4=UNL
 uint8_t eByte = 0;      // termination character
 
@@ -359,6 +362,13 @@ void loop() {
     // lnRdy=2: received data - send it to the instrument...
     if (lnRdy==2) {
       processLine(pBuf,pbPtr, 2);
+      // Auto-receive data from GPIB bus following a command
+      if (aMode==1) gpibReceiveData();
+      // Auto-receive data from GPIB bus following a command
+      if (aMode==2 && isQuery){
+        gpibReceiveData();
+        isQuery = false;
+      }
     }
 
     // Check status of SRQ and SPOLL if asserted
@@ -366,9 +376,9 @@ void loop() {
       spoll_h(NULL);
       isSRQ = false;
     }
-    
-    // Auto-receive data from GPIB bus
-    if (isAuto && aRead) gpibReceiveData();
+  
+    // Continuous auto-receive data from GPIB bus
+    if (aMode==3 && aRead) gpibReceiveData();
   }
 
   // Device mode:
@@ -798,7 +808,12 @@ void processLine(char *buffr, uint8_t dsize, uint8_t mode) {
   if (mode==2){
 #ifdef DEBUG1    
     Serial.print(F("processLine: Sent to the instrument: ")); printHex(line, dsize);
-#endif    
+#endif
+
+    // Is this a query command (string ending with ?)
+    if (line[dsize-1]=='?') isQuery = true;
+
+    // Send string to instrument
     gpibSendData(line, dsize);
   }
 
@@ -1071,18 +1086,21 @@ void amode_h(char *params) {
   int val;
   if (params!=NULL) { 
     val = atoi(params);
-    if (val<0||val>1) {
+    if (val<0||val>3) {
       errBadCmd();
-      if (isVerb) Serial.println(F("Automode: valid range is [0-disable|1-enable]."));
+      if (isVerb) Serial.println(F("Automode: valid range is [0-disable|1-Prologix|2-on-query|3-continuous]."));
       return;
     }
     if (val>0 && isVerb) {
       Serial.println(F("WARNING: automode ON can cause some devices to generate"));
       Serial.println(F("         'addressed to talk but nothing to say' errors"));
     }
-    isAuto = val ? true : false; if (isVerb) {Serial.print(F("Auto mode: ")); Serial.println(val ? "ON" : "OFF") ;}
+//    isAuto = val ? true : false; if (isVerb) {Serial.print(F("Auto mode: ")); Serial.println(val ? "ON" : "OFF") ;}
+    aMode = val;
+    if (aMode<3) aRead = false;
+    if (isVerb) {Serial.print(F("Auto mode: ")); Serial.println(aMode);}
   }else{
-    Serial.println(isAuto);
+    Serial.println(aMode);
   }
 }
 
@@ -1123,8 +1141,8 @@ void read_h(char *params) {
       eByte = atoi(params);
     }
   }
-  if (isAuto){
-    // in auto mode we set this flag to indicate we are ready for auto read
+  if (aMode==3){
+    // in auto continumous mode we set this flag to indicate we are ready for continuous read
     aRead = true;
   }else{
     // If auto mode is disabled we do a single read
@@ -1141,7 +1159,7 @@ void clr_h() {
     if (isVerb) Serial.println(F("Failed to address device")); 
     return; 
   }
-  if (gpibSendCmd(SDC))  { 
+  if (gpibSendCmd(GC_SDC))  { 
     if (isVerb) Serial.println(F("Failed to send SDC")); 
     return; 
   }
@@ -1164,7 +1182,7 @@ void llo_h(char *params) {
     // For 'all' send LLO to the bus without addressing any device - device will show REM when addressed 
     if (params!=NULL) { 
       if (0 == strncmp(params, "all", 3)) {
-        if (gpibSendCmd(LLO)){
+        if (gpibSendCmd(GC_LLO)){
           if (isVerb) Serial.println(F("Failed to send universal LLO."));
         }
       }
@@ -1175,7 +1193,7 @@ void llo_h(char *params) {
         return;
       }
       // Send LLO to currently addressed device
-      if (gpibSendCmd(LLO)){
+      if (gpibSendCmd(GC_LLO)){
         if (isVerb) Serial.println(F("Failed to send LLO to device"));
         return;
       }
@@ -1220,7 +1238,7 @@ void loc_h(char *params) {
         return;
       }
       // Send GTL      
-      if (gpibSendCmd(GTL)) {
+      if (gpibSendCmd(GC_GTL)) {
         if (isVerb) Serial.println(F("Failed sending LOC."));
         return;
       }
@@ -1301,7 +1319,7 @@ void trg_h(char *params) {
         return;
       }
       // Send GTL
-      if (gpibSendCmd(GET))  { 
+      if (gpibSendCmd(GC_GET))  { 
         if (isVerb) Serial.println(F("Failed to trigger device")); 
         return; 
       }
@@ -1391,7 +1409,7 @@ void spoll_h(char *params) {
   }
 
   // Send Unlisten [UNL] to all devices
-  if ( gpibSendCmd(UNL) )  { 
+  if ( gpibSendCmd(GC_UNL) )  { 
 #ifdef DEBUG4
     Serial.println(F("spoll_h: failed to send UNL"));
 #endif
@@ -1399,7 +1417,7 @@ void spoll_h(char *params) {
   }
 
   // Controller addresses itself as listner
-  if ( gpibSendCmd(LAD+AR488.caddr) )  {
+  if ( gpibSendCmd(GC_LAD+AR488.caddr) )  {
 #ifdef DEBUG4
     Serial.println(F("spoll_h: failed to send LAD")); 
 #endif
@@ -1407,7 +1425,7 @@ void spoll_h(char *params) {
   }
 
   // Send Serial Poll Enable [SPE] to all devices
-  if ( gpibSendCmd(SPE) )  {
+  if ( gpibSendCmd(GC_SPE) )  {
 #ifdef DEBUG4
     Serial.println(F("spoll_h: failed to send SPE")); 
 #endif
@@ -1428,7 +1446,7 @@ void spoll_h(char *params) {
     if (val != AR488.caddr) {
 
       // Address a device to talk
-      if ( gpibSendCmd(TAD+val) )  {
+      if ( gpibSendCmd(GC_TAD+val) )  {
 
 #ifdef DEBUG4   
         Serial.println(F("spoll_h: failed to send TAD")); 
@@ -1465,7 +1483,7 @@ void spoll_h(char *params) {
   if (all) Serial.println();
 
   // Send Serial Poll Disable [SPD] to all devices
-  if ( gpibSendCmd(SPD) )  {
+  if ( gpibSendCmd(GC_SPD) )  {
 #ifdef DEBUG4
     Serial.println(F("spoll_h: failed to send SPD")); 
 #endif
@@ -1473,7 +1491,7 @@ void spoll_h(char *params) {
   }
 
   // Send Untalk [UNT] to all devices
-  if ( gpibSendCmd(UNT) )  {
+  if ( gpibSendCmd(GC_UNT) )  {
 #ifdef DEBUG4  
     Serial.println(F("spoll_h: failed to send UNT")); 
 #endif
@@ -1481,7 +1499,7 @@ void spoll_h(char *params) {
   }
 
   // Unadress listners [UNL] to all devices
-  if ( gpibSendCmd(UNL) )  {
+  if ( gpibSendCmd(GC_UNL) )  {
 #ifdef DEBUG4    
     Serial.println(F("spoll_h: failed to send UNL")); 
 #endif
@@ -1603,7 +1621,7 @@ void aspoll_h() {
  * The universal Device Clear (DCL) is unaddressed and affects all devices on the Gpib bus.
  */
 void dcl_h() {
-  if ( gpibSendCmd(DCL) )  { 
+  if ( gpibSendCmd(GC_DCL) )  { 
     if (isVerb) Serial.println(F("Sending DCL failed")); 
     return; 
   }
@@ -1745,11 +1763,11 @@ struct gpibOpcode {
  * commands received over the GPIB bus
  */
 static gpibOpcode goHidx[] = {
-  { SDC,    sdc_h },
-  { SPD,    spd_h },
-  { SPE,    spe_h },
-  { UNL,    unl_h }, 
-  { UNT,    unt_h }
+  { GC_SDC,    sdc_h },
+  { GC_SPD,    spd_h },
+  { GC_SPE,    spe_h },
+  { GC_UNL,    unl_h }, 
+  { GC_UNT,    unt_h }
 };
 
 
@@ -2098,8 +2116,8 @@ bool gpibReceiveData(){
 // Perform read of data (r: 0=data; 1=cmd; >1=error;
   while ( !tranBrk && !isATN && !(r=gpibReadByte(&db)) ) {
 
-    // When reading with EOI=1 or AUTO=1 Check for break condition
-    if (rEoi || isAuto) readBreak();
+    // When reading with EOI=1 or aMode=3 Check for break condition
+    if (rEoi || (aMode==3)) readBreak();
     
     // If attention required by new command then break here 
     if (tranBrk == 7 || isATN) break;
@@ -2278,13 +2296,13 @@ bool gpibWriteByte(uint8_t db) {
  * dir: 0=listen; 1=talk;
  */
 bool addrDev(uint8_t addr, bool dir){
-  if (gpibSendCmd(UNL)) return ERR;
+  if (gpibSendCmd(GC_UNL)) return ERR;
   if (dir) {
-    if (gpibSendCmd(LAD+AR488.caddr)) return ERR;
-    if (gpibSendCmd(TAD+addr)) return ERR;
+    if (gpibSendCmd(GC_LAD+AR488.caddr)) return ERR;
+    if (gpibSendCmd(GC_TAD+addr)) return ERR;
   }else{
-    if (gpibSendCmd(TAD+AR488.caddr)) return ERR;
-    if (gpibSendCmd(LAD+addr)) return ERR;
+    if (gpibSendCmd(GC_TAD+AR488.caddr)) return ERR;
+    if (gpibSendCmd(GC_LAD+addr)) return ERR;
   }
   return OK;
 }
@@ -2297,8 +2315,8 @@ bool uaddrDev(){
   // De-bounce
   delayMicroseconds(30);
   // Utalk/unlisten
-  if (gpibSendCmd(UNL)) return ERR;
-  if (gpibSendCmd(UNT)) return ERR;
+  if (gpibSendCmd(GC_UNL)) return ERR;
+  if (gpibSendCmd(GC_UNT)) return ERR;
   return OK;
 }
 
