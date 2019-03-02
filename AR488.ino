@@ -16,7 +16,7 @@ AR488 is Licenced under the GNU Public licence.
 #include <avr/interrupt.h>
 
 // Firmware version
-#define FWVER "AR488 GPIB controller, version 0.46.01, 01/03/2019"
+#define FWVER "AR488 GPIB controller, version 0.46.02, 02/03/2019"
 
 
 // Debug options
@@ -340,7 +340,7 @@ void setup() {
  */
 void loop() {
 
-  int bytes = 0;
+//  int bytes = 0;
 
   // NOTE: serialEvent() handles serial interrupt
   // Each received char is passed through parser until an un-escaped CR
@@ -457,7 +457,7 @@ void initController() {
   // Initialise GPIB data lines (sets to INPUT_PULLUP)
   readGpibDbus();
   // Assert IFC to signal controller in charge (CIC)
-  ifc_h();
+  ifc_h(NULL);
 }
 
 
@@ -553,7 +553,7 @@ void errBadCmd(){
  * Read configuration from EEPROM
  */
 void epGetCfg() {
-  int ew = 0x00;
+//  int ew = 0x00;
   int epaddr = 0;
   int val;
   val = EEPROM.read(0);
@@ -569,14 +569,13 @@ void epGetCfg() {
  */
 //uint8_t epSaveCfg(uint8_t page){
 uint8_t epSaveCfg(){
-
-  long int sz;
   int epaddr=0;
 
 //  if (page<0 || page>4) return ERR;
 
-  sz = sizeof(AR488);
 #ifdef debug5
+  long int sz;
+  sz = sizeof(AR488);
   Serial.print(F("Size of structure: "));
   Serial.println(sz);
 #endif
@@ -584,6 +583,7 @@ uint8_t epSaveCfg(){
   EEPROM.put(epaddr, AR488);
   if (isVerb) Serial.print(F("Settings saved."));
 //  if (isVerb) { Serial.print(F("Settings saved to configuration profile ")); Serial.println(page); };
+  return OK;
 }
 
 
@@ -726,9 +726,9 @@ void flushPbuf() {
  * NOTE: modes: 1=device, 2=controller, 3=both
  */
 struct cmdRec { 
-  char* token; 
-  void (*handler)(char *params);
-  int modes;
+  const char* token; 
+  void (*handler)(char*);
+  uint8_t modes;
 };
 
 
@@ -1133,7 +1133,8 @@ void read_h(char *params) {
   // Read any parameters
   if (params!=NULL) {
     if (strlen(params) > 3){
-      if (isVerb) Serial.println(F("Invalid termination character - ignored."));
+      if (isVerb) Serial.println(F("Invalid termination character - ignored."));void addr_h(char *params);
+
     }else if (strncmp(params, "eoi", 3)==0){  // Read with eoi detection
       rEoi = true;
     }else{  // Assume ASCII character given and convert to an 8 bit byte
@@ -1154,7 +1155,7 @@ void read_h(char *params) {
 /*
  * Send device clear (usually resets the device to power on state)
  */
-void clr_h() {
+void clr_h(char *params) {
   if (addrDev(AR488.paddr, 0)) {
     if (isVerb) Serial.println(F("Failed to address device")); 
     return; 
@@ -1261,7 +1262,7 @@ void loc_h(char *params) {
   * Assert IFC for 150 microseconds making the AR488 the Controller-in-Charge
   * All interfaces return to their idle state
   */
-void ifc_h() {
+void ifc_h(char *params) {
   if (AR488.cmode) {
     setGpibState(0b00000001, 0b00000000, 0b00000001);        
     delayMicroseconds(150);
@@ -1341,7 +1342,7 @@ void trg_h(char *params) {
 /*
  * Reset the controller
  */
-void rst_h() {
+void rst_h(char *params) {
   // Reset controller using watchdog timeout
   unsigned long tout;
   tout = millis()+3000;
@@ -1433,7 +1434,7 @@ void spoll_h(char *params) {
   }
 
   // Poll GPIB address or addresses as set by i and j
-  for (i; i<j; i++){
+  for (i=i; i<j; i++){
 
     // Set GPIB address in val
     if (all) {
@@ -1526,7 +1527,7 @@ void spoll_h(char *params) {
  * SRQ command handler
  * Return status of SRQ line
  */
-void srq_h(){
+void srq_h(char *params){
   //NOTE: LOW=asserted, HIGH=unasserted
   Serial.println(!digitalRead(SRQ));
 }
@@ -1565,7 +1566,7 @@ void stat_h(char *params){
 /*
  * Save controller configuration
  */
-void save_h(){
+void save_h(char *params){
 
   epSaveCfg();
 //  epSaveCfg(1);
@@ -1611,8 +1612,10 @@ void lon_h(char *params) {
  * All serial poll - polls all devices, not just the currently addressed instrument
  * Alias wrapper for ++spoll all
  */
-void aspoll_h() {
-  spoll_h("all");
+void aspoll_h(char *params) {
+  char all[4];
+  strcpy(all,"all\0");
+  spoll_h(all);
 }
 
 
@@ -1620,7 +1623,7 @@ void aspoll_h() {
  * Send Universal Device Clear
  * The universal Device Clear (DCL) is unaddressed and affects all devices on the Gpib bus.
  */
-void dcl_h() {
+void dcl_h(char *params) {
   if ( gpibSendCmd(GC_DCL) )  { 
     if (isVerb) Serial.println(F("Sending DCL failed")); 
     return; 
@@ -1633,7 +1636,7 @@ void dcl_h() {
 /*
  * Re-load default configuration
  */
-void default_h() {
+void default_h(char *params) {
   initAR488();
 }
 
@@ -1642,7 +1645,7 @@ void default_h() {
  * Parallel Poll Handler
  * Device must be set to respond on DIO line 1 - 8
  */
-void ppoll_h() {
+void ppoll_h(char *params) {
   uint8_t sb = 0;
 
   // Poll devices
@@ -1668,7 +1671,7 @@ void ppoll_h() {
  * Assert or de-assert REN 0=de-assert; 1=assert
  */
 void ren_h(char *params) {
- char *stat; 
+// char *stat;
   int val;
   if (params!=NULL) {
     val = atoi(params);
@@ -1683,7 +1686,7 @@ void ren_h(char *params) {
 /*
  * Enable verbose mode 0=OFF; 1=ON
  */
-void verb_h() { 
+void verb_h(char *params) { 
     isVerb = !isVerb;
     Serial.print("Verbose: ");
     Serial.println(isVerb ? "ON" : "OFF");
@@ -1775,11 +1778,11 @@ void attnRequired() {
 
   uint8_t db=0;
   uint8_t stat=0;
-  uint8_t addr=0;
+//  uint8_t addr=0;
   int oasize = sizeof(goHidx)/sizeof(goHidx[0]);
   int i=0;
 
-  int x=0;
+//  int x=0;
 
   // Set device listner active state (assert NDAC+NRFD, DAV=INPUT_PULLUP)
   setGpibControls(DLAS);
@@ -1894,7 +1897,7 @@ void sdc_h() {
 #ifdef DEBUG5  
   Serial.print(F("Reset adressed to me: ")); Serial.println(aTl);
 #endif
-  if (aTl) rst_h();
+  if (aTl) rst_h(NULL);
   if (isVerb) Serial.println(F("Reset failed."));
 }
 
@@ -1964,7 +1967,7 @@ void unt_h() {
 /*
  * Send the status byte
  */
-bool gpibSendStatus(){
+void gpibSendStatus(){
   // Have been addressed and polled so send the status byte
   if (isVerb) { Serial.print(F("Sending status byte: ")); Serial.println(AR488.stat); };    
   setGpibControls(DTAS);
@@ -2075,11 +2078,11 @@ void gpibSendData(char *data, uint8_t dsize){
  */
 bool gpibReceiveData(){
 
-  char ch;
+//  char ch;
   uint8_t r=0,db;
 
   int x=0;
-  int s=0;
+//  int s=0;
 
 
   // Set flags
@@ -2192,6 +2195,7 @@ bool gpibReceiveData(){
 
   if (r>0) return ERR;
 
+  return OK;
 }
 
 
@@ -2398,7 +2402,7 @@ void setGpibDbus(uint8_t db) {
  * NRFD  10  PORTB bit 2 byte bit 2
  * DAV   11  PORTB bit 3 byte bit 3
  * EOI   12  PORTB bit 4 byte bit 4
- //* REN   13  PORTB bit 5 byte bit 5
+ // * REN   13  PORTB bit 5 byte bit 5
  * SRQ   2   PORTD bit 2 byte bit 6
  * REN   3   PORTD bit 3 byte bit 5 
  * ATN   7   PORTD bit 8 byte bit 7
@@ -2431,7 +2435,7 @@ void setGpibState(uint8_t pdir, uint8_t pstat, uint8_t mask){
  * setGpibState byte1:  0=input, 1=output;
  * setGpibState byte2: 0=LOW, 1=HIGH/INPUT_PULLUP
  */
-bool setGpibControls(uint8_t state){
+void setGpibControls(uint8_t state){
 
   // Switch state
   switch (state) {
