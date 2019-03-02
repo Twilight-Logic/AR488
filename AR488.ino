@@ -16,7 +16,7 @@ AR488 is Licenced under the GNU Public licence.
 #include <avr/interrupt.h>
 
 // Firmware version
-#define FWVER "AR488 GPIB controller, version 0.46.02, 02/03/2019"
+#define FWVER "AR488 GPIB controller, version 0.46.03, 02/03/2019"
 
 
 // Debug options
@@ -1282,7 +1282,7 @@ void trg_h(char *params) {
   uint8_t cnt = 0;
 
   // Initialise address array
-  for (int i; i<15; i++){
+  for (int i=0; i<15; i++){
     addrs[i] = 0;
   }
 
@@ -1313,7 +1313,7 @@ void trg_h(char *params) {
 
   // If we have some addresses to trigger....
   if (cnt>0){
-    for (int i; i<cnt; i++){
+    for (int i=0; i<cnt; i++){
       // Address the device
       if (addrDev(addrs[i],0)) {
         if (isVerb) Serial.println(F("Failed to address device")); 
@@ -1361,13 +1361,13 @@ void spoll_h(char *params) {
   uint8_t addrs[15];
   uint8_t sb = 0;
   uint8_t r;
-  uint8_t i = 0;
+//  uint8_t i = 0;
   uint8_t j = 0;
   uint8_t val = 0;
   bool all = false;
 
   // Initialise address array
-  for (int i; i<15; i++){
+  for (int i=0; i<15; i++){
     addrs[i] = 0;
   }
 
@@ -1434,7 +1434,7 @@ void spoll_h(char *params) {
   }
 
   // Poll GPIB address or addresses as set by i and j
-  for (i=i; i<j; i++){
+  for (int i=0; i<j; i++){
 
     // Set GPIB address in val
     if (all) {
