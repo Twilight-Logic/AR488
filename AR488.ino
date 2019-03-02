@@ -8,6 +8,9 @@ permission of Emanuele Girlando, who has kindly reviewed and tested this code.
 
 Thanks also to Luke Mester for comparison testing against the Prologix interface.
 AR488 is Licenced under the GNU Public licence.
+
+Thanks to maxwell3e10 on the EEVblog forum for suggesting additional auto mode settings.
+
 */
 
 // Includes
@@ -16,7 +19,7 @@ AR488 is Licenced under the GNU Public licence.
 #include <avr/interrupt.h>
 
 // Firmware version
-#define FWVER "AR488 GPIB controller, version 0.46.03, 02/03/2019"
+#define FWVER "AR488 GPIB controller, version 0.46.10, 02/03/2019"
 
 
 // Debug options
@@ -222,6 +225,7 @@ struct AR488conf {
   uint8_t saddr;  // Secondary device address
   uint8_t eos;    // EOS (end of send - to GPIB) character flag [0=CRLF, 1=CR, 2=LF, 3=None]
   uint8_t stat;   // Status byte to return in response to a poll
+  uint8_t amode;  // Auto mode setting (0=off; 1=Prologix; 2=onquery; 3=continuous;
   int rtmo;       // Read timout (read_tmo_ms) in milliseconds - 0-3000 - value depends on instrument
   char eot_ch;    // EOT character to append to USB output when EOI signal detected
   char vstr[48];  // Custom version string
@@ -245,13 +249,12 @@ bool isVerb = false;
 uint8_t lnRdy = 0;      // Line ready to process
 
 // GPIB data receive flags
-//bool isAuto = false;    // Auto read mode?
 bool isReading = false; // Is a GPIB read in progress?
 bool aRead = false;     // GPIB data read in progress
 bool rEoi = false;      // read eoi requested
 bool rEbt = false;      // read with specified terminator character
 bool isQuery = false;   // Direct instrument command is a query
-uint8_t aMode = 0;      // Auto read mode: 0=off; 1=Prologix; 2=on query (CMD?); 3=continuous;
+//uint8_t aMode = 0;      // Auto read mode: 0=off; 1=Prologix; 2=on query (CMD?); 3=continuous;
 uint8_t tranBrk = 0;    // transmission break on 1=++, 2=EOI, 3=ATN 4=UNL
 uint8_t eByte = 0;      // termination character
 
@@ -363,9 +366,9 @@ void loop() {
     if (lnRdy==2) {
       processLine(pBuf,pbPtr, 2);
       // Auto-receive data from GPIB bus following a command
-      if (aMode==1) gpibReceiveData();
+      if (AR488.amode==1) gpibReceiveData();
       // Auto-receive data from GPIB bus following a command
-      if (aMode==2 && isQuery){
+      if (AR488.amode==2 && isQuery){
         gpibReceiveData();
         isQuery = false;
       }
@@ -378,7 +381,7 @@ void loop() {
     }
   
     // Continuous auto-receive data from GPIB bus
-    if (aMode==3 && aRead) gpibReceiveData();
+    if (AR488.amode==3 && aRead) gpibReceiveData();
   }
 
   // Device mode:
@@ -420,7 +423,7 @@ void loop() {
  */
 void initAR488() {
   // Set default values
-  AR488 = {0xCC,false,false,2,0,1,0,0,0,1200,0,'\0'};
+  AR488 = {0xCC,false,false,2,0,1,0,0,0,0,1200,0,'\0'};
 
   // Clear version string variable
   memset(AR488.vstr, '\0', 48);
@@ -457,7 +460,7 @@ void initController() {
   // Initialise GPIB data lines (sets to INPUT_PULLUP)
   readGpibDbus();
   // Assert IFC to signal controller in charge (CIC)
-  ifc_h(NULL);
+  ifc_h();
 }
 
 
@@ -721,50 +724,109 @@ void flushPbuf() {
 
 
 /*
+ * Command index record structure
+ * Record: command-token, command-handler, modes-available 
+ * NOTE: modes: 1=device, 2=controller, 3=both
+ */
+
+struct cmdIdx { 
+  const char* token;
+  uint8_t ctype;
+  uint8_t cidx;
+  uint8_t opmode;
+};
+
+/*
  * Command handler record structure
  * Record: command-token, command-handler, modes-available 
  * NOTE: modes: 1=device, 2=controller, 3=both
  */
-struct cmdRec { 
-  const char* token; 
+
+struct cmdVRec { 
+  void (*handler)();
+};
+
+struct cmdPRec { 
   void (*handler)(char*);
-  uint8_t modes;
 };
 
 
 /*
  * Array containing index of accepted ++ commands
  */
-static cmdRec cmdHidx [] = { 
-  { "addr",        addr_h,      3 }, 
-  { "allspoll",    aspoll_h,    2 },
-  { "auto",        amode_h,     2 },
-  { "clr",         clr_h,       2 },
-  { "dcl",         dcl_h,       2 },
-  { "default",     default_h,   3 },
-  { "eoi",         eoi_h,       3 },
-  { "eos",         eos_h,       3 },
-  { "eot_char",    eot_char_h,  3 },
-  { "eot_enable",  eot_en_h,    3 },
-  { "ifc",         ifc_h,       2 },
-  { "llo",         llo_h,       2 },
-  { "loc",         loc_h,       2 },
-//  { "lon",         lon_h,       1 },
-  { "mode" ,       cmode_h,     3 },
-  { "ppoll",       ppoll_h,     2 },
-  { "read",        read_h,      2 },
-  { "read_tmo_ms", rtmo_h,      2 },
-  { "ren",         ren_h,       2 },
-  { "rst",         rst_h,       3 },
-  { "trg",         trg_h,       2 },
-  { "savecfg",     save_h,      3 },
-  { "setvstr",     setvstr_h,   3 },
-  { "spoll",       spoll_h,     2 },
-  { "srq",         srq_h,       2 },
-  { "srqauto",     srqa_h,      2 },
-  { "status",      stat_h,      1 },
-  { "ver",         ver_h,       3 },
-  { "verbose" ,    verb_h,      3 }
+static cmdIdx plusCmdIdx [] = { 
+  { "allspoll",    1, 0x00, 2 },
+  { "clr",         1, 0x01, 2 },
+  { "dcl",         1, 0x02, 2 },
+  { "default",     1, 0x03, 3 },
+  { "ifc",         1, 0x04, 2 },
+  { "ppoll",       1, 0x05, 2 },
+  { "rst",         1, 0x06, 3 },
+  { "srq",         1, 0x07, 2 },
+  { "savecfg",     1, 0x08, 3 },
+  { "verbose" ,    1, 0x09, 3 },
+  { "addr",        2, 0x00, 3 }, 
+  { "auto",        2, 0x01, 2 },
+  { "eoi",         2, 0x02, 3 },
+  { "eos",         2, 0x03, 3 },
+  { "eot_char",    2, 0x04, 3 },
+  { "eot_enable",  2, 0x05, 3 },
+  { "llo",         2, 0x06, 2 },
+  { "loc",         2, 0x07, 2 },
+//  { "lon",         2, 0x08, 1 },
+  { "mode" ,       2, 0x09, 3 },
+  { "read",        2, 0x0A, 2 },
+  { "read_tmo_ms", 2, 0x0B, 2 },
+  { "ren",         2, 0x0C, 2 },
+  { "trg",         2, 0x0D, 2 },
+  { "setvstr",     2, 0x0E, 3 },
+  { "spoll",       2, 0X0F, 2 },
+  { "srqauto",     2, 0x10, 2 },
+  { "status",      2, 0x11, 1 },
+  { "ver",         2, 0x12, 3 }
+};
+
+
+/*
+ * Array containing index of accepted ++ commands
+ */
+static cmdVRec cmdVHlist [] = { 
+  aspoll_h,
+  clr_h,
+  dcl_h,
+  default_h,
+  ifc_h,
+  ppoll_h,
+  rst_h,
+  srq_h,
+  save_h,
+  verb_h
+};
+
+
+/*
+ * Array containing index of accepted ++ commands
+ */
+static cmdPRec cmdPHlist [] = { 
+  addr_h, 
+  amode_h,
+  eoi_h,
+  eos_h,
+  eot_char_h,
+  eot_en_h,
+  llo_h,
+  loc_h,
+  lon_h,
+  cmode_h,
+  read_h,
+  rtmo_h,
+  ren_h,
+  trg_h,
+  setvstr_h,
+  spoll_h,
+  srqa_h,
+  stat_h,
+  ver_h
 };
 
 
@@ -834,7 +896,7 @@ void getCmd(char *buffr) {
 
   char *token;  // pointer to command token
   char params[64]; // pointer to command parameters
-  int casize = sizeof(cmdHidx)/sizeof(cmdHidx[0]);
+  int casize = sizeof(plusCmdIdx)/sizeof(plusCmdIdx[0]);
   int i=0, j=0;
 
   memset(params, '\0', 64);
@@ -854,34 +916,42 @@ void getCmd(char *buffr) {
   // Look for a valid command token
   i=0;
   do {
-    if (strcmp(cmdHidx[i].token, token) == 0) break;
+    if (strcmp(plusCmdIdx[i].token, token) == 0) break;
     i++;
   } while (i<casize);
   if (i<casize) {
     // We have found a valid command and handler
 #ifdef DEBUG1
     Serial.print("getCmd: "); 
-    Serial.print("found handler for: "); Serial.println(cmdHidx[i].token);
+    Serial.print("found handler for: "); Serial.println(plusCmdIdx[i].token);
 #endif
     // If command is relevant to controller mode then execute it
-    if (cmdHidx[i].modes&AR488.cmode) {
-      // Copy command parameters to params and call handler with parameters
-      do {
-        j++;
-        token = strtok(NULL, " \t");
-        if (strlen(token)>0) {
-          if (j>1) {strcat(params, " ");};
-          strcat(params, token);
-        }
-      } while (token != NULL);
-      if (strlen(params)>0) {
+    if (plusCmdIdx[i].opmode&AR488.cmode) {
+      // If its a command with parameters
+      if (plusCmdIdx[i].ctype==2) {
+        // Copy command parameters to params and call handler with parameters
+        do {
+          j++;
+          token = strtok(NULL, " \t");
+          if (strlen(token)>0) {
+            if (j>1) {strcat(params, " ");};
+            strcat(params, token);
+          }
+        } while (token != NULL);
+        // If command parameters were sepcified
+        if (strlen(params)>0) {
 #ifdef DEBUG1
-        Serial.print(F("Calling handler with parameters: ")); Serial.println(params);
+          Serial.print(F("Calling handler with parameters: ")); Serial.println(params);
 #endif
-        cmdHidx[i].handler(params);
-      }else{
-        // Call handler without parameters
-        cmdHidx[i].handler(NULL);
+          cmdPHlist[plusCmdIdx[i].cidx].handler(params);
+        // If there are no parameters sepcified
+        }else{
+          // Call handler without parameters
+          cmdPHlist[plusCmdIdx[i].cidx].handler(NULL);
+        }
+      // If its a command that does not take parameters
+      }else if (plusCmdIdx[i].ctype==1){
+        cmdVHlist[plusCmdIdx[i].cidx].handler();        
       }
     }else{
       errBadCmd();
@@ -1096,11 +1166,11 @@ void amode_h(char *params) {
       Serial.println(F("         'addressed to talk but nothing to say' errors"));
     }
 //    isAuto = val ? true : false; if (isVerb) {Serial.print(F("Auto mode: ")); Serial.println(val ? "ON" : "OFF") ;}
-    aMode = val;
-    if (aMode<3) aRead = false;
-    if (isVerb) {Serial.print(F("Auto mode: ")); Serial.println(aMode);}
+    AR488.amode = val;
+    if (AR488.amode<3) aRead = false;
+    if (isVerb) {Serial.print(F("Auto mode: ")); Serial.println(AR488.amode);}
   }else{
-    Serial.println(aMode);
+    Serial.println(AR488.amode);
   }
 }
 
@@ -1142,7 +1212,7 @@ void read_h(char *params) {
       eByte = atoi(params);
     }
   }
-  if (aMode==3){
+  if (AR488.amode==3){
     // in auto continumous mode we set this flag to indicate we are ready for continuous read
     aRead = true;
   }else{
@@ -1155,7 +1225,7 @@ void read_h(char *params) {
 /*
  * Send device clear (usually resets the device to power on state)
  */
-void clr_h(char *params) {
+void clr_h() {
   if (addrDev(AR488.paddr, 0)) {
     if (isVerb) Serial.println(F("Failed to address device")); 
     return; 
@@ -1262,7 +1332,7 @@ void loc_h(char *params) {
   * Assert IFC for 150 microseconds making the AR488 the Controller-in-Charge
   * All interfaces return to their idle state
   */
-void ifc_h(char *params) {
+void ifc_h() {
   if (AR488.cmode) {
     setGpibState(0b00000001, 0b00000000, 0b00000001);        
     delayMicroseconds(150);
@@ -1342,7 +1412,7 @@ void trg_h(char *params) {
 /*
  * Reset the controller
  */
-void rst_h(char *params) {
+void rst_h() {
   // Reset controller using watchdog timeout
   unsigned long tout;
   tout = millis()+3000;
@@ -1527,7 +1597,7 @@ void spoll_h(char *params) {
  * SRQ command handler
  * Return status of SRQ line
  */
-void srq_h(char *params){
+void srq_h(){
   //NOTE: LOW=asserted, HIGH=unasserted
   Serial.println(!digitalRead(SRQ));
 }
@@ -1566,7 +1636,7 @@ void stat_h(char *params){
 /*
  * Save controller configuration
  */
-void save_h(char *params){
+void save_h(){
 
   epSaveCfg();
 //  epSaveCfg(1);
@@ -1612,7 +1682,7 @@ void lon_h(char *params) {
  * All serial poll - polls all devices, not just the currently addressed instrument
  * Alias wrapper for ++spoll all
  */
-void aspoll_h(char *params) {
+void aspoll_h() {
   char all[4];
   strcpy(all,"all\0");
   spoll_h(all);
@@ -1623,7 +1693,7 @@ void aspoll_h(char *params) {
  * Send Universal Device Clear
  * The universal Device Clear (DCL) is unaddressed and affects all devices on the Gpib bus.
  */
-void dcl_h(char *params) {
+void dcl_h() {
   if ( gpibSendCmd(GC_DCL) )  { 
     if (isVerb) Serial.println(F("Sending DCL failed")); 
     return; 
@@ -1636,7 +1706,7 @@ void dcl_h(char *params) {
 /*
  * Re-load default configuration
  */
-void default_h(char *params) {
+void default_h() {
   initAR488();
 }
 
@@ -1645,7 +1715,7 @@ void default_h(char *params) {
  * Parallel Poll Handler
  * Device must be set to respond on DIO line 1 - 8
  */
-void ppoll_h(char *params) {
+void ppoll_h() {
   uint8_t sb = 0;
 
   // Poll devices
@@ -1686,7 +1756,7 @@ void ren_h(char *params) {
 /*
  * Enable verbose mode 0=OFF; 1=ON
  */
-void verb_h(char *params) { 
+void verb_h() { 
     isVerb = !isVerb;
     Serial.print("Verbose: ");
     Serial.println(isVerb ? "ON" : "OFF");
@@ -1897,7 +1967,7 @@ void sdc_h() {
 #ifdef DEBUG5  
   Serial.print(F("Reset adressed to me: ")); Serial.println(aTl);
 #endif
-  if (aTl) rst_h(NULL);
+  if (aTl) rst_h();
   if (isVerb) Serial.println(F("Reset failed."));
 }
 
@@ -2120,7 +2190,7 @@ bool gpibReceiveData(){
   while ( !tranBrk && !isATN && !(r=gpibReadByte(&db)) ) {
 
     // When reading with EOI=1 or aMode=3 Check for break condition
-    if (rEoi || (aMode==3)) readBreak();
+    if (rEoi || (AR488.amode==3)) readBreak();
     
     // If attention required by new command then break here 
     if (tranBrk == 7 || isATN) break;
