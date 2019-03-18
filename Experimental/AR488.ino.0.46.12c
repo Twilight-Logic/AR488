@@ -233,7 +233,7 @@ struct AR488conf {
 //  uint8_t tmb;    //
   char eot_ch;    // EOT character to append to USB output when EOI signal detected
   char vstr[48];  // Custom version string
-  uint8_t tmc;    // Control lines change settle time (microseconds 1-255)
+  uint16_t tmc;    // Control lines change settle time (microseconds 1-255)
   uint16_t tmd;    // Switch to data receive settle time (microseconds 1-30,000)
   uint8_t tme;    // Pause at end of data read before accepting next command (microseconds 1-255)
   uint8_t tml;    // Interval between characters being read [read loop delay] (microseconds 1-255)
@@ -1863,7 +1863,7 @@ void tmc_h(char *params) {
   int val;
   if (params!=NULL) {
     val = atoi(params); 
-    if (val<0||val>255) {
+    if (val<0||val>30001) {
       errBadCmd();
       if (isVerb) Serial.println(F("Invalid: expected EOT character ASCII value in the range 0 - 255"));
       return;
