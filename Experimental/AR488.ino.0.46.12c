@@ -1863,9 +1863,9 @@ void tmc_h(char *params) {
   int val;
   if (params!=NULL) {
     val = atoi(params); 
-    if (val<0||val>30001) {
+    if (val<0||val>30000) {
       errBadCmd();
-      if (isVerb) Serial.println(F("Invalid: expected EOT character ASCII value in the range 0 - 255"));
+      if (isVerb) Serial.println(F("Invalid: expected EOT character ASCII value in the range 0 - 30,000"));
       return;
     }
     AR488.tmc = val;
@@ -1881,9 +1881,9 @@ void tmd_h(char *params) {
   int val;
   if (params!=NULL) {
     val = atoi(params); 
-    if (val<0||val>30001) {
+    if (val<0||val>30000) {
       errBadCmd();
-      if (isVerb) Serial.println(F("Invalid: expected EOT character ASCII value in the range 0 - 255"));
+      if (isVerb) Serial.println(F("Invalid: expected EOT character ASCII value in the range 0 - 30,000"));
       return;
     }
     AR488.tmd = val;
@@ -1900,7 +1900,7 @@ void tme_h(char *params) {
     val = atoi(params); 
     if (val<0||val>255) {
       errBadCmd();
-      if (isVerb) Serial.println(F("Invalid: expected EOT character ASCII value in the range 0 - 30,000"));
+      if (isVerb) Serial.println(F("Invalid: expected EOT character ASCII value in the range 0 - 255"));
       return;
     }
     AR488.tme = val;
