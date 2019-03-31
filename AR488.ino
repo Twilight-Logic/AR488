@@ -1,3 +1,5 @@
+#include <EEPROM.h>
+
 /*
 Arduino IEEE-488 implementation by John Chajecki
 
@@ -19,7 +21,7 @@ Thanks to maxwell3e10 on the EEVblog forum for suggesting additional auto mode s
 #include <avr/interrupt.h>
 
 // Firmware version
-#define FWVER "AR488 GPIB controller, version 0.46.10, 02/03/2019"
+#define FWVER "AR488 GPIB controller, version 0.46.13, 31/03/2019"
 
 
 // Debug options
@@ -225,10 +227,11 @@ struct AR488conf {
   uint8_t saddr;  // Secondary device address
   uint8_t eos;    // EOS (end of send - to GPIB) character flag [0=CRLF, 1=CR, 2=LF, 3=None]
   uint8_t stat;   // Status byte to return in response to a poll
-  uint8_t amode;  // Auto mode setting (0=off; 1=Prologix; 2=onquery; 3=continuous;
+  uint8_t amode;  // Auto mode setting (0=off; 1=Prologix; 2=onquery; 3=continuous;  
   int rtmo;       // Read timout (read_tmo_ms) in milliseconds - 0-3000 - value depends on instrument
   char eot_ch;    // EOT character to append to USB output when EOI signal detected
   char vstr[48];  // Custom version string
+  uint16_t tmbus; // Control lines change settle time (microseconds 1-30,000)
 };
 
 struct AR488conf AR488;
@@ -422,11 +425,8 @@ void loop() {
  * Initialise the interface
  */
 void initAR488() {
-  // Set default values
-  AR488 = {0xCC,false,false,2,0,1,0,0,0,0,1200,0,'\0'};
-
-  // Clear version string variable
-  memset(AR488.vstr, '\0', 48);
+  // Set default values ({'\0'} sets version string array to null)
+  AR488 = {0xCC,false,false,2,0,1,0,0,0,0,1200,0,{'\0'},0};
 }
 
 
@@ -438,7 +438,7 @@ void initDevice() {
   setGpibControls(DINI);
   // Disable SRQ and enable ATN interrupt
   cli();
-//  PCMSK2 &= SRQint;
+//  PCMSK2 &= SRQint; // SRQ interrupt now controlled by ++status command
   PCMSK2 |= ATNint;
   sei();
   // Initialise GPIB data lines (sets to INPUT_PULLUP)
@@ -455,7 +455,7 @@ void initController() {
   // Disable ATN and enable SRQ interrupt
   cli();
   PCMSK2 &= ATNint;
-//  PCMSK2 |= SRQint;
+//  PCMSK2 |= SRQint; // SRQ interrupt now controlled by ++status command
   sei();
   // Initialise GPIB data lines (sets to INPUT_PULLUP)
   readGpibDbus();
@@ -476,14 +476,17 @@ void serialEvent(){
  * Interrupt data transfer when escape pressed
  */
 void readBreak(){
+  // Check whether EOI is asserted
+  if (digitalRead(EOI)==LOW){
+    tranBrk = 5;
+    return;
+  }
+
   // Check serial input to see if we need to break on ++ character
   if (Serial.available()) {   // Only need to parse if a character is available
     lnRdy = parseInput(Serial.read());
     if (lnRdy==1) tranBrk = 7;
   }
-
-  // Check whether EOI is asserted
-  if (digitalRead(EOI)==LOW) tranBrk = 5;
 }
 
 
@@ -500,6 +503,8 @@ ISR(PCINT2_vect){
   // Has PCINT23 fired (ATN asserted)?
   if (AR488.cmode==1) { // Only in device mode
     if ((PIND^pindMem) & ATNint) {
+      isATN = (PIND & ATNint) == 0;
+/*      
       if (PIND & ATNint) {
         // isATN is false when ATN is unasserted (HIGH)
         isATN = false;  
@@ -507,6 +512,7 @@ ISR(PCINT2_vect){
         // isATN is true when ATN is asserted (LOW)
         isATN = true;
       }
+*/      
     }
   }
 
@@ -783,12 +789,13 @@ static cmdIdx plusCmdIdx [] = {
   { "spoll",       2, 0X0F, 2 },
   { "srqauto",     2, 0x10, 2 },
   { "status",      2, 0x11, 1 },
-  { "ver",         2, 0x12, 3 }
+  { "ver",         2, 0x12, 3 },
+  { "tmbus",       2, 0x13, 3 }  
 };
 
 
 /*
- * Array containing index of accepted ++ commands
+ * Array containing index of accepted ++ commands without parameters
  */
 static cmdVRec cmdVHlist [] = { 
   aspoll_h,
@@ -805,7 +812,7 @@ static cmdVRec cmdVHlist [] = {
 
 
 /*
- * Array containing index of accepted ++ commands
+ * Array containing index of accepted ++ commands with parameters
  */
 static cmdPRec cmdPHlist [] = { 
   addr_h, 
@@ -826,7 +833,8 @@ static cmdPRec cmdPHlist [] = {
   spoll_h,
   srqa_h,
   stat_h,
-  ver_h
+  ver_h,
+  tmbus_h
 };
 
 
@@ -1136,7 +1144,7 @@ void eot_char_h(char *params) {
   int val;
   if (params!=NULL) {
     val = atoi(params); 
-    if (val<0||val>256) {
+    if (val<0||val>255) {
       errBadCmd();
       if (isVerb) Serial.println(F("Invalid: expected EOT character ASCII value in the range 0 - 255"));
       return;
@@ -1290,19 +1298,25 @@ void loc_h(char *params) {
     if (params!=NULL) { 
       if (strncmp(params, "all", 3)==0) {
         // Unassert REN
-        setGpibState(0b00100000, 0b00100000, 0b00100000);        
+        setGpibState(0b00100000, 0b00100000, 0);
+//        setGpibState(0b00100000, 0b00100000, 0b00100000);        
         delay(40);
         // Simultaneously assert ATN and REN
-        setGpibState(0b10100000, 0b00000000, 0b10100000);
+//        setGpibState(0b10100000, 0b10100000, 1);
+        setGpibState(0b00000000, 0b10100000, 0);
+//        setGpibState(0b10100000, 0b00000000, 0b10100000);
         delay(40);
         // Unassert ATN
-        setGpibState(0b10000000, 0b10000000, 0b10000000);
+        setGpibState(0b10000000, 0b10000000, 0);
+//        setGpibState(0b10000000, 0b10000000, 0b10000000, 0);
+//        setGpibState(0b10000000, 0b10000000, 0b10000000);
         // Return REN to previous state
         digitalWrite(REN, ren);        
       }
     }else{ 
       // De-assert REN
-      setGpibState(0b00100000, 0b00100000, 0b00100000);
+      setGpibState(0b00100000, 0b00100000, 0);
+//      setGpibState(0b00100000, 0b00100000, 0b00100000);
       // Address device to listen
       if (addrDev(AR488.paddr, 0)) {
         if (isVerb) Serial.println(F("Failed to address device."));
@@ -1319,7 +1333,8 @@ void loc_h(char *params) {
         return;
       }
       // Re-assert REN
-      setGpibState(0b00100000, 0b00000000, 0b00100000);        
+      setGpibState(0b00000000, 0b00100000, 0);        
+//      setGpibState(0b00100000, 0b00000000, 0b00100000);        
 
       // Set GPIB controls back to idle state
       setGpibControls(CIDS);
@@ -1334,9 +1349,13 @@ void loc_h(char *params) {
   */
 void ifc_h() {
   if (AR488.cmode) {
-    setGpibState(0b00000001, 0b00000000, 0b00000001);        
+    // Assert IFC
+    setGpibState(0b00000000, 0b00000001, 0);        
+//    setGpibState(0b00000001, 0b00000000, 0b00000001);        
     delayMicroseconds(150);
-    setGpibState(0b00000001, 0b00000001, 0b00000001);        
+    // De-assert IFC
+    setGpibState(0b00000001, 0b00000001, 0);        
+//    setGpibState(0b00000001, 0b00000001, 0b00000001);        
     if (isVerb) Serial.println(F("IFC signal asserted for 150 microseconds"));
   }
 }
@@ -1620,11 +1639,15 @@ void stat_h(char *params){
     AR488.stat=val;
     if (val&0x40){
       // If bit 6 is set need to assert the SRQ line?
-      setGpibState(0b01000000, 0b00000000, 0b01000000);
+      setGpibState(0b01000000, 0b01000000, 1);
+      setGpibState(0b00000000, 0b01000000, 0);
+//      setGpibState(0b01000000, 0b00000000, 0b01000000);
       if (isVerb) Serial.println(F("SRQ asserted."));
     }else{
       // Otherwise set SRQ line to INPUT_PULLUP
-      setGpibState(0b00000000, 0b01000000, 0b01000000);
+      setGpibState(0b00000000, 0b01000000, 1);
+      setGpibState(0b01000000, 0b01000000, 0);
+//      setGpibState(0b00000000, 0b01000000, 0b01000000);
     }
   }else{
     // Return the currently set status byte
@@ -1723,7 +1746,8 @@ void ppoll_h() {
   setGpibControls(CIDS);
   delayMicroseconds(20);
   // Assert ATN and EOI
-  setGpibState(0b10010000, 0b00000000, 0b10010000);
+  setGpibState(0b00000000, 0b10010000, 0);
+//  setGpibState(0b10010000, 0b00000000, 0b10010000);
   delayMicroseconds(20);
   // Read data byte from GPIB bus without handshake
   sb = readGpibDbus();
@@ -1819,6 +1843,26 @@ void srqa_h(char *params) {
 }
 
 
+/****** Timing parameters ******/
+
+
+void tmbus_h(char *params) {
+  int val;
+  if (params!=NULL) {
+    val = atoi(params); 
+    if (val<0||val>30000) {
+      errBadCmd();
+      if (isVerb) Serial.println(F("Invalid: expected EOT character ASCII value in the range 0 - 30,000"));
+      return;
+    }
+    AR488.tmbus = val;
+    if (isVerb) {Serial.print(F("TMbus set to: ")); Serial.println(val);};
+  }else{
+    Serial.println(AR488.tmbus, DEC);
+  }
+}
+
+
 /******************************************************/
 /***** Device mode GPIB command handling routines *****/
 /******************************************************/
@@ -1853,8 +1897,7 @@ void attnRequired() {
   int i=0;
 
 //  int x=0;
-
-  // Set device listner active state (assert NDAC+NRFD, DAV=INPUT_PULLUP)
+  // Set device listner active state (assert NDAC+NRFD (low), DAV=INPUT_PULLUP)
   setGpibControls(DLAS);
 
   // Clear listen/talk flags
@@ -1892,21 +1935,22 @@ void attnRequired() {
         Serial.println(F("attnRequired: Controller wants me to send >>>"));
 #endif
         if (!isRO) {  // Cannot talk in read-only (++lon) mode       
-            aTt = true;
-            break;
+          aTt = true;
 #ifdef DEBUG5
         }else{
           Serial.println(F("attnRequired: cannot respond in listen-only [++lon 1] mode"));  
 #endif          
         }
-      // Some other talker address
-      }else if (db>0x3F && db<0x5F){
+        break;
+      // Some other device being addressed to talk
+      }else if (db>0x3F && db<0x5F) {
         if (!isSprq) {
           if (isRO) { // Read-only (++lon) mode
             aTl = true;
             rEoi = true;
           }
         }
+        break;
       // Some other listener address
       }else if (db>0x1F && db<0x3F){
 // Do we need these? - Disabled because it causes serial poll response to fail
@@ -1916,7 +1960,8 @@ void attnRequired() {
 //          rEoi = true;
 
         // Ignore
-      // Some other byte: lookup opcode handler 
+      // Some other byte: lookup opcode handler
+      
       }else{
 #ifdef DEBUG5
         Serial.println(F("Looking up GPIB opcode..."));
@@ -1955,7 +2000,6 @@ Serial.println();
 
   // Set back to idle state
   if (!aTl && !aTt ) setGpibControls(DIDS);
-
 //Serial.println(F("END attnReceived."));
 
 }
@@ -2060,7 +2104,7 @@ void gpibSendData(char *data, uint8_t dsize){
     // Address device to listen
     if (addrDev(AR488.paddr, 0)) {
       if (isVerb) {
-        Serial.print(F("gpibReceiveData: failed to address device "));
+        Serial.print(F("gpibSendData: failed to address device "));
         Serial.print(AR488.paddr);
         Serial.println(F(" to listen"));
       }
@@ -2114,9 +2158,11 @@ void gpibSendData(char *data, uint8_t dsize){
 
   // If EOI enabled then assert EOI
   if (AR488.eoi) {
-    setGpibState(0b00010000, 0b00000000, 0b00010000);
+    setGpibState(0b00000000, 0b00010000, 0);
+//    setGpibState(0b00010000, 0b00000000, 0b00010000);
     delayMicroseconds(40);
-    setGpibState(0b00010000, 0b00010000, 0b00010000);
+    setGpibState(0b00010000, 0b00010000, 0);
+//    setGpibState(0b00010000, 0b00010000, 0b00010000);
 #ifdef DEBUG3
     Serial.println(F("Asserted EOI"));
 #endif
@@ -2145,7 +2191,12 @@ void gpibSendData(char *data, uint8_t dsize){
 
 /*
  * Receive data from the GPIB bus
+ *
+ * Readbreak:
+ * 5 - EOI detected
+ * 7 - command received via serial
  */
+ 
 bool gpibReceiveData(){
 
 //  char ch;
@@ -2155,8 +2206,10 @@ bool gpibReceiveData(){
 //  int s=0;
 
 
-  // Set flags
+  // Flag read in progress...
   isReading = true;
+  
+  // Reset transmission break flag
   tranBrk = 0;
 
   // If we are a controller
@@ -2170,6 +2223,9 @@ bool gpibReceiveData(){
         Serial.println(F(" to talk"));
       }
     }
+
+    // Wait for instrument ready
+    Wait_on_pin_state(HIGH,NRFD,AR488.rtmo);    
 
     // Set GPIB control lines to controller read mode
     setGpibControls(CLAS);
@@ -2187,19 +2243,23 @@ bool gpibReceiveData(){
   }
 
 // Perform read of data (r: 0=data; 1=cmd; >1=error;
-  while ( !tranBrk && !isATN && !(r=gpibReadByte(&db)) ) {
+  while ( tranBrk==0 && !isATN && !(r=gpibReadByte(&db)) ) {
 
     // When reading with EOI=1 or aMode=3 Check for break condition
     if (rEoi || (AR488.amode==3)) readBreak();
     
-    // If attention required by new command then break here 
-    if (tranBrk == 7 || isATN) break;
+    // If break condition ocurred or ATN asserted then break here 
+    if (tranBrk==7 || isATN) break;
 
+#ifdef DEBUG1
+    Serial.print(db, HEX), Serial.print(' ');
+#else
     // Output the character to the serial port
     Serial.print((char)db);
+#endif
 
-    // EOI detected - print last character and then break on EOI
-    if (tranBrk==5) break;
+    // Reading with EOI and EOI detected - print last character and then break on EOI
+    if (rEoi && tranBrk==5) break;
 
     // Stop if byte = specified EOT character  
     if (db==eByte && rEbt) break;
@@ -2211,8 +2271,6 @@ bool gpibReceiveData(){
     // Byte counter
     x++;
     
-    // Check for interrupt condition (++, EOI or ATN)
-//    readBreak();
   }
 
 #ifdef DEBUG7
@@ -2236,7 +2294,6 @@ bool gpibReceiveData(){
   if (r>0) {
     if (isVerb && r==1) Serial.println(F("gpibReceiveData: timeout waiting for talker"));
     if (isVerb && r==2) Serial.println(F("gpibReceiveData: timeout waiting for transfer to complete"));
-//      return ERR;
   }
 
   if (AR488.cmode==2){
@@ -2277,7 +2334,8 @@ bool gpibReceiveData(){
 uint8_t gpibReadByte(uint8_t *db){
 
   // Unassert NRFD (we are ready for more data)
-  setGpibState(0b00000100,0b00000100,0b00000100);
+  setGpibState(0b00000100,0b00000100, 0);
+//  setGpibState(0b00000100,0b00000100,0b00000100);
 
   // Wait for DAV to go LOW indicating talker has finished setting data lines..
   if (Wait_on_pin_state(LOW,DAV,AR488.rtmo))  { 
@@ -2287,13 +2345,15 @@ uint8_t gpibReadByte(uint8_t *db){
   } 
 
   // Assert NRFD (NOT ready - busy reading data) 
-  setGpibState(0b00000100,0b00000000,0b00000100);
+  setGpibState(0b00000000,0b00000100, 0);
+//  setGpibState(0b00000100,0b00000000,0b00000100);
 
   // read from DIO
   *db = readGpibDbus();
 
   // Unassert NDAC signalling data accepted
-  setGpibState(0b00000010,0b00000010,0b00000010);
+  setGpibState(0b00000010,0b00000010, 0);
+//  setGpibState(0b00000010,0b00000010,0b00000010);
 
   // Wait for DAV to go HIGH indicating data no longer valid (i.e. transfer complete)
   if (Wait_on_pin_state(HIGH,DAV,AR488.rtmo))  { 
@@ -2302,7 +2362,11 @@ uint8_t gpibReadByte(uint8_t *db){
   }
 
   // Re-assert NDAC - handshake complete, ready to accept data again
-  setGpibState(0b00000010,0b00000000,0b00000010);
+  setGpibState(0b00000000,0b00000010, 0);
+//  setGpibState(0b00000010,0b00000000,0b00000010);
+
+  // GPIB bus DELAY
+  delayMicroseconds(AR488.tmbus);
 
   return 0;
 
@@ -2315,19 +2379,12 @@ uint8_t gpibReadByte(uint8_t *db){
  */
 bool gpibWriteByte(uint8_t db) {
 
-    // Wait for NDAC to go LOW indicating that devices are at attention
-    if (Wait_on_pin_state(LOW,NDAC,AR488.rtmo)) { 
-      if (isVerb) Serial.println(F("gpibWriteByte: timeout waiting for receiver attention [NDAC asserted]")); 
-      return true; 
-    }
-    /*
-    if (Wait_on_pin_state(LOW,NRFD,AR488.rtmo)) { 
-      if (isVerb) Serial.println(F("gpibWriteByte: timeout waiting for receiver attention [NDAC+NRFD asserted]")); 
-      return true; 
-    }
-    */
-
-  // Wait for NRFD to go HIGH (receiver is ready)
+  // Wait for NDAC to go LOW (indicating that devices are at attention)
+  if (Wait_on_pin_state(LOW,NDAC,AR488.rtmo)) { 
+    if (isVerb) Serial.println(F("gpibWriteByte: timeout waiting for receiver attention [NDAC asserted]")); 
+    return true; 
+  }
+  // Wait for NRFD to go HIGH (indicating that receiver is ready)
   if (Wait_on_pin_state(HIGH,NRFD,AR488.rtmo))  { 
     if (isVerb) Serial.println(F("gpibWriteByte: timeout waiting for receiver ready - [NRFD unasserted]")); 
     return true; 
@@ -2335,12 +2392,10 @@ bool gpibWriteByte(uint8_t db) {
 
   // Place data on the bus
   setGpibDbus(db);
-// Serial.println(isATN);
-  
-//  delayMicroseconds(20);
 
   // Assert DAV (data is valid - ready to collect)
-  setGpibState(0b00001000, 0b00000000, 0b00001000);
+  setGpibState(0b00000000, 0b00001000, 0);
+//  setGpibState(0b00001000, 0b00000000, 0b00001000);
 
   // Wait for NRFD to go LOW (receiving)
   if (Wait_on_pin_state(LOW,NRFD,AR488.rtmo))  { 
@@ -2355,10 +2410,14 @@ bool gpibWriteByte(uint8_t db) {
   }
   
   // Unassert DAV
-  setGpibState(0b00001000, 0b00001000, 0b00001000);
+  setGpibState(0b00001000, 0b00001000, 0);
+//  setGpibState(0b00001000, 0b00001000, 0b00001000);
 
   // Reset the data bus
   setGpibDbus(0);
+
+  // GPIB bus DELAY
+  delayMicroseconds(AR488.tmbus);
 
   // Exit successfully
   return false;
@@ -2372,11 +2431,13 @@ bool gpibWriteByte(uint8_t db) {
 bool addrDev(uint8_t addr, bool dir){
   if (gpibSendCmd(GC_UNL)) return ERR;
   if (dir) {
-    if (gpibSendCmd(GC_LAD+AR488.caddr)) return ERR;
+    // Device to talk, controller to listen
     if (gpibSendCmd(GC_TAD+addr)) return ERR;
+    if (gpibSendCmd(GC_LAD+AR488.caddr)) return ERR;
   }else{
-    if (gpibSendCmd(GC_TAD+AR488.caddr)) return ERR;
+    // Device to listen, controller to talk
     if (gpibSendCmd(GC_LAD+addr)) return ERR;
+    if (gpibSendCmd(GC_TAD+AR488.caddr)) return ERR;
   }
   return OK;
 }
@@ -2412,7 +2473,7 @@ boolean Wait_on_pin_state(uint8_t state, uint8_t pin, int interval) {
 
   while (digitalRead(pin) != state) {
     if (millis()>=timeout) return true;
-    if (digitalRead(EOI)==LOW) tranBrk = 2;
+//    if (digitalRead(EOI)==LOW) tranBrk = 2;
   }
   return false;        // = no timeout therefore succeeded!
 }
@@ -2452,17 +2513,11 @@ void setGpibDbus(uint8_t db) {
   // Set data bus
   PORTC = (PORTC & ~0b00111111) | (db & 0b00111111);
   PORTD = (PORTD & ~0b00110000) | ((db & 0b11000000) >> 2);
-  
-  // Set pins with data byte
-//  PORTD = ( (PORTD&0b11001111) | (~db>>2 & 0b00110000) ) ;
-//  PORTC = ( (PORTC&0b11000000) | (~db    & 0b00111111) ) ;
-
-  delayMicroseconds(2);
 }
 
 
 /*
- * Set the state of the GPIB control lines
+ * Set the direction and state of the GPIB control lines
  * Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
  * pdir:  0=input, 1=output;
  * pstat: 0=LOW, 1=HIGH/INPUT_PULLUP
@@ -2477,8 +2532,37 @@ void setGpibDbus(uint8_t db) {
  * REN   3   PORTD bit 3 byte bit 5 
  * ATN   7   PORTD bit 8 byte bit 7
  */
+void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode){
+  
+  // PORTB - use only the first (right-most) 5 bits (pins 8-12)
+  uint8_t portBb = bits&0x1F;
+  uint8_t portBm = mask&0x1F;
+  // PORT D - keep bit 7, rotate bit 6 right 4 positions to set bit 2 on register
+  uint8_t portDb = (bits&0x80) + ((bits&0x40)>>4) + ((bits&0x20)>>2);
+  uint8_t portDm = (mask&0x80) + ((mask&0x40)>>4) + ((mask&0x20)>>2);
+
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  switch (mode) {
+    case 0:
+      // Set pin states using mask
+      PORTB = ( (PORTB&~portBm) | (portBb&portBm) );
+      PORTD = ( (PORTD&~portDm) | (portDb&portDm) );
+      break;
+    case 1:    
+      // Set pin direction registers using mask
+      DDRB = ( (DDRB&~portBm) | (portBb&portBm) );
+      DDRD = ( (DDRD&~portDm) | (portDb&portDm) );
+      break;
+  }
+
+}
+
+
+/* Original routine
 void setGpibState(uint8_t pdir, uint8_t pstat, uint8_t mask){
-  // PORTB - use only the first (right-most) 6 bits
+  // PORTB - use only the first (right-most) 5 bits (pins 8-12)
   uint8_t portBd = pdir&0x1F;
   uint8_t portBs = pstat&0x1F;
   uint8_t portBm = mask&0x1F;
@@ -2488,24 +2572,121 @@ void setGpibState(uint8_t pdir, uint8_t pstat, uint8_t mask){
   uint8_t portDm = (mask&0x80) + ((mask&0x40)>>4) + ((mask&0x20)>>2);
   // Set registers: register = (register & ~bitmask) | (value & bitmask)
   // Mask: 0=unaffected; 1=to be changed
-  // Set data direction registers
-  DDRB = ( (DDRB&~portBm) | (portBd&portBm) );
+  // Set data direction registers - fixed masks
+//  DDRB = ( (DDRB&~portBm) | (portBd&portBm) );
   DDRD = ( (DDRD&~portDm) | (portDd&portDm) );
-  // Set data registers
+
+  DDRB = ((DDRB&~0x1F) | portBd);
+
+  // Set data registers - mask applied
   PORTB = ( (PORTB&~portBm) | (portBs&portBm) );
   PORTD = ( (PORTD&~portDm) | (portDs&portDm) );
 }
-
+*/
 
 /*
  * Control the GPIB bus - set various GPIB states
- * state is a predefined state (CINI, CIDS, CTAS, CLAS, DINI, DIDS, DACS);
+ * state is a predefined state (CINI, CIDS, CCMS, CLAS, CTAS, DINI, DIDS, DLAS, DTAS);
  * setGpibState (uint8_t direction, uint8_t state[low/high]) 
  * Bits control lines as follows: 8-ATN, 7-SRQ, 6-REN, 5-EOI, 4-DAV, 3-NRFD, 2-NDAC, 1-IFC     
- * setGpibState byte1:  0=input, 1=output;
- * setGpibState byte2: 0=LOW, 1=HIGH/INPUT_PULLUP
+ * setGpibState byte2 (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
+ * setGpibState byte3 (mask)     : 0=unaffected, 1=enabled
+ * setGpibState byte3 (mode)     : 0=set pin state, 1=set pin direction
  */
 void setGpibControls(uint8_t state){
+
+  // Switch state
+  switch (state) {
+    // Controller states
+    case CINI:  // Initialisation
+      // Set pin direction
+      setGpibState(0b10111000, 0b11111111, 1);
+      // Set pin state
+      setGpibState(0b11011111, 0b11111111, 0);
+#ifdef DEBUG2
+      Serial.println(F("Initialised GPIB control mode"));
+#endif
+      break;
+    case CIDS:  // Controller idle state
+      setGpibState(0b10111000, 0b10011110, 1);
+      setGpibState(0b11011111, 0b10011110, 0);
+#ifdef DEBUG2      
+      Serial.println(F("Set GPIB lines to idle state"));
+#endif
+      break;
+    case CCMS:  // Controller active - send commands
+      setGpibState(0b10111001, 0b10011111, 1);
+      setGpibState(0b01011111, 0b10011111, 0);
+#ifdef DEBUG2      
+      Serial.println(F("Set GPIB lines for sending a command"));
+#endif
+      break;
+    case CLAS:  // Controller - read data bus
+      // Set state for receiving data
+      setGpibState(0b10100110, 0b10011110, 1);
+      setGpibState(0b11011000, 0b10011110, 0);
+#ifdef DEBUG2      
+      Serial.println(F("Set GPIB lines for reading data"));
+#endif
+      break;
+    case CTAS:  // Controller - write data bus
+      setGpibState(0b10111001, 0b10011110, 1);
+      setGpibState(0b11011111, 0b10011110, 0);
+#ifdef DEBUG2      
+      Serial.println(F("Set GPIB lines for writing data"));
+#endif
+      break;     
+
+/* Bits control lines as follows: 8-ATN, 7-SRQ, 6-REN, 5-EOI, 4-DAV, 3-NRFD, 2-NDAC, 1-IFC */  
+
+    // Listener states
+    case DINI:  // Listner initialisation
+      setGpibState(0b00000000, 0b11111111, 1);
+      setGpibState(0b11111111, 0b11111111, 0);
+#ifdef DEBUG2    
+      Serial.println(F("Initialised GPIB listener mode"));
+#endif
+      break;
+    case DIDS:  // Device idle state
+      setGpibState(0b00000000, 0b00001110, 1);
+      setGpibState(0b11111111, 0b00001110, 0);
+#ifdef DEBUG2      
+      Serial.println(F("Set GPIB lines to idle state"));
+#endif
+      break;
+    case DLAS:  // Device listner active (actively listening - can handshake)
+      setGpibState(0b00000110, 0b00001110, 1);
+      setGpibState(0b11111001, 0b00001110, 0);
+#ifdef DEBUG2      
+      Serial.println(F("Set GPIB lines to idle state"));
+#endif
+      break;
+    case DTAS:  // Device talker active (sending data)
+      setGpibState(0b00001000, 0b00001110, 1);
+      setGpibState(0b11111001, 0b00001110, 0);
+#ifdef DEBUG2      
+      Serial.println(F("Set GPIB lines for listening as addresed device"));
+#endif
+      break;
+#ifdef DEBUG2      
+    default:
+      // Should never get here!
+//      setGpibState(0b00000110, 0b10111001, 0b11111111);
+      Serial.println(F("Unknown GPIB state requested!"));
+#endif
+  }
+  
+  // Save state
+  cstate = state;
+
+  // GPIB bus delay (to allow state to settle)
+  delayMicroseconds(AR488.tmbus); 
+
+}
+
+
+/* Old version
+ *  void setGpibControls(uint8_t state){
 
   // Switch state
   switch (state) {
@@ -2529,7 +2710,11 @@ void setGpibControls(uint8_t state){
 #endif
       break;
     case CLAS:  // Controller - read data bus
-      setGpibState(0b10100110, 0b11011001, 0b10011110);
+//      setGpibState(0b10100110, 0b11011001, 0b10011110);
+      setGpibState(0b10100110, 0b11011001, 0b10011000);
+// Ignore NRFD and NDAC state
+//      setGpibState(0b10100110, 0b11011101, 0b10011110);
+      // Bit 3 in 2nd byte - unassert NRFD immediately to indicate ready to receive
 #ifdef DEBUG2      
       Serial.println(F("Set GPIB lines for reading data"));
 #endif
@@ -2541,8 +2726,9 @@ void setGpibControls(uint8_t state){
 #endif
       break;     
 
+*/
 /* Bits control lines as follows: 8-ATN, 7-SRQ, 6-REN, 5-EOI, 4-DAV, 3-NRFD, 2-NDAC, 1-IFC */  
-
+/*
     // Listener states
     case DINI:  // Listner initialisation
 //      setGpibState(0b00000110, 0b10111001, 0b11111111);
@@ -2579,8 +2765,9 @@ void setGpibControls(uint8_t state){
   
   // Save state and delay to settle
   cstate = state;
-  delayMicroseconds(10); 
+  delayMicroseconds(3); 
 
 }
+*/
 
 /********** END OF SKETCH **********/
