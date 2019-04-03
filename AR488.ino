@@ -21,7 +21,7 @@ Thanks to maxwell3e10 on the EEVblog forum for suggesting additional auto mode s
 #include <avr/interrupt.h>
 
 // Firmware version
-#define FWVER "AR488 GPIB controller, version 0.46.13, 31/03/2019"
+#define FWVER "AR488 GPIB controller, version 0.46.15, 03/04/2019"
 
 
 // Debug options
@@ -218,20 +218,20 @@ uint8_t pbPtr = 0;
  * Default values set for controller mode
  */     
 struct AR488conf {
-  uint8_t ew;     // EEPROM write indicator byte
-  bool eot_en;    // Enable/disable append EOT char to string received from GPIB bus before sending to USB
-  bool eoi;       // Assert EOI on last data char written to GPIB - 0-disable, 1-enable      
-  uint8_t cmode;  // Controller mode - 0=unset, 1=device, 2=controller
-  uint8_t caddr;  // Controller address
-  uint8_t paddr;  // Primary device address
-  uint8_t saddr;  // Secondary device address
-  uint8_t eos;    // EOS (end of send - to GPIB) character flag [0=CRLF, 1=CR, 2=LF, 3=None]
-  uint8_t stat;   // Status byte to return in response to a poll
-  uint8_t amode;  // Auto mode setting (0=off; 1=Prologix; 2=onquery; 3=continuous;  
-  int rtmo;       // Read timout (read_tmo_ms) in milliseconds - 0-3000 - value depends on instrument
-  char eot_ch;    // EOT character to append to USB output when EOI signal detected
-  char vstr[48];  // Custom version string
-  uint16_t tmbus; // Control lines change settle time (microseconds 1-30,000)
+  uint8_t ew;       // EEPROM write indicator byte
+  bool eot_en;      // Enable/disable append EOT char to string received from GPIB bus before sending to USB
+  bool eoi;         // Assert EOI on last data char written to GPIB - 0-disable, 1-enable      
+  uint8_t cmode;    // Controller mode - 0=unset, 1=device, 2=controller
+  uint8_t caddr;    // Controller address
+  uint8_t paddr;    // Primary device address
+  uint8_t saddr;    // Secondary device address
+  uint8_t eos;      // EOS (end of send - to GPIB) character flag [0=CRLF, 1=CR, 2=LF, 3=None]
+  uint8_t stat;     // Status byte to return in response to a poll
+  uint8_t amode;    // Auto mode setting (0=off; 1=Prologix; 2=onquery; 3=continuous;  
+  int rtmo;         // Read timout (read_tmo_ms) in milliseconds - 0-3000 - value depends on instrument
+  char eot_ch;      // EOT character to append to USB output when EOI signal detected
+  char vstr[48];    // Custom version string
+  uint16_t tmbus;   // Delay to allow the bus control/data lines to settle (1-30,000 microseconds)
 };
 
 struct AR488conf AR488;
@@ -368,10 +368,14 @@ void loop() {
     // lnRdy=2: received data - send it to the instrument...
     if (lnRdy==2) {
       processLine(pBuf,pbPtr, 2);
-      // Auto-receive data from GPIB bus following a command
-      if (AR488.amode==1) gpibReceiveData();
-      // Auto-receive data from GPIB bus following a command
+      // Auto-read data from GPIB bus following any command
+      if (AR488.amode==1){
+//        delay(10);
+        gpibReceiveData();
+      }
+      // Auto-receive data from GPIB bus following a query command
       if (AR488.amode==2 && isQuery){
+//        delay(10);
         gpibReceiveData();
         isQuery = false;
       }
@@ -759,6 +763,11 @@ struct cmdPRec {
 
 /*
  * Array containing index of accepted ++ commands
+ * Parameters:
+ *    command - command name
+ *    type    - 1-without parameters; 2-with parameters 
+ *    idnum   - unique sequence number
+ *    mode    - 1-device; 2-controller; 3-both
  */
 static cmdIdx plusCmdIdx [] = { 
   { "allspoll",    1, 0x00, 2 },
@@ -784,18 +793,19 @@ static cmdIdx plusCmdIdx [] = {
   { "read",        2, 0x0A, 2 },
   { "read_tmo_ms", 2, 0x0B, 2 },
   { "ren",         2, 0x0C, 2 },
-  { "trg",         2, 0x0D, 2 },
-  { "setvstr",     2, 0x0E, 3 },
-  { "spoll",       2, 0X0F, 2 },
-  { "srqauto",     2, 0x10, 2 },
-  { "status",      2, 0x11, 1 },
-  { "ver",         2, 0x12, 3 },
-  { "tmbus",       2, 0x13, 3 }  
+  { "repeat",      2, 0x0D, 2 },
+  { "trg",         2, 0x0E, 2 },
+  { "setvstr",     2, 0x0F, 3 },
+  { "spoll",       2, 0X10, 2 },
+  { "srqauto",     2, 0x11, 2 },
+  { "status",      2, 0x12, 1 },
+  { "ver",         2, 0x13, 3 },
+  { "tmbus",       2, 0x14, 3 }  
 };
 
 
 /*
- * Array containing index of accepted ++ commands without parameters
+ * Array containing index of accepted ++ commands (type 1) without parameters
  */
 static cmdVRec cmdVHlist [] = { 
   aspoll_h,
@@ -812,7 +822,7 @@ static cmdVRec cmdVHlist [] = {
 
 
 /*
- * Array containing index of accepted ++ commands with parameters
+ * Array containing index of accepted ++ commands (type 2) with parameters
  */
 static cmdPRec cmdPHlist [] = { 
   addr_h, 
@@ -828,6 +838,7 @@ static cmdPRec cmdPHlist [] = {
   read_h,
   rtmo_h,
   ren_h,
+  repeat_h,
   trg_h,
   setvstr_h,
   spoll_h,
@@ -903,7 +914,7 @@ void processLine(char *buffr, uint8_t dsize, uint8_t mode) {
 void getCmd(char *buffr) {
 
   char *token;  // pointer to command token
-  char params[64]; // pointer to command parameters
+  char params[64]; // array containing command parameters
   int casize = sizeof(plusCmdIdx)/sizeof(plusCmdIdx[0]);
   int i=0, j=0;
 
@@ -946,7 +957,7 @@ void getCmd(char *buffr) {
             strcat(params, token);
           }
         } while (token != NULL);
-        // If command parameters were sepcified
+        // If command parameters were specified
         if (strlen(params)>0) {
 #ifdef DEBUG1
           Serial.print(F("Calling handler with parameters: ")); Serial.println(params);
@@ -978,6 +989,36 @@ void printHex(char *buffr, int dsize){
   }
   Serial.println();
 }
+
+
+/*
+ * Convert string to integer and check whether value is within
+ * a designated range 0 - 65535
+ * Returns converted value in rval
+ * Returns true if successful, false if not
+ */
+bool notInRange(char *param, uint16_t lowl, uint16_t higl, uint16_t &rval){
+
+  // Null string passed?
+  if (strlen(param)==0) return true;
+
+  // Convert to integer
+  rval = 0;
+  rval = atoi(param);
+  // Check range
+  if (rval<lowl || rval>higl) {
+    errBadCmd();
+    if (isVerb) {
+      Serial.print(F("Invalid: range is between "));
+      Serial.print(lowl);
+      Serial.print(F(" and "));
+      Serial.println(higl);
+    }
+    return true;
+  }
+  return false;
+}
+
 
 
 /*************************************/
@@ -1843,8 +1884,50 @@ void srqa_h(char *params) {
 }
 
 
-/****** Timing parameters ******/
+/*
+ * Repeat a given command and return result
+ */
+void repeat_h(char *params){
+  
+  uint16_t count;
+  uint16_t tmdly;
+  char *param;
 
+  if (params!=NULL) {
+    // Count (number of repetitions)
+    param = strtok(params, " \t");
+    if (strlen(param)>0) {
+      if (notInRange(param, 2, 255, count)) return;
+    }
+    // Time delay (milliseconds)
+    param = strtok(NULL, " \t");
+    if (strlen(param)>0) {
+      if (notInRange(param, 0, 30000, tmdly)) return;
+    }
+    
+    // Pointer to remainder of parameters string
+    param = strtok(NULL, "\n\r");
+    if (strlen(param)>0) {
+      for (uint16_t i=0; i<count; i++) {
+        // Send string to instrument
+        gpibSendData(param, strlen(param));
+        delay(tmdly);
+        gpibReceiveData();
+      }
+    }else{
+      errBadCmd();
+      if (isVerb) Serial.println(F("Missing parameter"));
+      return;
+    }
+  }else{
+    errBadCmd();
+    if (isVerb) Serial.println(F("Missing parameters"));
+  }
+ 
+}
+
+
+/****** Timing parameters ******/
 
 void tmbus_h(char *params) {
   int val;
