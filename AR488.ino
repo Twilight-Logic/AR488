@@ -21,7 +21,10 @@ Thanks to maxwell3e10 on the EEVblog forum for suggesting additional auto mode s
 #include <avr/interrupt.h>
 
 // Firmware version
-#define FWVER "AR488 GPIB controller, version 0.46.15, 03/04/2019"
+#define FWVER "AR488 GPIB controller, version 0.46.16, 04/04/2019"
+
+// Script options
+//#define STARTUP
 
 
 // Debug options
@@ -116,6 +119,39 @@ Thanks to maxwell3e10 on the EEVblog forum for suggesting additional auto mode s
  * For information regarding the GPIB firmware by Emanualle Girlando see:
  * http://egirland.blogspot.com/2014/03/arduino-uno-as-usb-to-gpib-controller.html
  */
+
+
+/******************************/
+/******  DEFINED SCRIPTS  *****/
+/******************************/
+
+#ifdef STARTUP
+const char start01[] PROGMEM = "++addr 7";
+const char start02[] PROGMEM = "++auto 1";
+const char start03[] PROGMEM = "*IDN?";
+const char start04[] PROGMEM = "*RST";
+const char start05[] PROGMEM = ":func 'volt:ac'";
+const char * const startup_script[] PROGMEM = {
+  start01,
+  start02,
+  start03,
+  start04,
+  start05
+};
+#endif
+
+
+
+
+/*****************************/
+/******  END OF SCRIPTS  *****/
+/*****************************/
+
+
+
+
+
+
 
 // Internal LED
 const int LED = 13;
@@ -338,6 +374,19 @@ void setup() {
   // Save state of the PORTD pins
   pindMem = PIND;
 
+#ifdef STARTUP
+  uint8_t elem = sizeof(startup_script)/sizeof(startup_script[0]);
+  for (int i=0; i<elem; i++){
+    memset(pBuf, '\0', PBSIZE);
+    strcpy_P(pBuf, (char *)pgm_read_word(&(startup_script[i])));
+//Serial.println(pBuf);    
+    if (isCmd(pBuf)){
+      processLine(pBuf, strlen(pBuf), 1);
+    }else{
+      processLine(pBuf, strlen(pBuf), 2);
+    }
+  }
+#endif
 }
 
 
@@ -354,7 +403,7 @@ void loop() {
   // If the line is data (inclding direct instrument commands) then
   // send it to the instrument.
 
-  // NOTE: parseInput() ser lnRdy in serialEvent or readBreak
+  // NOTE: parseInput() sets lnRdy in serialEvent or readBreak
   // lnRdy=1: process command;
   // lnRdy=2: send data to Gpib
 
@@ -492,6 +541,7 @@ void readBreak(){
     if (lnRdy==1) tranBrk = 7;
   }
 }
+
 
 
 /******************************/
@@ -935,7 +985,7 @@ void getCmd(char *buffr) {
   // Look for a valid command token
   i=0;
   do {
-    if (strcmp(plusCmdIdx[i].token, token) == 0) break;
+    if (strcasecmp(plusCmdIdx[i].token, token) == 0) break;
     i++;
   } while (i<casize);
   if (i<casize) {
