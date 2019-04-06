@@ -140,7 +140,7 @@ const char startup_macro[] PROGMEM = {
   "++auto 1\n"
   "*IDN?\n"
   "*RST\n"
-  ":func 'volt:ac'\n"
+  ":func 'volt:ac'"
   /*<-End of startup macro*/
 };
 
@@ -1165,27 +1165,39 @@ void execMacro(uint8_t idx) {
   char c;
   const char * macro = pgm_read_word(macros + idx);
   int ssize = strlen_P(macro);
-//    Serial.print("Idx:  ");Serial.println(idx);
-//    Serial.print("Size: ");Serial.println(ssize);
+  //    Serial.print("Idx:  ");Serial.println(idx);
+  //    Serial.print("Size: ");Serial.println(ssize);
   // Read characters from macro character array
   for (int i = 0; i < ssize; i++) {
     c = pgm_read_byte_near(macro + i);
-    if (c == CR || c == LF) {
-//      Serial.println(pBuf);
-        if (isCmd(pBuf)){
-          processLine(pBuf, strlen(pBuf), 1);
+    if (c == CR || c == LF || i == (ssize - 1)) {
+      // Reached last character before NL. Add to buffer before processing
+      if (i == ssize-1) {
+        // Check buffer and add character
+        if (pbPtr < (PBSIZE - 2)){
+          addPbuf(c);
         }else{
-          processLine(pBuf, strlen(pBuf), 2);
+          // Buffer full - clear and exit
+          flushPbuf();
+          return;
         }
+      }
+//      Serial.println(pBuf);
+      if (isCmd(pBuf)){
+        processLine(pBuf, strlen(pBuf), 1);
+      }else{
+        processLine(pBuf, strlen(pBuf), 2);
+      }
+      // Done - clear the buffer
       flushPbuf();
     } else {
-      if (pbPtr<(PBSIZE-2)) {
-        // Add char to buffer
-        pBuf[pbPtr] = c;
-        pbPtr++;
-      }else{
-        // Exceeds buffer size - exit and clear buffer
-        i=ssize;
+      // Check buffer and add character
+      if (pbPtr < (PBSIZE - 2)) {
+        addPbuf(c);
+      } else {
+        // Exceeds buffer size - clear buffer and exit
+        i = ssize;
+        return;
       }
     }
   }
@@ -1211,12 +1223,12 @@ void addr_h(char *params) {
     // Primary address
     param = strtok(params, " \t");
     if (notInRange(param, 1, 30, val)) return;
-//    if (strlen(param) > 0) {
-//      val = atoi(param);
-//      if (val < 1 || val > 30) {
-//        errBadCmd();
-//        if (isVerb) Serial.println(F("Invalid: GPIB primary address is in the range 1 - 30")); return;
-//      }
+    //    if (strlen(param) > 0) {
+    //      val = atoi(param);
+    //      if (val < 1 || val > 30) {
+    //        errBadCmd();
+    //        if (isVerb) Serial.println(F("Invalid: GPIB primary address is in the range 1 - 30")); return;
+    //      }
     if (val == AR488.caddr) {
       errBadCmd();
       if (isVerb) Serial.println(F("That is my address! Address of a remote device is required."));
@@ -1227,20 +1239,20 @@ void addr_h(char *params) {
       Serial.print(F("Set device primary address to: "));
       Serial.println(val);
     }
-//  }
+    //  }
     // Secondary address
     AR488.saddr = 0;
     val = 0;
     param = strtok(NULL, " \t");
     if (param != NULL) {
       if (notInRange(param, 96, 126, val)) return;
-//    val = atoi(param);
-//    if (val > 0) {
-//      if (val < 96 || val > 126) {
-//        errBadCmd();
-//        if (isVerb) Serial.println(F("Invalid: GPIB secondary address is in the range 96 - 126"));
-//        return;
-//      }
+      //    val = atoi(param);
+      //    if (val > 0) {
+      //      if (val < 96 || val > 126) {
+      //        errBadCmd();
+      //        if (isVerb) Serial.println(F("Invalid: GPIB secondary address is in the range 96 - 126"));
+      //        return;
+      //      }
       AR488.saddr = val;
       if (isVerb) {
         Serial.print("Set device secondary address to: ");
@@ -1966,8 +1978,8 @@ void lon_h(char *params) {
    Alias wrapper for ++spoll all
 */
 void aspoll_h() {
-//  char all[4];
-//  strcpy(all, "all\0");
+  //  char all[4];
+  //  strcpy(all, "all\0");
   spoll_h((char*)"all");
 }
 
