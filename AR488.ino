@@ -138,7 +138,6 @@ const char startup_macro[] PROGMEM = {
   /* Insert startup macro here ->*/
   "++addr 7\n"
   "++auto 1\n"
-  "*IDN?\n"
   "*RST\n"
   ":func 'volt:ac'"
   /*<-End of startup macro*/
