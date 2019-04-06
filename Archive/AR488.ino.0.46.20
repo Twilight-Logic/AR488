@@ -141,7 +141,6 @@ const char startup_macro[] PROGMEM = {
   "*IDN?\n"
   "*RST\n"
   ":func 'volt:ac'\n"
-  "\0"
   /*<-End of startup macro*/
 };
 
@@ -156,55 +155,54 @@ const char macro_1 [] PROGMEM = {
   "++addr 3\n"
   "++auto 0\n"
   "M3\n"
-  "\0"
   /*<-End of macro*/
 };
 
 const char macro_2 [] PROGMEM = {
   /* Insert of macro here ->*/
-  "\0"
+  ""
   /*<-End of macro*/
 };
 
 const char macro_3 [] PROGMEM = {
   /* Insert of macro here ->*/
-  "\0"
+  ""
   /*<-End of macro*/
 };
 
 const char macro_4 [] PROGMEM = {
   /* Insert of macro here ->*/
-  "\0"
+  ""
   /*<-End of macro*/
 };
 
 const char macro_5 [] PROGMEM = {
   /* Insert of macro here ->*/
-  "\0"
+  ""
   /*<-End of macro*/
 };
 
 const char macro_6 [] PROGMEM = {
   /* Insert of macro here ->*/
-  "\0"
+  ""
   /*<-End of macro*/
 };
 
 const char macro_7 [] PROGMEM = {
   /* Insert of macro here ->*/
-  "\0"
+  ""
   /*<-End of macro*/
 };
 
 const char macro_8 [] PROGMEM = {
   /* Insert of macro here ->*/
-  "\0"
+  ""
   /*<-End of macro*/
 };
 
 const char macro_9 [] PROGMEM = {
   /* Insert of macro here ->*/
-  "\0"
+  ""
   /*<-End of macro*/
 };
 
