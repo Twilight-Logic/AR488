@@ -26,8 +26,8 @@
 
 // Macro options
 // Note: MACROS must be enabled to use the STARTUP macro
-#define MACROS    // Enable the user macros feature
-#define STARTUP   // Enable the startup macro
+//#define MACROS    // Enable the user macros feature
+//#define STARTUP   // Enable the startup macro
 
 
 // Debug options
