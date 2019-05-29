@@ -1,5 +1,5 @@
 # AR488 Arduino GPIB Interface
-AR488 Arduino GPIB Interface
+
 
 The AR488 GPIB controller is an Arduino-based controller for interfacing with IEEE488 GPIB devices via USB. This work was inspired by and has been based on the work originally released by Emanuele Girlando and has been released with his permission.
 
