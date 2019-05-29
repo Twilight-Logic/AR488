@@ -22,12 +22,23 @@
 #include <avr/interrupt.h>
 
 // Firmware version
-#define FWVER "AR488 GPIB controller, version 0.46.20, 05/04/2019"
+#define FWVER "AR488 GPIB controller, version 0.46.30, 29/05/2019"
 
 // Macro options
 // Note: MACROS must be enabled to use the STARTUP macro
 //#define MACROS    // Enable the user macros feature
 //#define STARTUP   // Enable the startup macro
+// Macro options
+
+
+// Bluetooth support
+/*
+#define AR_BT_EN 6            // Bluetooth control enable pin
+#define AR_BT_NAME "AR488-BT" // Bluetooth device name
+#define AR_BT_BAUD "115200"   // Bluetooth module baud rate
+#define AR_BT_CODE "488488"   // Bluetooth pairing code
+*/
+// Bluetooth support
 
 
 // Debug options
@@ -233,11 +244,6 @@ const char * const macros[] PROGMEM = {
 /******  END OF SCRIPTS  *****/
 /*****************************/
 
-
-
-// Internal LED
-const int LED = 13;
-
 // NOTE: Pinout last updated 09/01/2019
 #define DIO1  A0  /* GPIB 1  : PORTC bit 0 */
 #define DIO2  A1  /* GPIB 2  : PORTC bit 1 */
@@ -359,6 +365,9 @@ struct AR488conf AR488;
    Global variables with volatile values related to controller state
 */
 
+// Internal LED
+const int LED = 13;
+
 // GPIB control state
 uint8_t cstate = 0;
 
@@ -429,8 +438,14 @@ void setup() {
   // Initialise parse buffer
   flushPbuf();
 
+  // Initialise serial comms over USB or Bluetooth
+#ifdef AR_BT_EN
+  // Initialise Bluetooth  
+  btInit();
+#else
   // Start the serial port
   Serial.begin(115200);
+#endif
 
   // Initialise
   initAR488();
@@ -3051,89 +3066,142 @@ void setGpibControls(uint8_t state) {
 }
 
 
-/* Old version
-    void setGpibControls(uint8_t state){
+/******** BLUETOOTH SUPPORT ********/
 
-  // Switch state
-  switch (state) {
-    // Controller states
-    case CINI:  // Initialisation
-      setGpibState(0b10111000, 0b11011111, 0b11111111);
-  #ifdef DEBUG2
-      Serial.println(F("Initialised GPIB control mode"));
-  #endif
-      break;
-    case CIDS:  // Controller idle state
-      setGpibState(0b10111000, 0b11011111, 0b10011110);
-  #ifdef DEBUG2
-      Serial.println(F("Set GPIB lines to idle state"));
-  #endif
-      break;
-    case CCMS:  // Controller active - send commands
-      setGpibState(0b10111001, 0b01011111, 0b10011111);
-  #ifdef DEBUG2
-      Serial.println(F("Set GPIB lines for sending a command"));
-  #endif
-      break;
-    case CLAS:  // Controller - read data bus
-  //      setGpibState(0b10100110, 0b11011001, 0b10011110);
-      setGpibState(0b10100110, 0b11011001, 0b10011000);
-  // Ignore NRFD and NDAC state
-  //      setGpibState(0b10100110, 0b11011101, 0b10011110);
-      // Bit 3 in 2nd byte - unassert NRFD immediately to indicate ready to receive
-  #ifdef DEBUG2
-      Serial.println(F("Set GPIB lines for reading data"));
-  #endif
-      break;
-    case CTAS:  // Controller - write data bus
-      setGpibState(0b10111001, 0b11011111, 0b10011110);
-  #ifdef DEBUG2
-      Serial.println(F("Set GPIB lines for writing data"));
-  #endif
-      break;
+#ifdef AR_BT_EN
 
-*/
-/* Bits control lines as follows: 8-ATN, 7-SRQ, 6-REN, 5-EOI, 4-DAV, 3-NRFD, 2-NDAC, 1-IFC */
 /*
-    // Listener states
-    case DINI:  // Listner initialisation
-  //      setGpibState(0b00000110, 0b10111001, 0b11111111);
-      setGpibState(0b00000000, 0b11111111, 0b11111111);
-  #ifdef DEBUG2
-      Serial.println(F("Initialised GPIB listener mode"));
-  #endif
-      break;
-    case DIDS:  // Device idle state
-      setGpibState(0b00000000, 0b11111111, 0b00001110);
-  #ifdef DEBUG2
-      Serial.println(F("Set GPIB lines to idle state"));
-  #endif
-      break;
-    case DLAS:  // Device listner active (actively listening - can handshake)
-      setGpibState(0b00000110, 0b11111001, 0b00001110);
-  #ifdef DEBUG2
-      Serial.println(F("Set GPIB lines to idle state"));
-  #endif
-      break;
-    case DTAS:  // Device talker active (sending data)
-      setGpibState(0b00001000, 0b11111001, 0b00001110);
-  #ifdef DEBUG2
-      Serial.println(F("Set GPIB lines for listening as addresed device"));
-  #endif
-      break;
-  #ifdef DEBUG2
-    default:
-      // Should never get here!
-  //      setGpibState(0b00000110, 0b10111001, 0b11111111);
-      Serial.println(F("Unknown GPIB state requested!"));
-  #endif
-  }
+ * Initialise Bluetooth
+ */
+void btInit() {
+  // Enable bluetooth HC05/HC06 board config mode
+  pinMode(AR_BT_EN, OUTPUT);
+  digitalWrite(AR_BT_EN, HIGH);
 
-  // Save state and delay to settle
-  cstate = state;
-  delayMicroseconds(3);
+  // Detect baud rate
+  if (detectBaud()) {
+    // Baud rate detected
+    blinkLed(2);
+    delay(400);
+
+    // Are we already configured?
+    if (btChkCfg()) {
+      // Yes - blink LED once
+      delay(400);
+      blinkLed(1);      
+    }else{
+      // No - then configure
+      delay(400);
+      // Configure BT
+      if (btCfg()) blinkLed(3);
+    }
 
   }
-*/
+
+  // Reset bluetooth HC05/HC06 board and enter user mode
+  delay(2000);
+  digitalWrite(AR_BT_EN, LOW);
+  delay(500);
+  Serial.print(F("AT+RESET\r\n"));
+  delay(500);
+  flushPbuf();
+}
+
+
+/*
+ * Check HC05 BT configuration for change
+ */
+bool btChkCfg(){
+  Serial.println(F("AT+NAME?"));
+  delay(200);
+  if (!atReply("+NAME:" AR_BT_NAME)) return false;
+  delay(200);
+  Serial.println(F("AT+UART?"));
+  delay(200);
+  if (!atReply("+UART:" AR_BT_BAUD ",1,0")) return false;
+  delay(200);
+  Serial.println(F("AT+PSWD?"));
+  delay(200);
+  if (!atReply("+PIN:\"" AR_BT_CODE "\"")) return false;
+  return true;
+}
+
+
+/*
+ * Configure the HC05 Bluetooth Adapter
+ */
+bool btCfg(){
+  Serial.println(F("AT+ROLE=0"));
+  delay(200);
+  if (!atReply("OK")) return false;
+  
+  Serial.println(F("AT+NAME=\"" AR_BT_NAME "\""));
+  delay(200);
+  if (!atReply("OK")) return false;
+
+  Serial.println(F("AT+PSWD=\"" AR_BT_CODE "\""));
+  delay(200);
+  if (!atReply("OK")) return false;
+
+  Serial.println(F("AT+UART=" AR_BT_BAUD ",1,0"));
+  delay(200);
+  if (!atReply("OK")) return false;
+
+  return true;
+}
+
+
+/*
+ * Detect the Bluetooth HC05 board baud rate
+ */
+bool detectBaud (){
+  long int brate[5] = {9600, 19200, 38400, 57600, 115200};
+  uint8_t i = 0;
+  
+  while (i<5){
+    Serial.begin(brate[i]);
+    delay(400);
+    Serial.println("AT");
+    delay(200);
+    if (atReply("OK")) return true;
+    i++;
+  }
+  
+  return false;
+}
+
+
+/*
+ * Is the reply what we expected?
+ */
+bool atReply(const char* reply) {
+  uint8_t p = 0;
+  uint8_t sz = strlen(reply);
+
+  flushPbuf();
+  while (Serial.available()) {
+    if (Serial.available()>0 && p<PBSIZE-1) {
+      pBuf[p] = Serial.read();
+      p++;
+    }
+  }
+  if (strncmp(reply, pBuf, sz) == 0) return true;
+  return false;
+}
+
+
+/*
+ * Blink the internal LED
+ */
+void blinkLed(uint8_t count){
+  for (uint8_t i=0; i<count; i++){
+    digitalWrite(LED, HIGH);
+    delay(200);
+    digitalWrite(LED, LOW);
+    delay(200);    
+  }
+}
+
+#endif
 
 /********** END OF SKETCH **********/
