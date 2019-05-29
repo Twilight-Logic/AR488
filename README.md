@@ -9,7 +9,11 @@ To build an interface, at least one Arduino board will be required to act as the
 
 Details of construction and the mapping of Arduino pins to GPIB control signals and data bus are explained in the "Building an AR488 GPIB Interface" section of the AR488 manual.
  
-Commands generally adhere closely to the Prologix syntax, however there are some minor differences, additions and enhancements. For example, due to issues with longevity of the Arduino EEPROM memory, the ++savecfg command has been implemented differently to save EEPROM wear. Some commands have been enhanced with additional options and a number of new custom commands have been added to provide new features that are not found in the standard Prologix implementation. Details of all commands and features can be found in the Command Reference section of the AR488 manual. Information on adding Bluetooth support can be found in the AR488 Bluetooth supplement: https://github.com/Twilight-Logic/AR488/blob/master/AR488-manual.pdf.
+Commands generally adhere closely to the Prologix syntax, however there are some minor differences, additions and enhancements. For example, due to issues with longevity of the Arduino EEPROM memory, the ++savecfg command has been implemented differently to save EEPROM wear. Some commands have been enhanced with additional options and a number of new custom commands have been added to provide new features that are not found in the standard Prologix implementation. Details of all commands and features can be found in the Command Reference section of the AR488 manual:
+https://github.com/Twilight-Logic/AR488/blob/master/AR488-manual.pdf
+
+Information on adding Bluetooth support can be found in the AR488 Bluetooth supplement:
+https://github.com/Twilight-Logic/AR488/blob/master/AR488-manual.pdf.
 
 The sketch AR488.ino should be uploaded to the the completed interface board. Once uploaded, the firmware should respond to the ++ver command with its version information.
 
