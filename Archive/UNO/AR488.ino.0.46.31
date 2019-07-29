@@ -1277,9 +1277,9 @@ void rtmo_h(char *params) {
   int val;
   if (params != NULL) {
     val = atoi(params);
-    if (val < 1 || val > 3000) {
+    if (val < 1 || val > 32000) {
       errBadCmd();
-      if (isVerb) Serial.println(F("Invalid: valid timout range is 1 - 3000 ms."));
+      if (isVerb) Serial.println(F("Invalid: valid timout range is 1 - 32000 ms."));
       return;
     }
     AR488.rtmo = val;
