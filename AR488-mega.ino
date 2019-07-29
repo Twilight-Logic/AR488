@@ -8,6 +8,8 @@
   Any code in common with the original work is reproduced here with the explicit
   permission of Emanuele Girlando, who has kindly reviewed and tested this code.
 
+  Ported to the Mega by John Chajecki, 28/07/2019.
+
   Thanks also to Luke Mester for comparison testing against the Prologix interface.
   AR488 is Licenced under the GNU Public licence.
 
@@ -22,7 +24,7 @@
 #include <avr/interrupt.h>
 
 // Firmware version
-#define FWVER "AR488 GPIB controller, version 0.46.31, 29/07/2019"
+#define FWVER "AR488M GPIB controller, version 0.01.02, 29/07/2019"
 
 // Macro options
 // Note: MACROS must be enabled to use the STARTUP macro
@@ -244,32 +246,32 @@ const char * const macros[] PROGMEM = {
 /******  END OF SCRIPTS  *****/
 /*****************************/
 
-// NOTE: Pinout last updated 09/01/2019
-#define DIO1  A0  /* GPIB 1  : PORTC bit 0 */
-#define DIO2  A1  /* GPIB 2  : PORTC bit 1 */
-#define DIO3  A2  /* GPIB 3  : PORTC bit 2 */
-#define DIO4  A3  /* GPIB 4  : PORTC bit 3 */
-#define DIO5  A4  /* GPIB 13 : PORTC bit 4 */
-#define DIO6  A5  /* GPIB 14 : PORTC bit 5 */
-#define DIO7  4   /* GPIB 15 : PORTD bit 4 */
-#define DIO8  5   /* GPIB 16 : PORTD bit 5 */
+// NOTE: Pinout last updated 28/07/2019
+#define DIO1  A0  /* GPIB 1  : PORTF bit 0 */
+#define DIO2  A1  /* GPIB 2  : PORTF bit 1 */
+#define DIO3  A2  /* GPIB 3  : PORTF bit 2 */
+#define DIO4  A3  /* GPIB 4  : PORTF bit 3 */
+#define DIO5  A4  /* GPIB 13 : PORTF bit 4 */
+#define DIO6  A5  /* GPIB 14 : PORTF bit 5 */
+#define DIO7  A6  /* GPIB 15 : PORTF bit 4 */
+#define DIO8  A7  /* GPIB 16 : PORTF bit 5 */
 
-#define IFC   8   /* GPIB 9  : PORTB bit 0 */
-#define NDAC  9   /* GPIB 8  : PORTB bit 1 */
-#define NRFD  10  /* GPIB 7  : PORTB bit 2 */
-#define DAV   11  /* GPIB 6  : PORTB bit 3 */
-#define EOI   12  /* GPIB 5  : PORTB bit 4 */
+#define IFC   17  /* GPIB 9  : PORTH bit 0 */
+#define NDAC  16  /* GPIB 8  : PORTH bit 1 */
+#define NRFD  6   /* GPIB 7  : PORTH bit 3 */
+#define DAV   7   /* GPIB 6  : PORTH bit 4 */
+#define EOI   8   /* GPIB 5  : PORTH bit 5 */
+#define REN   9   /* GPIB 17 : PORTD bit 6 */
 
-#define SRQ   2   /* GPIB 10 : PORTD bit 2 */
-#define REN   3   /* GPIB 17 : PORTD bit 3 */
-#define ATN   7   /* GPIB 11 : PORTD bit 7 */
+#define SRQ  10   /* GPIB 10 : PORTB bit 4 */
+#define ATN  11   /* GPIB 11 : PORTB bit 5 */
 
 
 /*
    PIN interrupts
 */
-#define ATNint 0b10000000
-#define SRQint 0b00000100
+#define ATNint 0b00100000
+#define SRQint 0b00010000
 
 
 /*
@@ -406,7 +408,7 @@ bool aTt = false;
 bool aTl = false;
 
 // Interrupts
-volatile uint8_t pindMem = PIND;
+volatile uint8_t pinbMem = PINB;
 volatile bool isATN = false;  // has ATN been asserted?
 volatile bool isSRQ = false;  // has SRQ been asserted?
 
@@ -426,13 +428,13 @@ uint8_t runMacro = 0;
 void setup() {
 
   // Turn off internal LED (set OUPTUT/LOW)
-  DDRB |= 0b00100000;
-  PORTB &= 0b11011111;
+  DDRB |= 0b10000000;
+  PORTB &= 0b01111111;
 
   // Turn on interrupts
   cli();
-  //  PCICR |= 0b00000001;  // PORTB
-  PCICR |= 0b00000100;  // PORTD
+  PCICR |= 0b00000001;  // PORTB
+//  PCICR |= 0b00000100;  // PORTD
   sei();
 
   // Initialise parse buffer
@@ -470,8 +472,8 @@ void setup() {
   isATN = false;
   isSRQ = false;
 
-  // Save state of the PORTD pins
-  pindMem = PIND;
+  // Save state of the PORTB (pcint related) pins
+  pinbMem = PINB;
 
 #if defined(MACROS) && defined(STARTUP)
   // Run startup macro
@@ -651,26 +653,24 @@ void readBreak() {
 #pragma GCC diagnostic error "-Wmisspelled-isr"
 
 // Interrupt for ATN pin
-ISR(PCINT2_vect) {
+ISR(PCINT0_vect) {
 
-  // Has PCINT23 fired (ATN asserted)?
+  // Has PCINT5 fired (ATN asserted)?
   if (AR488.cmode == 1) { // Only in device mode
-    if ((PIND ^ pindMem) & ATNint) {
-      isATN = (PIND & ATNint) == 0;
+    if ((PINB ^ pinbMem) & ATNint) {
+      isATN = (PINB & ATNint) == 0;
     }
   }
 
-  // Has PCINT19 fired (SRQ asserted)?
+  // Has PCINT4 fired (SRQ asserted)?
   if (AR488.cmode == 2) { // Only in controller mode
-    if ((PIND ^ pindMem) & SRQint) {
-      if (PIND & SRQint) {
-        isSRQ = (PIND & SRQint) == 0;
-      }
+    if ((PINB ^ pinbMem) & SRQint) {
+      isSRQ = (PINB & SRQint) == 0;
     }
   }
 
   // Save current state of PORTD register
-  pindMem = PIND;
+  pinbMem = PINB;
 
 }
 
@@ -936,7 +936,8 @@ static const cmdIdx plusCmdIdx [] = {
   { "srqauto",     2, 0x12, 2 },
   { "status",      2, 0x13, 1 },
   { "ver",         2, 0x14, 3 },
-  { "tmbus",       2, 0x15, 3 }
+  { "tmbus",       2, 0x15, 3 },
+  { "xdiag",       2, 0x16, 3 }
 };
 
 
@@ -982,7 +983,8 @@ static const cmdPRec cmdPHlist [] = {
   srqa_h,
   stat_h,
   ver_h,
-  tmbus_h
+  tmbus_h,
+  xdiag_h
 };
 
 
@@ -2198,6 +2200,51 @@ void macro_h(char *params) {
 
 
 
+/*
+ * Bus diagnostics
+ */
+void xdiag_h(char *params){
+  char *param;
+  uint8_t mode = 0;
+  uint8_t val = 0;
+  
+  // Get first parameter (mode = 0 or 1)
+  param = strtok(params, " \t");
+  if (param != NULL) {
+    if (strlen(param)<4){
+      mode = atoi(param);
+      if (mode>2) {
+        Serial.println(F("Invalid: 0=data bus; 1=control bus"));
+        return;
+      }
+    }
+  }
+  // Get second parameter (8 bit byte)
+  param = strtok(NULL, " \t");
+  if (param != NULL) {
+    if (strlen(param)<4){
+      val = atoi(param);
+    }
+
+    if (mode) {
+      setGpibState(0xFF, 0xFF, 1);
+      setGpibState(val, 0xFF, 0);
+      delay(10000);
+      if (AR488.cmode==2) {
+        setGpibControls(CINI);
+      }else{
+        setGpibControls(DINI);
+      }
+    }else{
+      setGpibDbus(val);
+      delay(10000);
+      setGpibDbus(0);
+    }
+  }
+
+}
+
+
 /****** Timing parameters ******/
 
 void tmbus_h(char *params) {
@@ -2851,17 +2898,16 @@ boolean Wait_on_pin_state(uint8_t state, uint8_t pin, int interval) {
 */
 uint8_t readGpibDbus() {
   // Set data pins to input
-  //  DDRD = DDRD & 0b11001111 ;
-  //  DDRC = DDRC & 0b11000000 ;
-  DDRD &= 0b11001111 ;
-  DDRC &= 0b11000000 ;
-  //  PORTD = PORTD | 0b00110000; // PORTD bits 5,4 input_pullup
-  //  PORTC = PORTC | 0b00111111; // PORTC bits 5,4,3,2,1,0 input_pullup
-  PORTD |= 0b00110000; // PORTD bits 5,4 input_pullup
-  PORTC |= 0b00111111; // PORTC bits 5,4,3,2,1,0 input_pullup
+//  DDRD &= 0b11001111 ;
+//  DDRC &= 0b11000000 ;
+  DDRF &= 0b00000000 ;
+
+//  PORTD |= 0b00110000; // PORTD bits 5,4 input_pullup
+//  PORTC |= 0b00111111; // PORTC bits 5,4,3,2,1,0 input_pullup
+  PORTF |= 0b11111111; // set PORTC bits to input_pullup
 
   // Read the byte of data on the bus
-  return ~((PIND << 2 & 0b11000000) + (PINC & 0b00111111));
+  return ~(PINF & 0b11111111);
 }
 
 
@@ -2871,15 +2917,20 @@ uint8_t readGpibDbus() {
 */
 void setGpibDbus(uint8_t db) {
   // Set data pins as outputs
-  DDRD |= 0b00110000;
-  DDRC |= 0b00111111;
+//  DDRD |= 0b00110000;
+//  DDRC |= 0b00111111;
+
+  DDRF |= 0b11111111;
+
 
   // GPIB states are inverted
-  db = ~db;
+//  db = ~db;
 
   // Set data bus
-  PORTC = (PORTC & ~0b00111111) | (db & 0b00111111);
-  PORTD = (PORTD & ~0b00110000) | ((db & 0b11000000) >> 2);
+//  PORTC = (PORTC & ~0b00111111) | (db & 0b00111111);
+//  PORTD = (PORTD & ~0b00110000) | ((db & 0b11000000) >> 2);
+
+  PORTF = ~db;
 }
 
 
@@ -2889,67 +2940,47 @@ void setGpibDbus(uint8_t db) {
    pdir:  0=input, 1=output;
    pstat: 0=LOW, 1=HIGH/INPUT_PULLUP
    Arduino pin to Port/bit to direction/state byte map:
-   IFC   8   PORTB bit 0 byte bit 0
-   NDAC  9   PORTB bit 1 byte bit 1
-   NRFD  10  PORTB bit 2 byte bit 2
-   DAV   11  PORTB bit 3 byte bit 3
-   EOI   12  PORTB bit 4 byte bit 4
-  // * REN   13  PORTB bit 5 byte bit 5
-   SRQ   2   PORTD bit 2 byte bit 6
-   REN   3   PORTD bit 3 byte bit 5
-   ATN   7   PORTD bit 8 byte bit 7
+   IFC   17  PORTH bit 0 byte bit 0
+   NDAC  16  PORTH bit 1 byte bit 1
+   NRFD  6   PORTH bit 3 byte bit 2
+   DAV   7   PORTH bit 4 byte bit 3
+   EOI   8   PORTH bit 5 byte bit 4
+   REN   9   PORTH bit 6 byte bit 5
+   // These require pcint
+   SRQ   10  PORTB bit 4 byte bit 6
+   ATN   11  PORTB bit 5 byte bit 7
 */
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
-  // PORTB - use only the first (right-most) 5 bits (pins 8-12)
-  uint8_t portBb = bits & 0x1F;
-  uint8_t portBm = mask & 0x1F;
+  // PORT H - keep bits 5-0. Move bits 5-2 left 1 position to set bits 6-3 and 1-0 on port
+  uint8_t portHb = ((bits & 0x3C) << 1) + (bits & 0x03);
+  uint8_t portHm = ((mask & 0x3C) << 1) + (mask & 0x03);
   // PORT D - keep bit 7, rotate bit 6 right 4 positions to set bit 2 on register
-  uint8_t portDb = (bits & 0x80) + ((bits & 0x40) >> 4) + ((bits & 0x20) >> 2);
-  uint8_t portDm = (mask & 0x80) + ((mask & 0x40) >> 4) + ((mask & 0x20) >> 2);
+//  uint8_t portDb = (bits & 0x80) + ((bits & 0x40) >> 4) + ((bits & 0x20) >> 2);
+//  uint8_t portDm = (mask & 0x80) + ((mask & 0x40) >> 4) + ((mask & 0x20) >> 2);
 
+  // PORT B - keep bits 7 and 6, but rotate right 2 postions to set bits 5 and 4 on port 
+  uint8_t portBb = ((bits & 0xC0) >> 2);
+  uint8_t portBm = ((mask & 0xC0) >> 2);
+ 
   // Set registers: register = (register & ~bitmask) | (value & bitmask)
   // Mask: 0=unaffected; 1=to be changed
 
   switch (mode) {
     case 0:
       // Set pin states using mask
+      PORTH = ( (PORTH & ~portHm) | (portHb & portHm) );
       PORTB = ( (PORTB & ~portBm) | (portBb & portBm) );
-      PORTD = ( (PORTD & ~portDm) | (portDb & portDm) );
       break;
     case 1:
       // Set pin direction registers using mask
+      DDRH = ( (DDRH & ~portHm) | (portHb & portHm) );
       DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
-      DDRD = ( (DDRD & ~portDm) | (portDb & portDm) );
       break;
   }
 
 }
 
-
-/* Original routine
-  void setGpibState(uint8_t pdir, uint8_t pstat, uint8_t mask){
-  // PORTB - use only the first (right-most) 5 bits (pins 8-12)
-  uint8_t portBd = pdir&0x1F;
-  uint8_t portBs = pstat&0x1F;
-  uint8_t portBm = mask&0x1F;
-  // PORT D - keep bit 7, rotate bit 6 right 4 positions to set bit 2 on register
-  uint8_t portDd = (pdir&0x80) + ((pdir&0x40)>>4) + ((pdir&0x20)>>2);
-  uint8_t portDs = (pstat&0x80) + ((pstat&0x40)>>4) + ((pstat&0x20)>>2);
-  uint8_t portDm = (mask&0x80) + ((mask&0x40)>>4) + ((mask&0x20)>>2);
-  // Set registers: register = (register & ~bitmask) | (value & bitmask)
-  // Mask: 0=unaffected; 1=to be changed
-  // Set data direction registers - fixed masks
-  //  DDRB = ( (DDRB&~portBm) | (portBd&portBm) );
-  DDRD = ( (DDRD&~portDm) | (portDd&portDm) );
-
-  DDRB = ((DDRB&~0x1F) | portBd);
-
-  // Set data registers - mask applied
-  PORTB = ( (PORTB&~portBm) | (portBs&portBm) );
-  PORTD = ( (PORTD&~portDm) | (portDs&portDm) );
-  }
-*/
 
 /*
    Control the GPIB bus - set various GPIB states
