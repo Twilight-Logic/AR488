@@ -35,7 +35,7 @@
 
 // Bluetooth support
 /*
-#define AR_BT_EN 6            // Bluetooth control enable pin
+#define AR_BT_EN 12           // Bluetooth control enable pin
 #define AR_BT_NAME "AR488-BT" // Bluetooth device name
 #define AR_BT_BAUD "115200"   // Bluetooth module baud rate
 #define AR_BT_CODE "488488"   // Bluetooth pairing code
