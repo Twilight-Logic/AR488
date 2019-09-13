@@ -1,3 +1,7 @@
+<table>
+  <tr><td>Contributor:</td><td>artag</td></tr>
+</table>
+
 Contributor: artag
 Source: EEVblog
 Files: 32u4 port of the AR488 adapter
