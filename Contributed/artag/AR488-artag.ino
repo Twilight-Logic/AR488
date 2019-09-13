@@ -30,7 +30,7 @@
 
 
 // Firmware version
-#define FWVER "AR488 GPIB controller, version 0.46.31+, 9/09/2019 " SUFFIX 
+#define FWVER "AR488 GPIB controller, version 0.46.31+artg, 12/09/2019 " SUFFIX 
 
 // Macro options
 // Note: MACROS must be enabled to use the STARTUP macro
@@ -59,7 +59,7 @@
 //#define DEBUG7  // gpibReceiveData
 //#define DEBUG8  // ppoll_h
 
-#define   XDIAG   1  // extra cmd from mega version
+//#define   XDIAG   1  // port bit debug cmd from mega version
 
 /*
    Implements most of the CONTROLLER functions;
@@ -464,6 +464,10 @@ void setup() {
 #else
   // Start the serial port
   Serial.begin(115200);
+#if defined(__AVR_ATmega32U4__) 
+  while(!Serial)
+    ;
+#endif
 #endif
 
   // Initialise
@@ -474,11 +478,11 @@ void setup() {
   epGetCfg();
 
   // Print version string
-  //  if (strlen(AR488.vstr)>0) {
-  //    Serial.println(AR488.vstr);
-  //  }else{
-  //    Serial.println(FWVER);
-  //  }
+    //if (strlen(AR488.vstr)>0) {
+    //  Serial.println(AR488.vstr);
+    //}else{
+    //  Serial.println(FWVER);
+    //}
 
   // Initialize the interface in device mode
   if (AR488.cmode == 1) initDevice();
@@ -496,38 +500,6 @@ void setup() {
   // Run startup macro
   execMacro(0);
 #endif
-
-// test speeds
-
-  Serial.print("setGpibState ");
-  Serial.print(millis());
-  for (int i = 0; i < 10000; ++i)
-    setGpibState(0x55, 0x55, i&1);
-  Serial.print(" - ");
-  Serial.println(millis());
-  setGpibState(0xff, 0x0ff, 0);
-
-  Serial.print("setGpibDbus ");
-  Serial.print(millis());
-  for (int i = 0; i < 10000; ++i)
-    setGpibDbus(0x55);
-  Serial.print(" - ");
-  Serial.println(millis());
-
-  Serial.print("readGpibDbus ");
-  Serial.print(millis());
-  for (int i = 0; i < 10000; ++i)
-    readGpibDbus();
-  Serial.print(" - ");
-  Serial.println(millis());
-
-/*
-initial (uno)
-
-setGpibState 0 - 69  : 70us
-setGpibDbus 70 - 91  : 21us
-readGpibDbus 91 - 113 : 22us
-*/
 
 }
 
@@ -556,6 +528,13 @@ void loop() {
   // NOTE: parseInput() sets lnRdy in serialEvent or readBreak
   // lnRdy=1: process command;
   // lnRdy=2: send data to Gpib
+
+  // This happens between calls to loop() for devices using a hardware UART, but not currently for those using a USB simulation
+  // (will also apply to Due and some others - see the documentation for serialEvent() )
+#if defined(__AVR_ATmega32U4__) 
+  if (Serial && Serial.available())
+    serialEvent();
+#endif
 
   // lnRdy=1: received a command so execute it...
   if (lnRdy == 1) {
@@ -2297,7 +2276,10 @@ void xdiag_h(char *params){
       setGpibDbus(0);
     }
   }
-
+  else if (!mode) {
+    Serial.print(F("Data "));
+    Serial.println(readGpibDbus(),HEX);
+  }
 }
 
 #endif
@@ -2606,6 +2588,7 @@ void gpibSendData(char *data, uint8_t dsize) {
   }
 
 #ifdef DEBUG3
+  data[dsize] = 0;  // safe to do as parseLine always leaves 2 bytes unused
   Serial.print(F("Sent string [")); Serial.print(data); Serial.println(F("]"));
 #endif
 
