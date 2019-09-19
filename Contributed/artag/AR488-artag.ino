@@ -40,7 +40,7 @@
 #endif
 
 // Firmware version
-#define FWVER "AR488 GPIB controller, version 0.46.31+artg, 19/09/2019 " SUFFIX 
+#define FWVER "AR488 GPIB controller, ver. 0.46.32+artg, 19/09/2019 " SUFFIX 
 
 // Macro options
 // Note: MACROS must be enabled to use the STARTUP macro
