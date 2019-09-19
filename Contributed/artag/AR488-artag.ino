@@ -24,13 +24,23 @@
 
 // Include some definitions and small code fragments to customise various AVR-based arduinos
 
+// uno, nano, pro mini
+#ifdef __AVR_ATmega328P__
 #include "uno.h"
-//#include "mega.h"
-//#include "pro_micro.h"
+#endif
 
+// mega (mega2560 ?)
+#ifdef __AVR_ATmega2560__
+#include "mega.h"
+#endif
+
+// leonardo and pro micro
+#ifdef __AVR_ATmega32U4__
+#include "pro_micro.h"
+#endif
 
 // Firmware version
-#define FWVER "AR488 GPIB controller, version 0.46.31+artg, 12/09/2019 " SUFFIX 
+#define FWVER "AR488 GPIB controller, version 0.46.31+artg, 19/09/2019 " SUFFIX 
 
 // Macro options
 // Note: MACROS must be enabled to use the STARTUP macro
@@ -447,12 +457,8 @@ void setup() {
   LED_PORT &= ~LED_MASK;
 #endif
 
-  // Turn on interrupts
-  cli();
-  //  PCICR |= 0b00000001;  // PORTB
-  //  PCICR |= 0b00000100;  // PORTD
-  PCICR |= PCICR_BIT;
-  sei();
+  // Configure interrupts
+  setup_interrupts();
 
   // Initialise parse buffer
   flushPbuf();
@@ -680,8 +686,7 @@ void readBreak() {
 // Catches mis-spelled ISR vectors
 #pragma GCC diagnostic error "-Wmisspelled-isr"
 
-// Interrupt for ATN pin
-ISR(PCINT_vect) {
+void pin_change_interrupt(void) {
 
   // Has PCINT ??23 fired (ATN asserted)?
   if (AR488.cmode == 1) { // Only in device mode
@@ -693,15 +698,18 @@ ISR(PCINT_vect) {
   // Has PCINT ??19 fired (SRQ asserted)?
   if (AR488.cmode == 2) { // Only in controller mode
     if ((INTPINREG ^ intPinMem) & SRQint) {
-      if (INTPINREG & SRQint) {
-        isSRQ = (INTPINREG & SRQint) == 0;
-      }
+      isSRQ = (INTPINREG & SRQint) == 0;
     }
   }
 
   // Save current state of interrupt pin's register
   intPinMem = INTPINREG;
 
+}
+
+// Interrupt for ATN pin
+ISR(PCINT_vect) {
+  pin_change_interrupt();
 }
 
 
