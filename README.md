@@ -26,7 +26,7 @@ In the event that a problem is found, this can be logged via the Issues feature 
 - a description of the issue including;
 - what steps are required to reproduce the issue
 
-Further work to add WiFi and additional boards is in progress.
+Further work to add WiFi and support for additional boards is in progress.
 
 Comments and feedback can be provided here:
 https://www.eevblog.com/forum/projects/ar488-arduino-based-gpib-adapter/
