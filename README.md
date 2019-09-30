@@ -16,7 +16,7 @@ https://github.com/Twilight-Logic/AR488/blob/master/AR488-manual.pdf
 
 Once uploaded, the firmware should respond to the ++ver command with its version information.
 
-Please note that Bluetooth support has been temporarily removed in this version as the code needs to be updated to work with the current version. The previous version is still available in thr Archive/Uno or Archive/Mega directory if required.
+Please note that Bluetooth support has been temporarily removed in this version as the code needs to be updated to work with the current version. The previous version (0.46.32) is still available in Archive/Uno or Archive/Mega, and documentation in Archive/Docs directories if required.
 
 In the event that a problem is found, this can be logged via the Issues feature on the AR488 GitHub page. Please provide at minimum:
 
