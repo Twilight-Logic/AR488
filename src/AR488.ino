@@ -22,7 +22,7 @@
 #include <avr/interrupt.h>
 
 // Firmware version
-#define FWVER "AR488 GPIB controller, version 0.46.31, 29/07/2019"
+#define FWVER "AR488 GPIB controller, ver. 0.46.32, 19/09/2019"
 
 // Macro options
 // Note: MACROS must be enabled to use the STARTUP macro
@@ -663,9 +663,7 @@ ISR(PCINT2_vect) {
   // Has PCINT19 fired (SRQ asserted)?
   if (AR488.cmode == 2) { // Only in controller mode
     if ((PIND ^ pindMem) & SRQint) {
-      if (PIND & SRQint) {
-        isSRQ = (PIND & SRQint) == 0;
-      }
+      isSRQ = (PIND & SRQint) == 0;
     }
   }
 
