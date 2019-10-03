@@ -21,8 +21,26 @@
 #include <avr/wdt.h>
 #include <avr/interrupt.h>
 
+
+// Include some definitions and small code fragments to customise various AVR-based arduinos
+
+// uno, nano, pro mini
+#ifdef __AVR_ATmega328P__
+#include "uno.h"
+#endif
+
+// mega (mega2560 ?)
+#ifdef __AVR_ATmega2560__
+#include "mega.h"
+#endif
+
+// leonardo and pro micro
+#ifdef __AVR_ATmega32U4__
+#include "pro_micro.h"
+#endif
+
 // Firmware version
-#define FWVER "AR488 GPIB controller, version 0.46.31, 29/07/2019"
+#define FWVER "AR488 GPIB controller, ver. 0.46.32+artg, 19/09/2019 " SUFFIX 
 
 // Macro options
 // Note: MACROS must be enabled to use the STARTUP macro
@@ -33,7 +51,7 @@
 
 // Bluetooth support
 /*
-#define AR_BT_EN 6            // Bluetooth control enable pin
+#define AR_BT_EN AR_BT_EN_PIN // Bluetooth control enable pin
 #define AR_BT_NAME "AR488-BT" // Bluetooth device name
 #define AR_BT_BAUD "115200"   // Bluetooth module baud rate
 #define AR_BT_CODE "488488"   // Bluetooth pairing code
@@ -51,6 +69,7 @@
 //#define DEBUG7  // gpibReceiveData
 //#define DEBUG8  // ppoll_h
 
+//#define   XDIAG   1  // port bit debug cmd from mega version
 
 /*
    Implements most of the CONTROLLER functions;
@@ -244,6 +263,8 @@ const char * const macros[] PROGMEM = {
 /******  END OF SCRIPTS  *****/
 /*****************************/
 
+#ifndef DIO1
+
 // NOTE: Pinout last updated 09/01/2019
 #define DIO1  A0  /* GPIB 1  : PORTC bit 0 */
 #define DIO2  A1  /* GPIB 2  : PORTC bit 1 */
@@ -264,13 +285,18 @@ const char * const macros[] PROGMEM = {
 #define REN   3   /* GPIB 17 : PORTD bit 3 */
 #define ATN   7   /* GPIB 11 : PORTD bit 7 */
 
+#endif
 
 /*
    PIN interrupts
 */
+
+#ifndef ATNint
+
 #define ATNint 0b10000000
 #define SRQint 0b00000100
 
+#endif
 
 /*
    GPIB BUS commands
@@ -406,7 +432,7 @@ bool aTt = false;
 bool aTl = false;
 
 // Interrupts
-volatile uint8_t pindMem = PIND;
+volatile uint8_t intPinMem = INTPINREG;
 volatile bool isATN = false;  // has ATN been asserted?
 volatile bool isSRQ = false;  // has SRQ been asserted?
 
@@ -426,14 +452,13 @@ uint8_t runMacro = 0;
 void setup() {
 
   // Turn off internal LED (set OUPTUT/LOW)
-  DDRB |= 0b00100000;
-  PORTB &= 0b11011111;
+#if LED_MASK
+  LED_DDR  |=  LED_MASK;
+  LED_PORT &= ~LED_MASK;
+#endif
 
-  // Turn on interrupts
-  cli();
-  //  PCICR |= 0b00000001;  // PORTB
-  PCICR |= 0b00000100;  // PORTD
-  sei();
+  // Configure interrupts
+  setup_interrupts();
 
   // Initialise parse buffer
   flushPbuf();
@@ -445,6 +470,10 @@ void setup() {
 #else
   // Start the serial port
   Serial.begin(115200);
+#if defined(__AVR_ATmega32U4__) 
+  while(!Serial)
+    ;
+#endif
 #endif
 
   // Initialise
@@ -455,11 +484,11 @@ void setup() {
   epGetCfg();
 
   // Print version string
-  //  if (strlen(AR488.vstr)>0) {
-  //    Serial.println(AR488.vstr);
-  //  }else{
-  //    Serial.println(FWVER);
-  //  }
+    //if (strlen(AR488.vstr)>0) {
+    //  Serial.println(AR488.vstr);
+    //}else{
+    //  Serial.println(FWVER);
+    //}
 
   // Initialize the interface in device mode
   if (AR488.cmode == 1) initDevice();
@@ -470,8 +499,8 @@ void setup() {
   isATN = false;
   isSRQ = false;
 
-  // Save state of the PORTD pins
-  pindMem = PIND;
+  // Save state of the PCI pins
+  intPinMem = INTPINREG;
 
 #if defined(MACROS) && defined(STARTUP)
   // Run startup macro
@@ -505,6 +534,13 @@ void loop() {
   // NOTE: parseInput() sets lnRdy in serialEvent or readBreak
   // lnRdy=1: process command;
   // lnRdy=2: send data to Gpib
+
+  // This happens between calls to loop() for devices using a hardware UART, but not currently for those using a USB simulation
+  // (will also apply to Due and some others - see the documentation for serialEvent() )
+#if defined(__AVR_ATmega32U4__) 
+  if (Serial && Serial.available())
+    serialEvent();
+#endif
 
   // lnRdy=1: received a command so execute it...
   if (lnRdy == 1) {
@@ -590,8 +626,8 @@ void initDevice() {
   setGpibControls(DINI);
   // Disable SRQ and enable ATN interrupt
   cli();
-  //  PCMSK2 &= SRQint; // SRQ interrupt now controlled by ++status command
-  PCMSK2 |= ATNint;
+  //  PCMASK &= SRQint; // SRQ interrupt now controlled by ++status command
+  PCMASK |= ATNint;
   sei();
   // Initialise GPIB data lines (sets to INPUT_PULLUP)
   readGpibDbus();
@@ -606,8 +642,8 @@ void initController() {
   setGpibControls(CINI);  // Controller initialise state
   // Disable ATN and enable SRQ interrupt
   cli();
-  PCMSK2 &= ATNint;
-  //  PCMSK2 |= SRQint; // SRQ interrupt now controlled by ++status command
+  PCMASK &= ATNint;
+  //  PCMASK |= SRQint; // SRQ interrupt now controlled by ++status command
   sei();
   // Initialise GPIB data lines (sets to INPUT_PULLUP)
   readGpibDbus();
@@ -650,28 +686,30 @@ void readBreak() {
 // Catches mis-spelled ISR vectors
 #pragma GCC diagnostic error "-Wmisspelled-isr"
 
-// Interrupt for ATN pin
-ISR(PCINT2_vect) {
+void pin_change_interrupt(void) {
 
-  // Has PCINT23 fired (ATN asserted)?
+  // Has PCINT ??23 fired (ATN asserted)?
   if (AR488.cmode == 1) { // Only in device mode
-    if ((PIND ^ pindMem) & ATNint) {
-      isATN = (PIND & ATNint) == 0;
+    if ((INTPINREG ^ intPinMem) & ATNint) {
+      isATN = (INTPINREG & ATNint) == 0;
     }
   }
 
-  // Has PCINT19 fired (SRQ asserted)?
+  // Has PCINT ??19 fired (SRQ asserted)?
   if (AR488.cmode == 2) { // Only in controller mode
-    if ((PIND ^ pindMem) & SRQint) {
-      if (PIND & SRQint) {
-        isSRQ = (PIND & SRQint) == 0;
-      }
+    if ((INTPINREG ^ intPinMem) & SRQint) {
+      isSRQ = (INTPINREG & SRQint) == 0;
     }
   }
 
-  // Save current state of PORTD register
-  pindMem = PIND;
+  // Save current state of interrupt pin's register
+  intPinMem = INTPINREG;
 
+}
+
+// Interrupt for ATN pin
+ISR(PCINT_vect) {
+  pin_change_interrupt();
 }
 
 
@@ -936,7 +974,10 @@ static const cmdIdx plusCmdIdx [] = {
   { "srqauto",     2, 0x12, 2 },
   { "status",      2, 0x13, 1 },
   { "ver",         2, 0x14, 3 },
-  { "tmbus",       2, 0x15, 3 }
+  { "tmbus",       2, 0x15, 3 },
+#ifdef XDIAG
+  { "xdiag",       2, 0x16, 3 },
+#endif
 };
 
 
@@ -982,7 +1023,10 @@ static const cmdPRec cmdPHlist [] = {
   srqa_h,
   stat_h,
   ver_h,
-  tmbus_h
+  tmbus_h,
+#ifdef XDIAG
+  xdiag_h
+#endif
 };
 
 
@@ -2106,13 +2150,13 @@ void srqa_h(char *params) {
     switch (val) {
       case 0:
         cli();
-        PCMSK2 &= ~SRQint;
+        PCMASK &= ~SRQint;
         sei();
         isSrqa = false;
         break;
       case 1:
         cli();
-        PCMSK2 |= SRQint;
+        PCMASK |= SRQint;
         sei();
         isSrqa = true;
         break;
@@ -2196,6 +2240,57 @@ void macro_h(char *params) {
 #endif
 }
 
+
+#ifdef XDIAG
+
+/*
+ * Bus diagnostics
+ */
+void xdiag_h(char *params){
+  char *param;
+  uint8_t mode = 0;
+  uint8_t val = 0;
+  
+  // Get first parameter (mode = 0 or 1)
+  param = strtok(params, " \t");
+  if (param != NULL) {
+    if (strlen(param)<4){
+      mode = atoi(param);
+      if (mode>2) {
+        Serial.println(F("Invalid: 0=data bus; 1=control bus"));
+        return;
+      }
+    }
+  }
+  // Get second parameter (8 bit byte)
+  param = strtok(NULL, " \t");
+  if (param != NULL) {
+    if (strlen(param)<4){
+      val = atoi(param);
+    }
+
+    if (mode) {
+      setGpibState(0xFF, 0xFF, 1);
+      setGpibState(val, 0xFF, 0);
+      delay(10000);
+      if (AR488.cmode==2) {
+        setGpibControls(CINI);
+      }else{
+        setGpibControls(DINI);
+      }
+    }else{
+      setGpibDbus(val);
+      delay(10000);
+      setGpibDbus(0);
+    }
+  }
+  else if (!mode) {
+    Serial.print(F("Data "));
+    Serial.println(readGpibDbus(),HEX);
+  }
+}
+
+#endif
 
 
 /****** Timing parameters ******/
@@ -2501,6 +2596,7 @@ void gpibSendData(char *data, uint8_t dsize) {
   }
 
 #ifdef DEBUG3
+  data[dsize] = 0;  // safe to do as parseLine always leaves 2 bytes unused
   Serial.print(F("Sent string [")); Serial.print(data); Serial.println(F("]"));
 #endif
 
@@ -2845,86 +2941,6 @@ boolean Wait_on_pin_state(uint8_t state, uint8_t pin, int interval) {
   return false;        // = no timeout therefore succeeded!
 }
 
-
-/*
-   Read the status of the GPIB data bus wires and collect the byte of data
-*/
-uint8_t readGpibDbus() {
-  // Set data pins to input
-  //  DDRD = DDRD & 0b11001111 ;
-  //  DDRC = DDRC & 0b11000000 ;
-  DDRD &= 0b11001111 ;
-  DDRC &= 0b11000000 ;
-  //  PORTD = PORTD | 0b00110000; // PORTD bits 5,4 input_pullup
-  //  PORTC = PORTC | 0b00111111; // PORTC bits 5,4,3,2,1,0 input_pullup
-  PORTD |= 0b00110000; // PORTD bits 5,4 input_pullup
-  PORTC |= 0b00111111; // PORTC bits 5,4,3,2,1,0 input_pullup
-
-  // Read the byte of data on the bus
-  return ~((PIND << 2 & 0b11000000) + (PINC & 0b00111111));
-}
-
-
-/*
-   Set the status of the GPIB data bus wires with a byte of datacd ~/test
-
-*/
-void setGpibDbus(uint8_t db) {
-  // Set data pins as outputs
-  DDRD |= 0b00110000;
-  DDRC |= 0b00111111;
-
-  // GPIB states are inverted
-  db = ~db;
-
-  // Set data bus
-  PORTC = (PORTC & ~0b00111111) | (db & 0b00111111);
-  PORTD = (PORTD & ~0b00110000) | ((db & 0b11000000) >> 2);
-}
-
-
-/*
-   Set the direction and state of the GPIB control lines
-   Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
-   pdir:  0=input, 1=output;
-   pstat: 0=LOW, 1=HIGH/INPUT_PULLUP
-   Arduino pin to Port/bit to direction/state byte map:
-   IFC   8   PORTB bit 0 byte bit 0
-   NDAC  9   PORTB bit 1 byte bit 1
-   NRFD  10  PORTB bit 2 byte bit 2
-   DAV   11  PORTB bit 3 byte bit 3
-   EOI   12  PORTB bit 4 byte bit 4
-  // * REN   13  PORTB bit 5 byte bit 5
-   SRQ   2   PORTD bit 2 byte bit 6
-   REN   3   PORTD bit 3 byte bit 5
-   ATN   7   PORTD bit 8 byte bit 7
-*/
-void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
-
-  // PORTB - use only the first (right-most) 5 bits (pins 8-12)
-  uint8_t portBb = bits & 0x1F;
-  uint8_t portBm = mask & 0x1F;
-  // PORT D - keep bit 7, rotate bit 6 right 4 positions to set bit 2 on register
-  uint8_t portDb = (bits & 0x80) + ((bits & 0x40) >> 4) + ((bits & 0x20) >> 2);
-  uint8_t portDm = (mask & 0x80) + ((mask & 0x40) >> 4) + ((mask & 0x20) >> 2);
-
-  // Set registers: register = (register & ~bitmask) | (value & bitmask)
-  // Mask: 0=unaffected; 1=to be changed
-
-  switch (mode) {
-    case 0:
-      // Set pin states using mask
-      PORTB = ( (PORTB & ~portBm) | (portBb & portBm) );
-      PORTD = ( (PORTD & ~portDm) | (portDb & portDm) );
-      break;
-    case 1:
-      // Set pin direction registers using mask
-      DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
-      DDRD = ( (DDRD & ~portDm) | (portDb & portDm) );
-      break;
-  }
-
-}
 
 
 /* Original routine
