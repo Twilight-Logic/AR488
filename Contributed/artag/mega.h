@@ -46,6 +46,15 @@
 // pin change mask
 #define PCMASK     PCMSK2
 
+void setup_interrupts(void)
+{
+  cli();
+  //  PCICR |= 0b00000001;  // PORTB
+  //  PCICR |= 0b00000100;  // PORTD
+  PCICR |= PCICR_BIT;
+  sei();
+}
+
 
 /*
    Read the status of the GPIB data bus wires and collect the byte of data
