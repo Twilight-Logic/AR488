@@ -7,31 +7,45 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.47.36, 25/09/2019"
+#define FWVER "AR488 GPIB controller, ver. 0.47.44, 09/10/2019"
 
 
 /***** BOARD SELECTION *****/
 /*
  * At least one board and ONLY ONE board MUST be selected!
  */
-//#define AR488_UNO
+#define AR488_UNO
 //#define AR488_NANO
-#define AR488_MEGA2560
+//#define AR488_MEGA2560
+//#define AR488_MEGA32U4
 //#define AR488_CUSTOM
 
+/***** Serial port selection *****/
 /*
- * Select either hardware or software port (see notes about SoftwareSerial)
+ * Note: Only ONE port can be used and will receive output
  */
-#define AR_HW_SERIAL
-//#define AR_SW_SERIAL
-/*
- * Hardware port: UNO/NANO set 'Serial' only
- * MEGA suports Serial, Serial1, Serial2, Serial3. Since the pins 
- * associated with Serial2 are used in the default pin layout, Serial2 
- * is unavailable by default.
- */
-#ifdef AR_HW_SERIAL
-  #define AR_SERIAL_PORT Serial1
+/* UNO and NANO boards */
+#ifdef __AVR_ATmega328P__
+  // Select HardwareSerial or SoftwareSerial (default = HardwareSerial)
+  #define AR_HW_SERIAL
+  //#define AR_SW_SERIAL
+  // The UNO/NANO default port is 'Serial'
+  #define AR_SERIAL_PORT Serial
+/* Mega 32u4 based boards (Micro, Leonardo) */
+#elif __AVR_ATmega32U4__
+  // Comment out if using RXI, TXO pins
+  #define AR_CDC_SERIAL
+  // The Mega 32u4 default port is a virtual USB CDC port named 'Serial'
+  #define AR_SERIAL_PORT Serial
+/* Mega 2560 board */
+#elif __AVR_ATmega2560__
+  // M++addega 2560 supports Serial, Serial1, Serial2, Serial3. Since the pins 
+  // associated with Serial2 are used in the default pin layout, Serial2
+  // is unavailable. The default port is 'Serial'. Choose ONE port.
+  #define AR_HW_SERIAL
+  #define AR_SERIAL_PORT Serial
+  //#define AR_SERIAL_PORT Serial1
+  //#define AR_SERIAL_PORT Serial3
 #endif
 /*
  * Note: SoftwareSerial support conflicts with PCINT support
@@ -50,24 +64,21 @@
 
 /***** Pin State Detection *****/
 /*
- * With UNO. NANO and MEGA boards, USE_PCINTS can be used.
- * With AR488_CUSTOM and unknow boards, USE_PINHOOKS should be used.
+ * With UNO. NANO and MEGA boards with pre-defined layouts,
+ * USE_PCINTS can be used.
+ * With AR488_CUSTOM and unknown boards, USE_PINHOOKS should be used.
  * Interrupts may respond faster. Pinhooks (in-loop checking for 
  * state of pin) can be supported on a wider range of platforms.
  */
-//#define USE_PINHOOKS
-#define USE_PCINTS
-
-
-/***** EEPROM support *****/
-/*
- * Arduino boards feature a small EEPROM memory allocation.
- * Some boards do not support this. Comment out the 
- * below to turn of EEPROM support.
- * Note: with EEPROM support turned off, adapter configuration 
- * will be volatile.
- */
-#define USE_EEPROM
+#ifdef __AVR__
+  #if defined (AR488_UNO) || defined (AR488_NANO) || defined (AR488_MEGA2560) || defined (AR488_MEGA32U4)
+    #define USE_INTERRUPTS
+  #else
+    #define USE_PINHOOKS
+  #endif
+#else
+  #define USE_PINHOOKS
+#endif
 
 
 /***** Enable Macros *****/
