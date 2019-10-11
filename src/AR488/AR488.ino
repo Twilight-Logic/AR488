@@ -26,7 +26,7 @@
 #endif
 */
 
-/***** FWVER "AR488 GPIB controller, ver. 0.47.44, 09/10/2019" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.47.45, 10/10/2019" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -395,6 +395,11 @@ uint8_t runMacro = 0;
 */
 void setup() {
 
+  // Disable the watchdog (needed to prevent WDT reset loop)
+#ifdef __AVR__
+  wdt_disable();
+#endif
+
   // Turn off internal LED (set OUPTUT/LOW)
 #ifdef LED_BUILTIN
   pinMode(LED_BUILTIN, OUTPUT);
@@ -417,6 +422,17 @@ void setup() {
 //#else
   // Start the serial port
   arSerial->begin(AR_SERIAL_BAUD);
+  #if defined(__AVR_ATmega32U4__)
+    while(!*arSerial)
+    ;
+//    Serial.print(F("Starting "));
+    for(int i = 0; i < 20; ++i) {  // this gives you 10 seconds to start programming before it crashes
+      Serial.print(".");
+      delay(500);
+    }
+    Serial.println("@>");
+  #endif // __AVR_ATmega32U4__
+  
 //#endif
 
   // Initialise
@@ -1546,12 +1562,15 @@ void trg_h(char *params) {
  * and will not reset a crashed MCU, but it will re-start
  * the interface program and re-initialise all parameters. 
  */
+void(* resetProg) (void) = 0;//declare reset function at address 0
+
 void rst_h() {
-#ifdef WDTO_60MS
+#ifdef WDTO_1S
+//#ifdef NOTUSED
   // Where defined, reset controller using watchdog timeout
   unsigned long tout;
-  tout = millis() + 3000;
-  wdt_enable(WDTO_60MS);
+  tout = millis() + 2000;
+  wdt_enable(WDTO_1S);
   while (millis() < tout) {};
   // Should never reach here....
   if (isVerb) {
@@ -1562,7 +1581,6 @@ void rst_h() {
   resetProg();
 #endif
 }
-void(* resetProg) (void) = 0;//declare reset function at address 0
 
 
 /***** Serial Poll Handler *****/
