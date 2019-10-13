@@ -26,7 +26,7 @@
 #endif
 */
 
-/***** FWVER "AR488 GPIB controller, ver. 0.47.45, 10/10/2019" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.47.46, 13/10/2019" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -361,15 +361,7 @@ bool isRO = false;
 bool aTt = false;
 bool aTl = false;
 
-// Interrupts
-
-// WHAT IF MORE THAN ONE PORT NEEDS TO BE CHECKED?
-// (Interrupts might be assiged to different ports on some boards)
-extern volatile uint8_t pinMem;
-//volatile uint8_t intPinMem = INTPINREG;
-// WHAT IF MORE THAN ONE PORT NEEDS TO BE CHECKED?
-
-
+// State flags
 extern volatile bool isATN;  // has ATN been asserted?
 extern volatile bool isSRQ;  // has SRQ been asserted?
 
@@ -459,9 +451,6 @@ void setup() {
 
   isATN = false;
   isSRQ = false;
-
-  // Save state of the PORTD pins
-//  pinMem = PIND;
 
 #if defined(USE_MACROS) && defined(RUN_STARTUP)
   // Run startup macro
@@ -1944,12 +1933,9 @@ void setvstr_h(char *params) {
   int len;
   if (params != NULL) {
     len = strlen(params);
+    if (len>47) len=47; // Ignore anything over 47 characters
     memset(AR488.vstr, '\0', 48);
-    if (len < 48) {
-      strncpy(AR488.vstr, params, len);
-    } else {
-      strncpy(AR488.vstr, params, 47);
-    }
+    strncpy(AR488.vstr, params, len);
     if (isVerb) {
       arSerial->print(F("Changed version string to: "));
       arSerial->println(params);
