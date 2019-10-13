@@ -38,6 +38,7 @@ http://egirland.blogspot.com/2014/03/arduino-uno-as-usb-to-gpib-controller.html
 
 
 Acknowledgements:
+
 Emanuelle Girlando:  original project for Uno
 Luke Mester:         testing of original Uno/Nano verions against Prologix
 Artag:               porting to the 32u4 based Arduino Micro board
