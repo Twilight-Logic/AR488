@@ -35,10 +35,6 @@ Further work to add WiFi and support for additional boards is in progress.
 Comments and feedback can be provided here:
 https://www.eevblog.com/forum/projects/ar488-arduino-based-gpib-adapter/
 
-The original work by Emanuele Girlando is found here:
-http://egirland.blogspot.com/2014/03/arduino-uno-as-usb-to-gpib-controller.html
-
-
 <b><i>Acknowledgements:</i></b>
 <table>
 <tr><td>Emanuelle Girlando</td><td>Original project for the Arduino Uno</td></tr>
@@ -48,3 +44,5 @@ http://egirland.blogspot.com/2014/03/arduino-uno-as-usb-to-gpib-controller.html
 
 Also, thank you to all the contributors to the AR488 EEVblog thread for their suggestions and support.
 
+The original work by Emanuele Girlando is found here:
+http://egirland.blogspot.com/2014/03/arduino-uno-as-usb-to-gpib-controller.html
