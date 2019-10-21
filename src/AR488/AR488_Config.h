@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.47.46, 13/10/2019"
+#define FWVER "AR488 GPIB controller, ver. 0.47.51, 21/10/2019"
 
 
 /***** BOARD SELECTION *****/
@@ -73,6 +73,7 @@
 #ifdef __AVR__
   #if defined (AR488_UNO) || defined (AR488_NANO) || defined (AR488_MEGA2560) || defined (AR488_MEGA32U4)
     #define USE_INTERRUPTS
+//    #define USE_PINHOOKS
   #else
     #define USE_PINHOOKS
   #endif
@@ -116,7 +117,6 @@
 //#define DEBUG6  // EEPROM
 //#define DEBUG7  // gpibReceiveData
 //#define DEBUG8  // ppoll_h
-
 
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/

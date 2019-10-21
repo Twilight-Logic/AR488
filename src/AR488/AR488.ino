@@ -26,7 +26,7 @@
 #endif
 */
 
-/***** FWVER "AR488 GPIB controller, ver. 0.47.46, 13/10/2019" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.47.51, 21/10/2019" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -128,39 +128,6 @@
    functionality will need the remaining two pins to be connected.
    For further information about the AR488 see:
 */
-
-
-/***************************/
-/***** BOARD DETECTION *****/
-/***** vvvvvvvvvvvvvvv *****/
-
-/*
- * Need to decide whether to use automatic detection or
- * manual selection
- */
-/*
-#ifdef __AVR_ATmega328P__
-  #define #include "uno.h"
-> #endif
-> 
-> // mega (mega2560 ?)
-> #ifdef __AVR_ATmega2560__
-> #include "mega.h"
-> #endif
-> 
-> // leonardo and pro micro
-> #ifdef __AVR_ATmega32U4__
-> #include "pro_micro.h"
-> #endif
-*/
-/*
- * NOTE: there may be more than one config per board
- */
- 
-/***** ^^^^^^^^^^^^^^^ *****/
-/***** BOARD DETECTION *****/
-/***************************/
-
 
 
 /*********************************/
@@ -352,7 +319,7 @@ bool isEsc = false;   // Charcter escaped
 bool isPle = false;   // Plus escaped
 
 // Received serial poll request?
-bool isSprq = false;
+//bool isSprq = false;
 
 // Read only mode flag
 bool isRO = false;
@@ -382,9 +349,7 @@ uint8_t runMacro = 0;
 /***** COMMON CODE SECTION *****/
 /***** vvvvvvvvvvvvvvvvvvv *****/
 
-/*
- *****  Arduino SETUP procedure *****
-*/
+/******  Arduino standard SETUP procedure *****/
 void setup() {
 
   // Disable the watchdog (needed to prevent WDT reset loop)
@@ -460,12 +425,10 @@ void setup() {
 }
 
 
-/*
- *****   MAIN LOOP   *****
-*/
+/***** ARDUINO MAIN LOOP *****/
 void loop() {
 
-/***** Macros *****/
+/*** Macros ***/
 /*
  * Run the startup macro if enabled
  */
@@ -477,18 +440,18 @@ void loop() {
   }
 #endif
 
-/***** Pin Hooks *****/
+/*** Pin Hooks ***/
 /*
  * Not all boards support interrupts or have PCINTs. In this
  * case, use in-loop checking to detect when SRQ and ATN have 
  * been signalled
  */
 #ifdef USE_PINHOOKS
-  if ((AR488.cmode==1) && (digitalRead(ATN)==LOW)) isATN = true;
-  if ((AR488.cmode==2) && (digitalRead(SRQ)==LOW)) isSRQ = true;
+  isATN = (digitalRead(ATN)==LOW ? true : false);
+  isSRQ = (digitalRead(SRQ)==LOW ? true : false);
 #endif
 
-/***** In loop serial buffer checking *****/
+/*** In loop serial buffer checking ***/
 /* SerialEvent() handles the serial interrupt but some boards 
  * do not support SerialEvent. In this case use in-loop checking
  */
@@ -499,7 +462,7 @@ void loop() {
   }
 //#endif
 
-/***** Process the buffer *****/
+/*** Process the buffer ***/
 /* Each received char is passed through parser until an un-escaped 
  * CR is encountered. If we have a command then parse and execute.
  * If the line is data (inclding direct instrument commands) then
@@ -544,32 +507,8 @@ void loop() {
   }
 
   // Device mode:
-  // Check whether ATN asserted, get command then send or receive
   if (AR488.cmode == 1) {
-    if (isATN) {  // ATN asserted
-      attnRequired();
-    } else {
-      // Not allowed to send data in listen only (++lon) mode so clear the buffer and ATT flag
-      if (isRO && lnRdy == 2) {
-        flushPbuf();
-        aTt = false;
-      }
-      // Addressed to talk
-      if (aTt) {
-        if (isSprq) {
-          gpibSendStatus();
-        } else {
-          if (lnRdy == 2) {
-            processLine(pBuf, pbPtr, 2);
-          }
-        }
-        aTt = false;  // Clear talk flag
-      }
-      if (aTl) { // Addressed to listen
-        gpibReceiveData();
-        aTl = false;  // Clear listen flag
-      }
-    }
+    if (isATN) attnRequired();
   }
 
   delayMicroseconds(5);
@@ -577,18 +516,14 @@ void loop() {
 /***** END MAIN LOOP *****/
 
 
-/*
-   Initialise the interface
-*/
+/***** Initialise the interface *****/
 void initAR488() {
   // Set default values ({'\0'} sets version string array to null)
   AR488 = {0xCC, false, false, 2, 0, 1, 0, 0, 0, 0, 1200, 0, {'\0'}, 0};
 }
 
 
-/*
-   Initialise device mode
-*/
+/***** Initialise device mode *****/
 void initDevice() {
   // Set GPIB control bus to device idle mode
   setGpibControls(DINI);
@@ -624,6 +559,7 @@ void serialEvent() {
 #endif
 */
 
+
 /***** Interrupt data transfer when escape pressed *****/
 void readBreak() {
   // Check whether EOI is asserted
@@ -638,7 +574,6 @@ void readBreak() {
     if (lnRdy == 1) tranBrk = 7;
   }
 }
-
 
 
 /*************************************/
@@ -842,7 +777,7 @@ static cmdRec cmdHidx [] = {
   { "ifc",         2, (void(*)(char*)) ifc_h     },
   { "llo",         2, llo_h       },
   { "loc",         2, loc_h       },
-//  { "lon",         1, lon_h       },
+  { "lon",         1, lon_h       },
   { "macro",       2, macro_h     },
   { "mode" ,       3, cmode_h     },
   { "ppoll",       2, (void(*)(char*)) ppoll_h   },
@@ -889,14 +824,14 @@ void processLine(char *buffr, uint8_t dsize, uint8_t mode) {
   // Line contains a valid command after the ++
   if (mode == 1) {
     // Its a ++command so shift everything two bytes left (ignore ++) and parse
-    for (int i = 0; i < dsize - 2; i++) {
+    for (int i = 0; i < dsize-2; i++) {
       line[i] = line[i + 2];
     }
     // Replace last two bytes with a null (\0) character
     line[dsize - 2] = '\0';
     line[dsize - 1] = '\0';
 #ifdef DEBUG1
-    arSerial->print(F("processLine: Sent to the command processor: ")); printHex(line, dsize - 2);
+    arSerial->print(F("processLine: Sent to the command processor: ")); printHex(line, dsize-2);
 #endif
     // Execute the command
     if (isVerb) arSerial->println(); // Shift output to next line
@@ -911,7 +846,7 @@ void processLine(char *buffr, uint8_t dsize, uint8_t mode) {
 #endif
 
     // Is this a query command (string ending with ?)
-    if (line[dsize - 1] == '?') isQuery = true;
+    if (line[dsize-1] == '?') isQuery = true;
 
     // Send string to instrument
     gpibSendData(line, dsize);
@@ -1766,16 +1701,11 @@ void stat_h(char *params) {
     }
     AR488.stat = val;
     if (val & 0x40) {
-      // If bit 6 is set need to assert the SRQ line?
-      setGpibState(0b01000000, 0b01000000, 1);
-      setGpibState(0b00000000, 0b01000000, 0);
-      //      setGpibState(0b01000000, 0b00000000, 0b01000000);
+      setSrqSig();
       if (isVerb) arSerial->println(F("SRQ asserted."));
     } else {
-      // Otherwise set SRQ line to INPUT_PULLUP
-      setGpibState(0b00000000, 0b01000000, 1);
-      setGpibState(0b01000000, 0b01000000, 0);
-      //      setGpibState(0b00000000, 0b01000000, 0b01000000);
+      clrSrqSig();
+      if (isVerb) arSerial->println(F("SRQ un-asserted."));
     }
   } else {
     // Return the currently set status byte
@@ -1828,14 +1758,32 @@ void lon_h(char *params) {
 }
 
 
+/***** Set the SRQ signal *****/
+void setSrqSig() {
+  // Set SRQ line to OUTPUT HIGH (asserted)
+  setGpibState(0b01000000, 0b01000000, 1);
+  setGpibState(0b00000000, 0b01000000, 0);
+}
+
+
+/***** Clear the SRQ signal *****/
+void clrSrqSig() {
+  // Set SRQ line to INPUT_PULLUP (un-asserted)
+  setGpibState(0b00000000, 0b01000000, 1);
+  setGpibState(0b01000000, 0b01000000, 0);
+}
+
+
+
 /***********************************/
 /***** CUSTOM COMMAND HANDLERS *****/
 /***********************************/
 
+/***** All serial poll *****/
 /*
-   All serial poll - polls all devices, not just the currently addressed instrument
-   Alias wrapper for ++spoll all
-*/
+ * Polls all devices, not just the currently addressed instrument
+ * This is an alias wrapper for ++spoll all
+ */
 void aspoll_h() {
   //  char all[4];
   //  strcpy(all, "all\0");
@@ -1843,10 +1791,10 @@ void aspoll_h() {
 }
 
 
+/***** Send Universal Device Clear *****/
 /*
-   Send Universal Device Clear
-   The universal Device Clear (DCL) is unaddressed and affects all devices on the Gpib bus.
-*/
+ * The universal Device Clear (DCL) is unaddressed and affects all devices on the Gpib bus.
+ */
 void dcl_h() {
   if ( gpibSendCmd(GC_DCL) )  {
     if (isVerb) arSerial->println(F("Sending DCL failed"));
@@ -1857,18 +1805,16 @@ void dcl_h() {
 }
 
 
-/*
-   Re-load default configuration
-*/
+/***** Re-load default configuration *****/
 void default_h() {
   initAR488();
 }
 
 
+/***** Parallel Poll Handler *****/
 /*
-   Parallel Poll Handler
-   Device must be set to respond on DIO line 1 - 8
-*/
+ * Device must be set to respond on DIO line 1 - 8
+ */
 void ppoll_h() {
   uint8_t sb = 0;
 
@@ -1892,9 +1838,7 @@ void ppoll_h() {
 }
 
 
-/*
-   Assert or de-assert REN 0=de-assert; 1=assert
-*/
+/***** Assert or de-assert REN 0=de-assert; 1=assert *****/
 void ren_h(char *params) {
   // char *stat;
   int val;
@@ -1914,9 +1858,7 @@ void ren_h(char *params) {
 }
 
 
-/*
-   Enable verbose mode 0=OFF; 1=ON
-*/
+/***** Enable verbose mode 0=OFF; 1=ON *****/
 void verb_h() {
   isVerb = !isVerb;
   arSerial->print("Verbose: ");
@@ -1924,11 +1866,10 @@ void verb_h() {
 }
 
 
-/*
-   Set version string
-   Replace the standard AR488 version string with something else
-   NOTE: some instrument software requires a sepcific version string to ID the interface
-*/
+/***** Set version string *****/
+/* Replace the standard AR488 version string with something else
+ *  NOTE: some instrument software requires a sepcific version string to ID the interface
+ */
 void setvstr_h(char *params) {
   int len;
   if (params != NULL) {
@@ -1944,15 +1885,15 @@ void setvstr_h(char *params) {
 }
 
 
+/***** SRQ auto - show or enable/disable automatic spoll on SRQ *****/
 /*
-   SRQ auto - show or enable/disable automatic spoll on SRQ
-   In device mode, when the SRQ interrupt is triggered and SRQ
-   auto is set to 1, a serial poll is conducted automatically
-   and the status byte for the instrument requiring service is
-   automatically returned. When srqauto is set to 0 (default)
-   an ++spoll command needs to be given manually to return
-   the status byte.
-*/
+ * In device mode, when the SRQ interrupt is triggered and SRQ
+ * auto is set to 1, a serial poll is conducted automatically
+ * and the status byte for the instrument requiring service is
+ * automatically returned. When srqauto is set to 0 (default)
+ * an ++spoll command needs to be given manually to return
+ * the status byte.
+ */
 void srqa_h(char *params) {
   int val;
   if (params != NULL) {
@@ -1977,9 +1918,7 @@ void srqa_h(char *params) {
 }
 
 
-/*
-   Repeat a given command and return result
-*/
+/***** Repeat a given command and return result *****/
 void repeat_h(char *params) {
 
   uint16_t count;
@@ -2020,9 +1959,7 @@ void repeat_h(char *params) {
 }
 
 
-/*
-   Run a macro
-*/
+/***** Run a macro *****/
 void macro_h(char *params) {
 #ifdef USE_MACROS
   uint16_t val;
@@ -2050,10 +1987,10 @@ void macro_h(char *params) {
 }
 
 
+/***** Bus diagnostics *****/
 /*
- * Bus diagnostics
  * Usage: xdiag mode byte
- * mode: data bus
+ * mode: 0=data bus; 1=control bus
  * byte: byte to write on the bus
  * Note: values to switch individual bits = 1,2,4,8,10,20,40,80
  */
@@ -2125,49 +2062,29 @@ void tmbus_h(char *params) {
 /***** Device mode GPIB command handling routines *****/
 /******************************************************/
 
-struct gpibOpcode {
-  uint8_t opcode;
-  void (*handler)();
-  //  void (*handler)(char *params);
-};
-
-
+/***** Attention handling routine *****/
 /*
-   Gpib Opcode handling routine index
-   Used prmarily in device mode for handling
-   commands received over the GPIB bus
-*/
-static gpibOpcode goHidx[] = {
-  { GC_SDC,    sdc_h },
-  { GC_SPD,    spd_h },
-  { GC_SPE,    spe_h },
-  { GC_UNL,    unl_h },
-  { GC_UNT,    unt_h }
-};
-
-
+ * In device mode is invoked whenever ATN is asserted
+ */
 void attnRequired() {
 
   uint8_t db = 0;
   uint8_t stat = 0;
-  //  uint8_t addr=0;
-  int oasize = sizeof(goHidx) / sizeof(goHidx[0]);
-  int i = 0;
-
-  //  int x=0;
+  bool mla = false;
+  bool mta = false;
+  bool spe = false;
+  bool spd = false;
+  
   // Set device listner active state (assert NDAC+NRFD (low), DAV=INPUT_PULLUP)
   setGpibControls(DLAS);
 
-  // Clear listen/talk flags
-  aTl = false;
-  aTt = false;
-
 #ifdef DEBUG5
-  arSerial->println(F("ATN asserted - checking whether this is for me...."));
+  arSerial->println(F("Answering attention!"));
 #endif
 
   // Read bytes
-  while (isATN) {
+//  while (isATN) {
+  while (digitalRead(ATN)==LOW) {
     stat = gpibReadByte(&db);
     if (!stat) {
 
@@ -2175,94 +2092,127 @@ void attnRequired() {
       arSerial->println(db, HEX);
 #endif
 
-      // MLA: am I being addressed to listen?
+      // Device is addressed to listen
       if (AR488.paddr == (db ^ 0x20)) { // MLA = db^0x20
 #ifdef DEBUG5
         arSerial->println(F("attnRequired: Controller wants me to data accept data <<<"));
 #endif
-        // Set listen flag and listen parameters
-        aTl = true;
-        // Receive data until EOI or ATN asserted
-        // EOI if controller is sending it
-        // ATN means next bytes will contain a command
-        rEoi = true;
-        break;
-        // MTA: am I being addressed to talk?
-      } else if (AR488.paddr == (db ^ 0x40)) { // MTA = db^0x40;
+        mla = true;
+      }
+
+      // Device is addressed to talk
+      if (AR488.paddr == (db ^ 0x40)) { // MLA = db^0x40
+
+        if (isRO) {
 #ifdef DEBUG5
-        arSerial->println(F("attnRequired: Controller wants me to send >>>"));
-#endif
-        if (!isRO) {  // Cannot talk in read-only (++lon) mode
-          aTt = true;
-#ifdef DEBUG5
-        } else {
           arSerial->println(F("attnRequired: cannot respond in listen-only [++lon 1] mode"));
+          // Clear the buffer to prevent it getting blocked
+          if (lnRdy==2) flushPbuf();
 #endif
-        }
-        break;
-        // Some other device being addressed to talk
-      } else if (db > 0x3F && db < 0x5F) {
-        if (!isSprq) {
-          if (isRO) { // Read-only (++lon) mode
-            aTl = true;
-            rEoi = true;
+        }else{
+          // Call talk handler to send data
+          mta = true;
+          if (!spe) {
+#ifdef DEBUG5
+            arSerial->println(F("attnRequired: Controller wants me to send data >>>"));
+#endif
           }
         }
-        break;
-        // Some other listener address
-      } else if (db > 0x1F && db < 0x3F) {
-        // Do we need these? - Disabled because it causes serial poll response to fail
-        // when the AR488 is not the first address in the polled devices address list
-        // NOTE: sets aTl to true when controller address (20) is received
-        //          aTl = true;
-        //          rEoi = true;
+      }
 
-        // Ignore
-        // Some other byte: lookup opcode handler
-
-      } else {
-#ifdef DEBUG5
-        arSerial->println(F("Looking up GPIB opcode..."));
-#endif
-        i = 0;
-        do {
-          if (goHidx[i].opcode == db) break;
-          i++;    // Contains index
-        } while (i < oasize);
-        // If we have a handler then execute it
-        if (i < oasize) {
-#ifdef DEBUG5
-          arSerial->print(F("Executing GPIB command: ")); arSerial->println(db, HEX);
-#endif
-          goHidx[i].handler();
+      // Some other device being addressed to talk (LON mode -> isRO = true)
+      if (db > 0x3F && db < 0x5F && isRO) {
+        // Can't talk - no point listening to self!
+        // Listen only to other devices on the bus
+        if (AR488.paddr != (db ^ 0x40)) {
+          mla = true; // Not actually MLA, but need to listen as if it were
         }
       }
-    } else {
-      // Should never get here - so something has gone wrong
-      if (isVerb) arSerial->println(F("attnRequired: failed to read command byte"));
-      break;
+
+      // Serial poll enable request
+      if (db==GC_SPE) spe = true;
+
+      // Serial poll disable request
+      if (db==GC_SPD) spd = true;
+ 
+      // Unlisten
+      if (db==GC_UNL) unl_h();
+
+      // Untalk
+      if (db==GC_UNT) unt_h();
+
+    }
+ 
+  
+  }
+
+#ifdef DEBUG5
+  arSerial->println(F("End ATN loop."));
+#endif
+
+//setGpibControls(DIDS);
+
+
+  if (mla) { 
+#ifdef DEBUG5
+    arSerial->println(F("Listening..."));
+#endif
+    // Call listen handler (receive data)
+    mla_h();
+    mla = false;
+  }
+
+  // Addressed to listen?
+  if (mta) {
+    // Serial poll enabled
+    if (spe) {
+#ifdef DEBUG5
+      arSerial->println(F("attnRequired: Received serial poll enable."));
+#endif
+      spe_h();
+      spe = false;
+    // Otherwise just send data
+    }else{
+//      Wait_on_pin_state(HIGH, ATN, AR488.rtmo);
+      mta_h();
+      mta = false;
     }
   }
 
-  /*
-    arSerial->println(F("Debug info:"));
-    arSerial->print(F("x      : ")); arSerial->println(x);
-    arSerial->print(F("db     : ")); arSerial->println(db, HEX);
-    arSerial->print(F("lfd    : ")); arSerial->println(lfd);
-    arSerial->print(F("rEoi   : ")); arSerial->println(rEoi);
-    arSerial->print(F("snd    : ")); arSerial->println(snd);
-    arSerial->print(F("i      : ")); arSerial->println(oasize);
-    arSerial->print(F("oasize : ")); arSerial->println(oasize);
-    arSerial->println();
-  */
+  // Serial poll disable received
+  if (spd) {
+#ifdef DEBUG5
+    arSerial->println(F("attnRequired: Received serial poll disable."));
+#endif
+    spd_h();
+    mta = false;
+    spe = false;
+    spd = false;
+  }
 
-  // Set back to idle state
-  if (!aTl && !aTt ) setGpibControls(DIDS);
-  //arSerial->println(F("END attnReceived."));
+  // Finished attention - set controls to idle
+  setGpibControls(DIDS);
+
+#ifdef DEBUG5
+  arSerial->println(F("END attnReceived."));
+#endif
 
 }
 
 
+/***** Device is addressed to listen - so listen *****/
+void mla_h(){
+  gpibReceiveData();
+}
+
+
+/***** Device is addressed to talk - so send data *****/
+void mta_h(){
+  if (lnRdy == 2) processLine(pBuf, pbPtr, 2);
+}
+
+
+/***** Selected Device Clear *****/
 void sdc_h() {
   // If being addressed then reset
   if (isVerb) arSerial->println(F("Resetting..."));
@@ -2274,39 +2224,43 @@ void sdc_h() {
 }
 
 
+/***** Serial Poll Disable *****/
 void spd_h() {
   if (isVerb) arSerial->println(F("<- serial poll request ended."));
-  setGpibDbus(0);
-  setGpibControls(DIDS);
-  isSprq = false;
 }
 
 
-/*
-   Serial poll enable
-*/
+/***** Serial Poll Enable *****/
 void spe_h() {
   if (isVerb) arSerial->println(F("Serial poll request received from controller ->"));
-  isSprq = true;
+  gpibSendStatus();
+  if (isVerb) arSerial->println(F("Status sent."));
+  // Clear the SRQ bit
+  AR488.stat = AR488.stat & ~0x40;
+  // Clear the SRQ signal
+  clrSrqSig();
+  if (isVerb) arSerial->println(F("SRQ bit cleared (if set)."));
 }
 
 
+/***** Unlisten *****/
 void unl_h() {
   // Stop receiving and go to idle
 #ifdef DEBUG5
   arSerial->println(F("Unlisten received."));
 #endif
-  aTl = false;
   rEoi = false;
+  tranBrk = 3;  // Stop receving transmission
 }
 
 
+/***** Untalk *****/
 void unt_h() {
   // Stop sending data and go to idle
 #ifdef DEBUG5
   arSerial->println(F("Untalk received."));
 #endif
-  aTt = false;
+//  tranBrk = 3;  // Stop sending transmission
 }
 
 
@@ -2314,9 +2268,7 @@ void unt_h() {
 /***** GPIB DATA HANDLING ROUTINES *****/
 /***************************************/
 
-/*
-   Send a single byte GPIB command
-*/
+/*****  Send a single byte GPIB command *****/
 bool gpibSendCmd(uint8_t cmdByte) {
 
   bool stat = false;
@@ -2340,9 +2292,7 @@ bool gpibSendCmd(uint8_t cmdByte) {
 }
 
 
-/*
-   Send the status byte
-*/
+/***** Send the status byte *****/
 void gpibSendStatus() {
   // Have been addressed and polled so send the status byte
   if (isVerb) {
@@ -2355,9 +2305,7 @@ void gpibSendStatus() {
 }
 
 
-/*
-   Send a series of characters as data to the GPIB bus
-*/
+/***** Send a series of characters as data to the GPIB bus *****/
 void gpibSendData(char *data, uint8_t dsize) {
 
   // If lon is turned on we cannot send data so exit
@@ -2373,6 +2321,7 @@ void gpibSendData(char *data, uint8_t dsize) {
         arSerial->print(AR488.paddr);
         arSerial->println(F(" to listen"));
       }
+      return;
     }
 
 #ifdef DEBUG3
@@ -2387,6 +2336,7 @@ void gpibSendData(char *data, uint8_t dsize) {
   }
 #ifdef DEBUG3
   arSerial->println(F("Set write data mode."));
+  arSerial->print(F("Send->"));
 #endif
 
   // Write the data string
@@ -2399,10 +2349,13 @@ void gpibSendData(char *data, uint8_t dsize) {
       // Otherwise ignore non-escaped CR, LF and ESC
       if ((data[i] != CR) || (data[i] != LF) || (data[i] != ESC)) gpibWriteByte(data[i]);
     }
+#ifdef DEBUG3
+    arSerial->print(data[i]);
+#endif
   }
 
 #ifdef DEBUG3
-  arSerial->print(F("Sent string [")); arSerial->print(data); arSerial->println(F("]"));
+  arSerial->println("<-End.");
 #endif
 
   // Write terminators according to EOS setting
@@ -2451,16 +2404,19 @@ void gpibSendData(char *data, uint8_t dsize) {
     // Device mode - set control lines to idle
     if (AR488.cmode == 1) setGpibControls(DIDS);
   }
+#ifdef DEBUG3
+    arSerial->println(F("<- End of send."));
+#endif
+ 
 }
 
 
+/***** Receive data from the GPIB bus ****/
 /*
-   Receive data from the GPIB bus
-
-   Readbreak:
-   5 - EOI detected
-   7 - command received via serial
-*/
+ * Readbreak:
+ * 5 - EOI detected
+ * 7 - command received via serial
+ */
 
 bool gpibReceiveData() {
 
@@ -2502,19 +2458,20 @@ bool gpibReceiveData() {
 #ifdef DEBUG7
     arSerial->println(F("Start listen ->"));
     arSerial->println(tranBrk);
-    arSerial->println(isATN);
+//    arSerial->println(isATN);
+    arSerial->println(digitalRead(ATN) ? "HIGH" : "LOW");
 #endif
 
   }
 
   // Perform read of data (r: 0=data; 1=cmd; >1=error;
-  while ( tranBrk == 0 && !isATN && !(r = gpibReadByte(&db)) ) {
+  while ( tranBrk == 0 && digitalRead(ATN)==HIGH && !(r = gpibReadByte(&db)) ) {
 
     // When reading with EOI=1 or aMode=3 Check for break condition
     if (rEoi || (AR488.amode == 3)) readBreak();
 
     // If break condition ocurred or ATN asserted then break here
-    if (tranBrk == 7 || isATN) break;
+    if (tranBrk == 7 || digitalRead(ATN)==LOW) break;
 
 #ifdef DEBUG1
     arSerial->print(db, HEX), arSerial->print(' ');
@@ -2541,7 +2498,7 @@ bool gpibReceiveData() {
 #ifdef DEBUG7
   arSerial->println(F("After loop:"));
   arSerial->println(tranBrk);
-  arSerial->println(isATN);
+//  arSerial->println(isATN);
   arSerial->println(r);
 #endif
 
@@ -2594,34 +2551,39 @@ bool gpibReceiveData() {
 }
 
 
+/***** Read a SINGLE BYTE of data from the GPIB bus using 3-way handshake *****/
 /*
-   Read a SINGLE BYTE of data from the GPIB bus using 3-way handshake
-   (- this function is called in a loop to read data    )
-   (- the GPIB bus must already be configured to listen )
-*/
+ * (- this function is called in a loop to read data    )
+ * (- the GPIB bus must already be configured to listen )
+ */
 uint8_t gpibReadByte(uint8_t *db) {
+  bool atnStat = (digitalRead(ATN) ? false : true); // Set to reverse, i.e. asserted=true; unasserted=false;
 
   // Unassert NRFD (we are ready for more data)
   setGpibState(0b00000100, 0b00000100, 0);
-  //  setGpibState(0b00000100,0b00000100,0b00000100);
+
+  // ATN asserted and just got unasserted - abort - we are not ready yet
+  if (atnStat && (digitalRead(ATN)==HIGH)) {
+    setGpibState(0b00000000, 0b00000100, 0);
+    return 3;
+  }
 
   // Wait for DAV to go LOW indicating talker has finished setting data lines..
   if (Wait_on_pin_state(LOW, DAV, AR488.rtmo))  {
     if (isVerb) arSerial->println(F("gpibReadByte: timeout waiting for DAV to go LOW"));
+    setGpibState(0b00000000, 0b00000100, 0);
     // No more data for you?
     return 1;
   }
 
   // Assert NRFD (NOT ready - busy reading data)
   setGpibState(0b00000000, 0b00000100, 0);
-  //  setGpibState(0b00000100,0b00000000,0b00000100);
 
   // read from DIO
   *db = readGpibDbus();
 
   // Unassert NDAC signalling data accepted
   setGpibState(0b00000010, 0b00000010, 0);
-  //  setGpibState(0b00000010,0b00000010,0b00000010);
 
   // Wait for DAV to go HIGH indicating data no longer valid (i.e. transfer complete)
   if (Wait_on_pin_state(HIGH, DAV, AR488.rtmo))  {
@@ -2631,7 +2593,6 @@ uint8_t gpibReadByte(uint8_t *db) {
 
   // Re-assert NDAC - handshake complete, ready to accept data again
   setGpibState(0b00000000, 0b00000010, 0);
-  //  setGpibState(0b00000010,0b00000000,0b00000010);
 
   // GPIB bus DELAY
   delayMicroseconds(AR488.tmbus);
@@ -2641,10 +2602,10 @@ uint8_t gpibReadByte(uint8_t *db) {
 }
 
 
+/***** Write a SINGLE BYTE onto the GPIB bus using 3-way handshake *****/
 /*
-   Write a SINGLE BYTE onto the GPIB bus using 3-way handshake
-   (- this function is called in a loop to send data )
-*/
+ * (- this function is called in a loop to send data )
+ */
 bool gpibWriteByte(uint8_t db) {
 
   // Wait for NDAC to go LOW (indicating that devices are at attention)
@@ -2663,7 +2624,6 @@ bool gpibWriteByte(uint8_t db) {
 
   // Assert DAV (data is valid - ready to collect)
   setGpibState(0b00000000, 0b00001000, 0);
-  //  setGpibState(0b00001000, 0b00000000, 0b00001000);
 
   // Wait for NRFD to go LOW (receiving)
   if (Wait_on_pin_state(LOW, NRFD, AR488.rtmo))  {
@@ -2679,7 +2639,6 @@ bool gpibWriteByte(uint8_t db) {
 
   // Unassert DAV
   setGpibState(0b00001000, 0b00001000, 0);
-  //  setGpibState(0b00001000, 0b00001000, 0b00001000);
 
   // Reset the data bus
   setGpibDbus(0);
@@ -2692,10 +2651,10 @@ bool gpibWriteByte(uint8_t db) {
 }
 
 
+/***** Untalk bus then address a device *****/
 /*
-   Untalk bus then address a device
-   dir: 0=listen; 1=talk;
-*/
+ * dir: 0=listen; 1=talk;
+ */
 bool addrDev(uint8_t addr, bool dir) {
   if (gpibSendCmd(GC_UNL)) return ERR;
   if (dir) {
@@ -2711,9 +2670,7 @@ bool addrDev(uint8_t addr, bool dir) {
 }
 
 
-/*
-   Unaddress a device (untalk bus)
-*/
+/***** Unaddress a device (untalk bus) *****/
 bool uaddrDev() {
   // De-bounce
   delayMicroseconds(30);
@@ -2729,32 +2686,35 @@ bool uaddrDev() {
 /**********************************/
 
 
+/***** Wait for "pin" to reach a specific state *****/
 /*
-   Wait for "pin" to reach a specific state
-   Returns false on success, true on timeout.
-   Pin MUST be set as INPUT_PULLUP otherwise it will not change and simply time out!
-
-*/
+ * Returns false on success, true on timeout.
+ * Pin MUST be set as INPUT_PULLUP otherwise it will not change and simply time out!
+ */
 boolean Wait_on_pin_state(uint8_t state, uint8_t pin, int interval) {
 
   unsigned long timeout = millis() + interval;
+  bool atnStat = (digitalRead(ATN) ? false : true); // Set to reverse - asserted=true; unasserted=false;
 
   while (digitalRead(pin) != state) {
+    // Check timer
     if (millis() >= timeout) return true;
+    // ATN status was asserted but now unasserted so abort
+    if (atnStat && (digitalRead(ATN)==HIGH)) return true;
     //    if (digitalRead(EOI)==LOW) tranBrk = 2;
   }
   return false;        // = no timeout therefore succeeded!
 }
 
+/***** Control the GPIB bus - set various GPIB states *****/
 /*
-   Control the GPIB bus - set various GPIB states
-   state is a predefined state (CINI, CIDS, CCMS, CLAS, CTAS, DINI, DIDS, DLAS, DTAS);
-   setGpibState (uint8_t direction, uint8_t state[low/high])
-   Bits control lines as follows: 8-ATN, 7-SRQ, 6-REN, 5-EOI, 4-DAV, 3-NRFD, 2-NDAC, 1-IFC
-   setGpibState byte2 (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
-   setGpibState byte3 (mask)     : 0=unaffected, 1=enabled
-   setGpibState byte3 (mode)     : 0=set pin state, 1=set pin direction
-*/
+ * state is a predefined state (CINI, CIDS, CCMS, CLAS, CTAS, DINI, DIDS, DLAS, DTAS);
+ * setGpibState (uint8_t direction, uint8_t state[low/high])
+ * Bits control lines as follows: 8-ATN, 7-SRQ, 6-REN, 5-EOI, 4-DAV, 3-NRFD, 2-NDAC, 1-IFC
+ * setGpibState byte2 (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
+ * setGpibState byte3 (mask)     : 0=unaffected, 1=enabled
+ * setGpibState byte3 (mode)     : 0=set pin state, 1=set pin direction
+ */
 void setGpibControls(uint8_t state) {
 
   // Switch state

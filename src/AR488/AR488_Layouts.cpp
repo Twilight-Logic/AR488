@@ -3,12 +3,11 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.47.44, 09/10/2019 *****/
+/***** AR488_Hardware.cpp, ver. 0.47.49, 18/10/2019 *****/
 
 
 volatile bool isATN = false;  // has ATN been asserted?
 volatile bool isSRQ = false;  // has SRQ been asserted?
-
 
 /**********************************/
 /***** UNO/NANO BOARD SECTION *****/
@@ -433,17 +432,19 @@ static const uint8_t SRQint = 0b01000000;
 
 void pin_change_interrupt(void) {
 
-  // Has ATN pin interrupt fired (ATN asserted)?
+  // Has the status of the ATN pin interrupt changed?
   if ((ATNPREG ^ atnPinMem) & ATNint) {
+    // Set the current status of ATN
     isATN = (ATNPREG & ATNint) == 0;
   }
 
-  // Has SRQ pin interrupt fired (SRQ asserted)?
+  // Has the status of the SRQ pin interrupt changed?
   if ((SRQPREG ^ srqPinMem) & SRQint) {
+    // Set the current status of SRQ
     isSRQ = (SRQPREG & SRQint) == 0;
   }
 
-  // Save current state of interrupt pin's register
+  // Save current state of the interrupt registers
   atnPinMem = ATNPREG;
   srqPinMem = SRQPREG;
 }
