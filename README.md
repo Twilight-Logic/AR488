@@ -3,7 +3,7 @@
 
 The AR488 GPIB controller is an Arduino-based controller for interfacing with IEEE488 GPIB devices via USB. This work was inspired by and has been based on the work originally released by Emanuele Girlando and has been released with his permission.
 
-This sketch represents a re-write of that work and implements the full set of Prologix ++ commands (with the exception of the ++lon device mode command), and also provides a macro feature as well as Bluetooth support. Secondary GPIB addressing is not yet supported.
+This sketch represents a re-write of that work and implements the full set of Prologix ++ commands in both controller and device mode, with the exception of ++help. Ssecondary GPIB addressing is not yet supported, but a macro feature is provided to allow automation of frequently used command sequences was well as controller and instrument initialisation at startup.
 
 To build an interface, at least one Arduino board will be required to act as the interface hardware. The Arduino Uno R3, Nano, Mega 2560 and Micro 23u4 boards are currently supported and provide a low cost alternative to other commercial interfaces.
 
