@@ -76,6 +76,7 @@
    ++ifc          - assert IFC signal for 150 miscoseconds - make AR488 controller in charge
    ++llo          - local lockout - disable front panel operation on instrument
    ++loc          - enable front panel operation on instrument
+   ++lon          - put controller in listen-only mode (listen to all traffic)
    ++mode         - set the interface mode (0=controller/1=device)
    ++read         - read data from instrument
    ++read_tmo_ms  - read timeout specified between 1 - 3000 milliseconds
@@ -97,6 +98,7 @@
    //++ren          - assert or unassert the REN signal
    ++ppoll        - conduct a parallel poll
    ++setvstr      - set custom version string (to identify controller, e.g. "GPIB-USB"). Max 47 chars, excess truncated.
+   ++ton          - put controller in talk-only mode (send data only)
    ++verbose      - verbose (human readable) mode
 
 */
@@ -106,10 +108,7 @@
 
    ++help     - show summary of commands
    ++debug    - debug mode (0=off, 1=basic, 2=verbose) [maybe best left in ifdef statements?]
-   ++lon      - put controller in listen-only mode (listen to all traffic)
-   ++ton      - put controller in talk-only mode (send data only)
    ++myaddr   - aset the controller address
-
 */
 
 /*
