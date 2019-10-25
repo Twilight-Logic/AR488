@@ -26,7 +26,7 @@
 #endif
 */
 
-/***** FWVER "AR488 GPIB controller, ver. 0.47.51, 21/10/2019" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.47.53, 25/10/2019" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -107,6 +107,7 @@
    ++help     - show summary of commands
    ++debug    - debug mode (0=off, 1=basic, 2=verbose) [maybe best left in ifdef statements?]
    ++lon      - put controller in listen-only mode (listen to all traffic)
+   ++ton      - put controller in talk-only mode (send data only)
    ++myaddr   - aset the controller address
 
 */
@@ -324,6 +325,9 @@ bool isPle = false;   // Plus escaped
 // Read only mode flag
 bool isRO = false;
 
+// Talk only mode flag
+bool isTO = false;
+
 // GPIB command parser
 bool aTt = false;
 bool aTl = false;
@@ -379,6 +383,8 @@ void setup() {
 //#else
   // Start the serial port
   arSerial->begin(AR_SERIAL_BAUD);
+
+/*
   #if defined(__AVR_ATmega32U4__)
     while(!*arSerial)
     ;
@@ -389,6 +395,7 @@ void setup() {
     }
     Serial.println("@>");
   #endif // __AVR_ATmega32U4__
+*/
   
 //#endif
 
@@ -508,7 +515,13 @@ void loop() {
 
   // Device mode:
   if (AR488.cmode == 1) {
-    if (isATN) attnRequired();
+    if (isTO) {
+      if (lnRdy == 2) processLine(pBuf, pbPtr, 2);
+    }else if (isRO) {
+      lonMode();
+    }else{
+      if (isATN) attnRequired();
+    }
   }
 
   delayMicroseconds(5);
@@ -793,6 +806,7 @@ static cmdRec cmdHidx [] = {
   { "srq",         2, (void(*)(char*)) srq_h     },
   { "srqauto",     2, srqa_h      },
   { "status",      1, stat_h      },
+  { "ton",         1, ton_h       },
   { "ver",         3, ver_h       },
   { "verbose",     3, (void(*)(char*)) verb_h    },
   { "tmbus",       3, tmbus_h     },
@@ -1748,12 +1762,36 @@ void lon_h(char *params) {
       if (isVerb) arSerial->println(F("LON: valid range is [0-disable|1-enable]."));
       return;
     }
-    isRO = val ? true : false; if (isVerb) {
+    isRO = val ? true : false;
+    isTO = !isRO; // Talk-only mode must be disabled!
+    if (isVerb) {
       arSerial->print(F("LON: "));
       arSerial->println(val ? "ON" : "OFF") ;
     }
   } else {
     arSerial->println(isRO);
+  }
+}
+
+
+/***** Talk only mode *****/
+void ton_h(char *params) {
+  int val;
+  if (params != NULL) {
+    val = atoi(params);
+    if (val < 0 || val > 1) {
+      errBadCmd();
+      if (isVerb) arSerial->println(F("TON: valid range is [0-disable|1-enable]."));
+      return;
+    }
+    isTO = val ? true : false;
+    isRO = !isTO; // Read-only mode must be disabled!
+    if (isVerb) {
+      arSerial->print(F("TON: "));
+      arSerial->println(val ? "ON" : "OFF") ;
+    }
+  } else {
+    arSerial->println(isTO);
   }
 }
 
@@ -2103,6 +2141,7 @@ void attnRequired() {
       // Device is addressed to talk
       if (AR488.paddr == (db ^ 0x40)) { // MLA = db^0x40
 
+/*
         if (isRO) {
 #ifdef DEBUG5
           arSerial->println(F("attnRequired: cannot respond in listen-only [++lon 1] mode"));
@@ -2110,16 +2149,23 @@ void attnRequired() {
           if (lnRdy==2) flushPbuf();
 #endif
         }else{
+*/ 
+
           // Call talk handler to send data
           mta = true;
-          if (!spe) {
 #ifdef DEBUG5
+          if (!spe) {
             arSerial->println(F("attnRequired: Controller wants me to send data >>>"));
-#endif
           }
-        }
-      }
+#endif
 
+/*
+        }
+*/        
+
+      }
+      
+/*
       // Some other device being addressed to talk (LON mode -> isRO = true)
       if (db > 0x3F && db < 0x5F && isRO) {
         // Can't talk - no point listening to self!
@@ -2128,6 +2174,7 @@ void attnRequired() {
           mla = true; // Not actually MLA, but need to listen as if it were
         }
       }
+*/
 
       // Serial poll enable request
       if (db==GC_SPE) spe = true;
@@ -2142,7 +2189,6 @@ void attnRequired() {
       if (db==GC_UNT) unt_h();
 
     }
- 
   
   }
 
@@ -2261,6 +2307,16 @@ void unt_h() {
   arSerial->println(F("Untalk received."));
 #endif
 //  tranBrk = 3;  // Stop sending transmission
+}
+
+
+void lonMode(){
+
+  gpibReceiveData();
+
+  // Clear the buffer to prevent it getting blocked
+  if (lnRdy==2) flushPbuf();
+  
 }
 
 
