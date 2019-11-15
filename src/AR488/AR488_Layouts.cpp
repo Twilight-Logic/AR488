@@ -3,22 +3,21 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.47.49, 18/10/2019 *****/
+/***** AR488_Hardware.cpp, ver. 0.47.56, 03/11/2019 *****/
 
 
 volatile bool isATN = false;  // has ATN been asserted?
 volatile bool isSRQ = false;  // has SRQ been asserted?
 
-/**********************************/
-/***** UNO/NANO BOARD SECTION *****/
-/***** vvvvvvvvvvvvvvvvvvvvvv *****/
+
+/*********************************/
+/***** UNO/NANO BOARD LAYOUT *****/
+/***** vvvvvvvvvvvvvvvvvvvvv *****/
 #if defined(AR488_UNO) || defined(AR488_NANO)
 
 /***** Read the status of the GPIB data bus wires and collect the byte of data *****/
 uint8_t readGpibDbus() {
   // Set data pins to input
-  //  DDRD = DDRD & 0b11001111 ;
-  //  DDRC = DDRC & 0b11000000 ;
   DDRD &= 0b11001111 ;
   DDRC &= 0b11000000 ;
   //  PORTD = PORTD | 0b00110000; // PORTD bits 5,4 input_pullup
@@ -57,7 +56,6 @@ void setGpibDbus(uint8_t db) {
    NRFD  10  PORTB bit 2 byte bit 2
    DAV   11  PORTB bit 3 byte bit 3
    EOI   12  PORTB bit 4 byte bit 4
-  // * REN   13  PORTB bit 5 byte bit 5
    SRQ   2   PORTD bit 2 byte bit 6
    REN   3   PORTD bit 3 byte bit 5
    ATN   7   PORTD bit 8 byte bit 7
@@ -86,7 +84,6 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
       DDRD = ( (DDRD & ~portDm) | (portDb & portDm) );
       break;
   }
-
 }
 
 
@@ -139,16 +136,16 @@ ISR(PCINT2_vect) {
 
 
 #endif //AR488UNO/AR488_NANO
-/***** ^^^^^^^^^^^^^^^^^^^^^^ *****/
-/***** UNO/NANO BOARD SECTION *****/
-/**********************************/
+/***** ^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** UNO/NANO BOARD LAYOUT *****/
+/*********************************/
 
 
 
-/***************************************/
-/***** MEGA2560 BOARD CODE SECTION *****/
-/***** vvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
-#ifdef AR488_MEGA2560
+/*******************************************/
+/***** MEGA2560 BOARD LAYOUT (Default) *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef AR488_MEGA2560_D
 
 /***** Read the status of the GPIB data bus wires and collect the byte of data *****/
 uint8_t readGpibDbus() {
@@ -229,7 +226,6 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
       DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
       break;
   }
-
 }
 
 
@@ -281,16 +277,362 @@ ISR(PCINT0_vect) {
 
 
 #endif //MEGA2560
-/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
-/***** MEGA2560 BOARD CODE SECTION *****/
-/***************************************/
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** MEGA2560 BOARD LAYOUT (Default) *****/
+/*******************************************/
+
+
+/************************************/
+/***** MEGA2560 BOARD LAYOUT E1 *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef AR488_MEGA2560_E1
+
+/***** Read the status of the GPIB data bus wires and collect the byte of data *****/
+uint8_t readGpibDbus() {
+  uint8_t db = 0;
+  uint8_t val = 0;
+  
+  // Set data pins to input
+  DDRA &= 0b10101010 ;
+  DDRC &= 0b01010101 ;
+
+  PORTA |= 0b01010101; // PORTA bits 6,4,2,0 input_pullup
+  PORTC |= 0b10101010; // PORTC bits 7,5,3,1 input_pullup
+
+  // Read the byte of data on the bus (GPIB states are inverted)
+  val = ~((PINA & 0b01010101) + (PINC & 0b10101010));
+
+  db |= (((val >> 1) & 1)<<3);
+  db |= (((val >> 3) & 1)<<2);
+  db |= (((val >> 5) & 1)<<1);
+  db |= (((val >> 7) & 1)<<0);
+
+  db |= (((val >> 6) & 1)<<7);
+  db |= (((val >> 4) & 1)<<6);
+  db |= (((val >> 2) & 1)<<5);
+  db |= (((val >> 0) & 1)<<4);
+
+  return db;
+}
+
+
+/***** Set the status of the GPIB data bus wires with a byte of datacd ~/test *****/
+void setGpibDbus(uint8_t db) {
+  uint8_t val = 0;
+  
+  // Set data pins as outputs
+  DDRA |= 0b01010101 ;
+  DDRC |= 0b10101010 ;
+
+  // GPIB states are inverted
+  db = ~db;
+
+  val |= (((db >> 3) & 1)<<1);
+  val |= (((db >> 2) & 1)<<3);
+  val |= (((db >> 1) & 1)<<5);
+  val |= (((db >> 0) & 1)<<7);
+
+  val |= (((db >> 7) & 1)<<6);
+  val |= (((db >> 6) & 1)<<4);
+  val |= (((db >> 5) & 1)<<2);
+  val |= (((db >> 4) & 1)<<0);
+
+  // Set data bus
+  PORTA = (PORTA & ~0b01010101) | (val & 0b01010101);
+  PORTC = (PORTC & ~0b10101010) | (val & 0b10101010);
+}
+
+
+/***** Set the direction and state of the GPIB control lines ****/
+/*
+   Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
+   pdir:  0=input, 1=output;
+   pstat: 0=LOW, 1=HIGH/INPUT_PULLUP
+   Arduino pin to Port/bit to direction/state byte map:
+   IFC   48  PORTL bit 1 byte bit 0
+   NDAC  46  PORTL bit 3 byte bit 1
+   NRFD  44  PORTL bit 5 byte bit 2
+   DAV   42  PORTL bit 7 byte bit 3
+   EOI   40  PORTG bit 1 byte bit 4
+   REN   38  PORTD bit 7 byte bit 5
+   // These require pcint
+   SRQ   50  PORTB bit 3 byte bit 6
+   ATN   52  PORTB bit 1 byte bit 7
+*/
+void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
+
+  // PORT B
+  uint8_t portBb = (((bits >> 7 & 1))<<1) + (((bits >> 6 & 1))<<3);
+  uint8_t portBm = (((mask >> 7 & 1))<<1) + (((mask >> 6 & 1))<<3);
+
+  // PORT D
+  uint8_t portDb = (((bits >> 5 & 1))<<7);
+  uint8_t portDm = (((mask >> 5 & 1))<<7);
+
+  // PORT G
+  uint8_t portGb = (((bits >> 4 & 1))<<1);
+  uint8_t portGm = (((mask >> 4 & 1))<<1);
+
+  // PORT L
+  uint8_t portLb = (((bits >> 0 & 1))<<1) + (((bits >> 1 & 1))<<3) + (((bits >> 2 & 1))<<5) + (((bits >> 3 & 1))<<7);
+  uint8_t portLm = (((mask >> 0 & 1))<<1) + (((mask >> 1 & 1))<<3) + (((mask >> 2 & 1))<<5) + (((mask >> 3 & 1))<<7);
+
+  // Set PORTs using mask to avoid affecting bits that should not be affected
+  // and calculated and masked port byte
+  // PORT B - bits 7 & 6 (ATN + SRQ)
+  // PORT D - bit 5 (REN)
+  // PORT G - bit 4 (EOI)
+  // PORT L - bits 1,3,5,7 (IFC, NDAC, NRFD, DAV)
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  switch (mode) {
+    case 0:
+      // Set pin states using mask
+      PORTB = ( (PORTB & ~portBm) | (portBb & portBm) );
+      PORTD = ( (PORTD & ~portDm) | (portDb & portDm) );
+      PORTG = ( (PORTG & ~portGm) | (portGb & portGm) );
+      PORTL = ( (PORTL & ~portLm) | (portLb & portLm) );
+      break;
+    case 1:
+      // Set pin direction registers using mask
+      DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
+      DDRD = ( (DDRD & ~portDm) | (portDb & portDm) );
+      DDRG = ( (DDRG & ~portGm) | (portGb & portGm) );
+      DDRL = ( (DDRL & ~portLm) | (portLb & portLm) );
+      break;
+  }
+}
+
+
+/***** Enable interrupts *****/
+#ifdef USE_INTERRUPTS
+
+volatile uint8_t atnPinMem = ATNPREG;
+volatile uint8_t srqPinMem = SRQPREG;
+static const uint8_t ATNint = 0b00000010;
+static const uint8_t SRQint = 0b00001000;
+
+
+void interruptsEn(){
+  cli();
+  PCICR |= 0b00000001;  // PORTB
+  PCMSK0 |= (SRQint^ATNint);
+  sei();
+}
+
+
+#pragma GCC diagnostic error "-Wmisspelled-isr"
+
+/***** Interrupt handler *****/
+ISR(PCINT0_vect) {
+
+  // Has PCINT1 fired (ATN asserted)?
+  if ((ATNPREG ^ atnPinMem) & ATNint) {
+    isATN = (ATNPREG & ATNint) == 0;
+  }
+
+  // Has PCINT3 fired (SRQ asserted)?
+  if ((SRQPREG ^ srqPinMem) & SRQint) {
+    isSRQ = (SRQPREG & SRQint) == 0;
+  }
+
+  // Save current state of PORTD register
+  atnPinMem = ATNPREG;
+  srqPinMem = SRQPREG;
+}
+
+/***** Catchall interrupt vector *****/
+/*
+  ISR(BADISR_vect) {
+  // ISR to catch ISR firing without handler
+  isBAD = true;
+  }
+*/
+#endif //USE_INTERRUPTS
+
+
+#endif //MEGA2560
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** MEGA2560 BOARD LAYOUT E1 *****/
+/************************************/
+
+
+/************************************/
+/***** MEGA2560 BOARD LAYOUT E2 *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef AR488_MEGA2560_E2
+
+/***** Read the status of the GPIB data bus wires and collect the byte of data *****/
+uint8_t readGpibDbus() {
+  uint8_t db = 0;
+  uint8_t val = 0;
+  
+  // Set data pins to input
+  DDRA &= 0b01010101 ;
+  DDRC &= 0b10101010 ;
+
+  PORTA |= 0b10101010; // PORTC bits 7,5,3,1 input_pullup
+  PORTC |= 0b01010101; // PORTA bits 6,4,2,0 input_pullup
+
+  // Read the byte of data on the bus (GPIB states are inverted)
+  val = ~((PINA & 0b10101010) + (PINC & 0b01010101));
+
+  db |= (((val >> 0) & 1)<<3);
+  db |= (((val >> 2) & 1)<<2);
+  db |= (((val >> 4) & 1)<<1);
+  db |= (((val >> 6) & 1)<<0);
+
+  db |= (((val >> 7) & 1)<<7);
+  db |= (((val >> 5) & 1)<<6);
+  db |= (((val >> 3) & 1)<<5);
+  db |= (((val >> 1) & 1)<<4);
+
+  return db;
+  
+}
+
+
+/***** Set the status of the GPIB data bus wires with a byte of datacd ~/test *****/
+void setGpibDbus(uint8_t db) {
+  uint8_t val = 0;
+  
+  // Set data pins as outputs
+  DDRA |= 0b10101010 ;
+  DDRC |= 0b01010101 ;
+
+  // GPIB states are inverted
+  db = ~db;
+
+  val |= (((db >> 4) & 1)<<1);
+  val |= (((db >> 5) & 1)<<3);
+  val |= (((db >> 6) & 1)<<5);
+  val |= (((db >> 7) & 1)<<7);
+
+  val |= (((db >> 0) & 1)<<6);
+  val |= (((db >> 1) & 1)<<4);
+  val |= (((db >> 2) & 1)<<2);
+  val |= (((db >> 3) & 1)<<0);
+
+  // Set data bus
+  PORTA = (PORTA & ~0b10101010) | (val & 0b10101010);
+  PORTC = (PORTC & ~0b01010101) | (val & 0b01010101);
+}
+
+
+/***** Set the direction and state of the GPIB control lines ****/
+/*
+   Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
+   pdir:  0=input, 1=output;
+   pstat: 0=LOW, 1=HIGH/INPUT_PULLUP
+   Arduino pin to Port/bit to direction/state byte map:
+   IFC   48  PORTL bit 1 byte bit 0
+   NDAC  46  PORTL bit 3 byte bit 1
+   NRFD  44  PORTL bit 5 byte bit 2
+   DAV   42  PORTL bit 7 byte bit 3
+   EOI   40  PORTG bit 1 byte bit 4
+   REN   38  PORTD bit 7 byte bit 5
+   // These require pcint
+   SRQ   50  PORTB bit 3 byte bit 6
+   ATN   52  PORTB bit 1 byte bit 7
+*/
+void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
+
+  // PORT B
+  uint8_t portBb = (((bits >> 7 & 1))<<0) + (((bits >> 6 & 1))<<2);
+  uint8_t portBm = (((mask >> 7 & 1))<<0) + (((mask >> 6 & 1))<<2);
+
+  // PORT G
+  uint8_t portGb = (((bits >> 4 & 1))<<0) + (((bits >> 5 & 1))<<2);
+  uint8_t portGm = (((mask >> 4 & 1))<<0) + (((mask >> 5 & 1))<<2);
+
+  // PORT L
+  uint8_t portLb = (((bits >> 0 & 1))<<0) + (((bits >> 1 & 1))<<2) + (((bits >> 2 & 1))<<4) + (((bits >> 3 & 1))<<6);
+  uint8_t portLm = (((mask >> 0 & 1))<<0) + (((mask >> 1 & 1))<<2) + (((mask >> 2 & 1))<<4) + (((mask >> 3 & 1))<<6);
+
+  // Set PORTs using mask to avoid affecting bits that should not be affected
+  // and calculated and masked port byte
+  // PORT B - bits 0 & 2 (ATN + SRQ)
+  // PORT G - bits 0 & 2 (EOI, REN)
+  // PORT L - bits 0,2,4,6 (IFC, NDAC, NRFD, DAV)
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  switch (mode) {
+    case 0:
+      // Set pin states using mask
+      PORTB = ( (PORTB & ~portBm) | (portBb & portBm) );
+      PORTG = ( (PORTG & ~portGm) | (portGb & portGm) );
+      PORTL = ( (PORTL & ~portLm) | (portLb & portLm) );
+      break;
+    case 1:
+      // Set pin direction registers using mask
+      DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
+      DDRG = ( (DDRG & ~portGm) | (portGb & portGm) );
+      DDRL = ( (DDRL & ~portLm) | (portLb & portLm) );
+      break;
+  }
+}
+
+
+/***** Enable interrupts *****/
+#ifdef USE_INTERRUPTS
+
+volatile uint8_t atnPinMem = ATNPREG;
+volatile uint8_t srqPinMem = SRQPREG;
+static const uint8_t ATNint = 0b00000001;
+static const uint8_t SRQint = 0b00000100;
+
+
+void interruptsEn(){
+  cli();
+  PCICR |= 0b00000001;  // PORTB
+  PCMSK0 |= (SRQint^ATNint);
+  sei();
+}
+
+
+#pragma GCC diagnostic error "-Wmisspelled-isr"
+
+/***** Interrupt handler *****/
+ISR(PCINT0_vect) {
+
+  // Has PCINT0 fired (ATN asserted)?
+  if ((ATNPREG ^ atnPinMem) & ATNint) {
+    isATN = (ATNPREG & ATNint) == 0;
+  }
+
+  // Has PCINT2 fired (SRQ asserted)?
+  if ((SRQPREG ^ srqPinMem) & SRQint) {
+    isSRQ = (SRQPREG & SRQint) == 0;
+  }
+
+  // Save current state of PORTD register
+  atnPinMem = ATNPREG;
+  srqPinMem = SRQPREG;
+}
+
+/***** Catchall interrupt vector *****/
+/*
+  ISR(BADISR_vect) {
+  // ISR to catch ISR firing without handler
+  isBAD = true;
+  }
+*/
+#endif //USE_INTERRUPTS
+
+
+#endif //MEGA2560
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** MEGA2560 BOARD LAYOUT E2 *****/
+/************************************/
 
 
 
-/***********************************************/
-/***** MICRO PRO (32u4) BOARD CODE SECTION *****/
-/***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
-#ifdef AR488_MEGA32U4
+/***********************************************************/
+/***** MICRO PRO (32u4) BOARD LAYOUT for MICRO (Artag) *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef AR488_MEGA32U4_MICRO
 
 uint8_t readGpibDbus() {
 
@@ -459,12 +801,9 @@ void interruptsEn(){
 #endif  // USE_INTERRUPTS
 
 #endif  // MEGA32U4
-/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
-/***** MICRO PRO (32u4) BOARD CODE SECTION *****/
-/***********************************************/
-
-
-
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** MICRO PRO (32u4) BOARD LAYOUT for MICRO (Artag) *****/
+/***********************************************************/
 
 
 

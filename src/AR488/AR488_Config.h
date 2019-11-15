@@ -7,47 +7,88 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.47.53, 25/10/2019"
+#define FWVER "AR488 GPIB controller, ver. 0.47.56, 03/11/2019"
 
 
-/***** BOARD SELECTION *****/
+/***** BOARD CONFIGURATION *****/
 /*
- * At least one board and ONLY ONE board MUST be selected!
+ * Platform will be selected automatically based on
+ * Arduino definition.
+ * Only ONE board/layout should be selected per platform
+ * Only ONE Serial port can be used to receive output
  */
-#define AR488_UNO
-//#define AR488_NANO
-//#define AR488_MEGA2560
-//#define AR488_MEGA32U4
+
+/*** Custom layout ***/
+/*
+ * Uncomment to use custom board layout
+ */
 //#define AR488_CUSTOM
 
-/***** Serial port selection *****/
 /*
- * Note: Only ONE port can be used and will receive output
+ * Configure the appropriate board/layout section
+ * below as required
  */
-/* UNO and NANO boards */
-#ifdef __AVR_ATmega328P__
-  // Select HardwareSerial or SoftwareSerial (default = HardwareSerial)
+#ifdef AR488_CUSTOM
+  /* Board layout */
+  /*
+   * Define board layout in the AR488 CUSTOM LAYOUT
+   * section below
+   */
+  /* Serial ports */
   #define AR_HW_SERIAL
+  #define AR_SERIAL_PORT Serial
+  //#define AR_SERIAL_PORT Serial1
+  //#define AR_SERIAL_PORT Serial2
+  //#define AR_SERIAL_PORT Serial3
+  //#define AR_CDC_SERIAL
   //#define AR_SW_SERIAL
+
+/*** UNO and NANO boards ***/
+#elif __AVR_ATmega328P__
+  /* Board/layout selection */
+  #define AR488_UNO
+  //#define AR488_NANO
+  //#define AR488_CUSTOM
+  /*** Serial ports ***/
+  //Select HardwareSerial or SoftwareSerial (default = HardwareSerial) ***/
+  #define AR_HW_SERIAL
   // The UNO/NANO default port is 'Serial'
   #define AR_SERIAL_PORT Serial
-/* Mega 32u4 based boards (Micro, Leonardo) */
+  //#define AR_SW_SERIAL
+
+/*** MEGA 32U4 based boards (Micro, Leonardo) ***/
 #elif __AVR_ATmega32U4__
+  /*** Board/layout selection ***/
+  #define AR488_MEGA32U4_MICRO
+  //#define AR488_CUSTOM
+  /*** Serial ports ***/
   // Comment out if using RXI, TXO pins
   #define AR_CDC_SERIAL
   // The Mega 32u4 default port is a virtual USB CDC port named 'Serial'
   #define AR_SERIAL_PORT Serial
-/* Mega 2560 board */
+  
+/*** MEGA 2560 board ***/
 #elif __AVR_ATmega2560__
-  // M++addega 2560 supports Serial, Serial1, Serial2, Serial3. Since the pins 
+  /*** Board/layout selection ***/
+//  #define AR488_MEGA2560_D
+//  #define AR488_MEGA2560_E1
+  #define AR488_MEGA2560_E2
+  /*** Serial ports ***/
+  // Mega 2560 supports Serial, Serial1, Serial2, Serial3. Since the pins 
   // associated with Serial2 are used in the default pin layout, Serial2
   // is unavailable. The default port is 'Serial'. Choose ONE port.
   #define AR_HW_SERIAL
-  #define AR_SERIAL_PORT Serial
-  //#define AR_SERIAL_PORT Serial1
+//  #define AR_SERIAL_PORT Serial
+  #define AR_SERIAL_PORT Serial1
   //#define AR_SERIAL_PORT Serial3
-#endif
+    
+#endif  // Board/layout selection
+
+
+
+/***** Software serial support *****/
 /*
+ * Configure the SoftwareSerial TX/RX pins and baud rate here
  * Note: SoftwareSerial support conflicts with PCINT support
  * When using SoftwareSerial, disable USE_PCINTS and enable 
  * USE_PINHOOKS
@@ -55,20 +96,24 @@
 #ifdef AR_SW_SERIAL
   #define AR_SW_SERIAL_RX 53
   #define AR_SW_SERIAL_TX 51
+  #define AR_SERIAL_BAUD 57600
+#else
+  #define AR_SERIAL_BAUD 115200
 #endif
+
 /*
  * Note: SoftwareSerial reliable only up to a MAX of 57600 baud only
  */
-#define AR_SERIAL_BAUD 115200
 
 
 /***** Pin State Detection *****/
 /*
  * With UNO. NANO and MEGA boards with pre-defined layouts,
  * USE_PCINTS can be used.
- * With AR488_CUSTOM and unknown boards, USE_PINHOOKS should be used.
- * Interrupts may respond faster. Pinhooks (in-loop checking for 
- * state of pin) can be supported on a wider range of platforms.
+ * With the AR488_CUSTOM layout and unknown boards, USE_PINHOOKS must  
+ * be used. Interrupts are used on pre-defined AVR board layouts and will 
+ * respond faster, however "pinhooks" (in-loop checking for state of pin) 
+ * can be supported with any board layout.
  */
 #ifdef __AVR__
   #if defined (AR488_UNO) || defined (AR488_NANO) || defined (AR488_MEGA2560) || defined (AR488_MEGA32U4)
