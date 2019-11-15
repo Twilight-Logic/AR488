@@ -7,7 +7,7 @@ This sketch represents a re-write of that work and implements the full set of Pr
 
 To build an interface, at least one Arduino board will be required to act as the interface hardware. The Arduino Uno R3, Nano, Mega 2560 and Micro 23u4 boards are currently supported and provide a low cost alternative to other commercial interfaces.
 
-Uno and Nano boards are both based around the ATmega328p microcontroller and have similar pinout and features. Only two pins (6 & 13) remain spare as the remainder are all used to interface with the GPIB bus. On the Micro, which is based around the ATmega32u4 microcontroller, all GPIO pins are used and none remain spare. The Mega 2560 costs slightly more but has a different design and layout with more control pins, communication ports and a more powerful ATmega2560 processor. This provides more flexibility and potential for further expansion. Pins 2-5, 13, analog pins A8 to A15, as well as the entire "digital" connector (pins 22 to 53) at the end of the board are not used by the sketch and remain available for adding displays and other devices. Please be aware that pins 16 and 17, corresponding to TXD2 and RXD2 (the Serial2 port) have been used by the sketch and cannot be used for serial communication, however serial ports 0, 1 and 3 remain available for use.
+Uno and Nano boards are both based around the ATmega328p microcontroller and have similar pinout and features. Only two pins (6 & 13) remain spare as the remainder are all used to interface with the GPIB bus. On the Micro, which is based around the ATmega32u4 microcontroller, all GPIO pins are used and none remain spare. The Mega 2560 costs slightly more but has a different design and layout with more control pins, communication ports and a more powerful ATmega2560 processor. This provides more flexibility and potential for further expansion. Currenly, 3 layouts are provided for the AtMega2650 using either the lower numbered pins on the sides of the board, or either row of pins on the two row header at the end of the board. This provides a flexible way to allows various displays and other devices to be connected if desired. Please be aware that pins 16 and 17, corresponding to TXD2 and RXD2 (the Serial2 port) have been used by the sketch and cannot be used for serial communication, however serial ports 0, 1 and 3 remain available for use.
 
 To use the sketch, create a new directory, and then unpack the .zip file into this location. Open the main sketch, AR488.ino, in the Ardduino IDE. This should also load all of the linked files. Have a look at Config.h and make any adjustment you require there (see the AR488 manual for details), in particular the board selection. Set the target board in the Board Manager of your Arduino IDE, and then compile and upload the sketch. There should be no need to make any changes to any other files. Once uploaded, the firmware should respond to the ++ver command with its version information.
 
@@ -20,7 +20,13 @@ https://github.com/Twilight-Logic/AR488/blob/master/AR488-manual.pdf
 
 Once uploaded, the firmware should respond to the ++ver command with its version information.
 
+<b><i>Wireless Communication:</i></b>
+
+Wireless connectivity can be added to the AR488 GPIB controller using an ESP8266 WiFi module. The AR488-ESP8266-addon sketch must be first uploaded to the board an once uploaded, the module must be connected to the AR488 via the Rx/Tx serial pins. Do not attempt to program the ESP8266 board while it is connected via serial to the AR488. This will result in an error.
+
 <i>Please note that Bluetooth support has been temporarily removed in this version as the code needs to be updated to work with the current version. The previous version (0.46.32) is still available in Archive/Uno or Archive/Mega, and documentation in Archive/Docs directories if required.</i>
+
+<b><i>Obtaining support:</i></b>
 
 In the event that a problem is found, this can be logged via the Issues feature on the AR488 GitHub page. Please provide at minimum:
 
