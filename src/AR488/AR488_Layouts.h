@@ -5,7 +5,7 @@
 
 #include "AR488_Config.h"
 
-/***** AR488_Hardware.h, ver. 0.47.56, 03/11/2019 *****/
+/***** AR488_Hardware.h, ver. 0.47.57, 22/11/2019 *****/
 
 
 /*************************************/
@@ -227,6 +227,7 @@
 /***** GLOBAL DEFINITIONS SECTION *****/
 /***** vvvvvvvvvvvvvvvvvvvvvvvvvv *****/
 
+void readyGpibDbus();
 uint8_t readGpibDbus();
 void setGpibDbus(uint8_t db);
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode);

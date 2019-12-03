@@ -26,7 +26,7 @@
 #endif
 */
 
-/***** FWVER "AR488 GPIB controller, ver. 0.47.56, 03/11/2019" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.47.59, 30/11/2019" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -575,10 +575,12 @@ void serialEvent() {
 /***** Interrupt data transfer when escape pressed *****/
 void readBreak() {
   // Check whether EOI is asserted
+/*  
   if (digitalRead(EOI) == LOW) {
     tranBrk = 5;
     return;
   }
+*/
 
   // Check serial input to see if we need to break on ++ character
   if (arSerial->available()) {   // Only need to parse if a character is available
@@ -2479,7 +2481,7 @@ bool gpibReceiveData() {
   uint8_t r = 0, db;
 
   int x = 0;
-  //  int s=0;
+//  int s = 0;
 
 
   // Flag read in progress...
@@ -2510,20 +2512,34 @@ bool gpibReceiveData() {
     // Set GPIB controls to device read mode
     setGpibControls(DLAS);
 
+  }
+
 #ifdef DEBUG7
     arSerial->println(F("Start listen ->"));
+    arSerial->print(F("TRNb: "));
     arSerial->println(tranBrk);
+    arSerial->print(F("rEOI: "));
+    arSerial->println(rEoi);
+    arSerial->print(F("ATN:  "));
 //    arSerial->println(isATN);
     arSerial->println(digitalRead(ATN) ? "HIGH" : "LOW");
 #endif
 
-  }
+
+  // Ready the data bus
+  readyGpibDbus();
 
   // Perform read of data (r: 0=data; 1=cmd; >1=error;
   while ( tranBrk == 0 && digitalRead(ATN)==HIGH && !(r = gpibReadByte(&db)) ) {
 
     // When reading with EOI=1 or aMode=3 Check for break condition
     if (rEoi || (AR488.amode == 3)) readBreak();
+
+#ifdef DEBUG7
+    if (tranBrk ==5) {
+      arSerial->println(F("\r\nEOI detected."));
+    }
+#endif
 
     // If break condition ocurred or ATN asserted then break here
     if (tranBrk == 7 || digitalRead(ATN)==LOW) break;
@@ -2536,6 +2552,7 @@ bool gpibReceiveData() {
 #endif
 
     // Reading with EOI and EOI detected - print last character and then break on EOI
+//    readBreak();
     if (rEoi && tranBrk == 5) break;
 
     // Stop if byte = specified EOT character
@@ -2552,7 +2569,9 @@ bool gpibReceiveData() {
 
 #ifdef DEBUG7
   arSerial->println(F("After loop:"));
+  arSerial->print(F("TRNb: "));
   arSerial->println(tranBrk);
+  arSerial->print(F("ATN:  "));
 //  arSerial->println(isATN);
   arSerial->println(r);
 #endif
@@ -2633,6 +2652,9 @@ uint8_t gpibReadByte(uint8_t *db) {
 
   // Assert NRFD (NOT ready - busy reading data)
   setGpibState(0b00000000, 0b00000100, 0);
+
+  // Check for EOI signal
+  if (rEoi && digitalRead(EOI) == LOW) tranBrk = 5;
 
   // read from DIO
   *db = readGpibDbus();

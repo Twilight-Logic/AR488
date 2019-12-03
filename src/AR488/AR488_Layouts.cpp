@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.47.56, 03/11/2019 *****/
+/***** AR488_Hardware.cpp, ver. 0.47.57, 03/11/2019 *****/
 
 
 volatile bool isATN = false;  // has ATN been asserted?
@@ -16,7 +16,7 @@ volatile bool isSRQ = false;  // has SRQ been asserted?
 #if defined(AR488_UNO) || defined(AR488_NANO)
 
 /***** Read the status of the GPIB data bus wires and collect the byte of data *****/
-uint8_t readGpibDbus() {
+void readyGpibDbus() {
   // Set data pins to input
   DDRD &= 0b11001111 ;
   DDRC &= 0b11000000 ;
@@ -24,7 +24,9 @@ uint8_t readGpibDbus() {
   //  PORTC = PORTC | 0b00111111; // PORTC bits 5,4,3,2,1,0 input_pullup
   PORTD |= 0b00110000; // PORTD bits 5,4 input_pullup
   PORTC |= 0b00111111; // PORTC bits 5,4,3,2,1,0 input_pullup
+}
 
+uint8_t readGpibDbus() {
   // Read the byte of data on the bus
   return ~((PIND << 2 & 0b11000000) + (PINC & 0b00111111));
 }
@@ -148,7 +150,7 @@ ISR(PCINT2_vect) {
 #ifdef AR488_MEGA2560_D
 
 /***** Read the status of the GPIB data bus wires and collect the byte of data *****/
-uint8_t readGpibDbus() {
+void readyGpibDbus() {
   // Set data pins to input
 //  DDRD &= 0b11001111 ;
 //  DDRC &= 0b11000000 ;
@@ -157,7 +159,9 @@ uint8_t readGpibDbus() {
 //  PORTD |= 0b00110000; // PORTD bits 5,4 input_pullup
 //  PORTC |= 0b00111111; // PORTC bits 5,4,3,2,1,0 input_pullup
   PORTF |= 0b11111111; // set PORTC bits to input_pullup
+}
 
+uint8_t readGpibDbus() {
   // Read the byte of data on the bus
   return ~(PINF & 0b11111111);
 }
@@ -288,16 +292,18 @@ ISR(PCINT0_vect) {
 #ifdef AR488_MEGA2560_E1
 
 /***** Read the status of the GPIB data bus wires and collect the byte of data *****/
-uint8_t readGpibDbus() {
-  uint8_t db = 0;
-  uint8_t val = 0;
-  
+void readyGpibDbus() {
   // Set data pins to input
   DDRA &= 0b10101010 ;
   DDRC &= 0b01010101 ;
 
   PORTA |= 0b01010101; // PORTA bits 6,4,2,0 input_pullup
   PORTC |= 0b10101010; // PORTC bits 7,5,3,1 input_pullup
+}
+
+uint8_t readGpibDbus() {
+  uint8_t db = 0;
+  uint8_t val = 0;
 
   // Read the byte of data on the bus (GPIB states are inverted)
   val = ~((PINA & 0b01010101) + (PINC & 0b10101010));
@@ -464,17 +470,20 @@ ISR(PCINT0_vect) {
 #ifdef AR488_MEGA2560_E2
 
 /***** Read the status of the GPIB data bus wires and collect the byte of data *****/
-uint8_t readGpibDbus() {
-  uint8_t db = 0;
-  uint8_t val = 0;
-  
+void readyGpibDbus() {
+
   // Set data pins to input
   DDRA &= 0b01010101 ;
   DDRC &= 0b10101010 ;
 
   PORTA |= 0b10101010; // PORTC bits 7,5,3,1 input_pullup
   PORTC |= 0b01010101; // PORTA bits 6,4,2,0 input_pullup
+}
 
+uint8_t readGpibDbus() {
+  uint8_t db = 0;
+  uint8_t val = 0;
+  
   // Read the byte of data on the bus (GPIB states are inverted)
   val = ~((PINA & 0b10101010) + (PINC & 0b01010101));
 
@@ -489,7 +498,6 @@ uint8_t readGpibDbus() {
   db |= (((val >> 1) & 1)<<4);
 
   return db;
-  
 }
 
 
@@ -634,8 +642,7 @@ ISR(PCINT0_vect) {
 /***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
 #ifdef AR488_MEGA32U4_MICRO
 
-uint8_t readGpibDbus() {
-
+void readyGpibDbus() {
   // Set data pins to input
   DDRB  &= 0b10000001 ;
   DDRD  &= 0b01111110 ;
@@ -655,7 +662,9 @@ uint8_t readGpibDbus() {
   Serial.print(" value ");
   Serial.println(x);
 #endif
+}
 
+uint8_t readGpibDbus() {
   return ~((PIND & 0b10000001) | (PINB & 0b01111110)) ;
 }
 
@@ -818,14 +827,18 @@ uint8_t ctrlbus[8] = { IFC, NDAC, NRFD, DAV, EOI, REN, SRQ, ATN };
 
 
 /***** Read the status of the GPIB data bus wires and collect the byte of data *****/
-uint8_t readGpibDbus() {
+void readyGpibDbus() {
   uint8_t db = 0;
-
   for (uint8_t i=0; i<8; i++){
     pinMode(databus[i], INPUT_PULLUP);
+  }
+}
+
+uint8_t readGpibDbus() {
+  uint8_t db = 0;
+  for (uint8_t i=0; i<8; i++){
     db = db + (digitalRead(databus[i]) ? 0 : 1<<i );
   }
-
   return db;
 }
 
