@@ -8,7 +8,6 @@
 /***** AR488_Hardware.h, ver. 0.47.57, 22/11/2019 *****/
 
 
-
 /*************************************/
 /***** CUSTOM PIN LAYOUT SECTION *****/
 /***** vvvvvvvvvvvvvvvvvvvvvvvvv *****/
