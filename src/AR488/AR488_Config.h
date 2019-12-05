@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.47.59, 30/11/2019"
+#define FWVER "AR488 GPIB controller, ver. 0.47.60, 05/12/2019"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -46,8 +46,8 @@
 /*** UNO and NANO boards ***/
 #elif __AVR_ATmega328P__
   /* Board/layout selection */
-  #define AR488_UNO
-  //#define AR488_NANO
+  //#define AR488_UNO
+  #define AR488_NANO
   //#define AR488_CUSTOM
   /*** Serial ports ***/
   //Select HardwareSerial or SoftwareSerial (default = HardwareSerial) ***/

@@ -26,7 +26,7 @@
 #endif
 */
 
-/***** FWVER "AR488 GPIB controller, ver. 0.47.59, 30/11/2019" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.47.60, 05/12/2019" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -1501,24 +1501,39 @@ void trg_h(char *params) {
  * and will not reset a crashed MCU, but it will re-start
  * the interface program and re-initialise all parameters. 
  */
-void(* resetProg) (void) = 0;//declare reset function at address 0
-
 void rst_h() {
+
+asm volatile ("jmp 0");
+
+
+/*
 #ifdef WDTO_1S
 //#ifdef NOTUSED
   // Where defined, reset controller using watchdog timeout
   unsigned long tout;
   tout = millis() + 2000;
   wdt_enable(WDTO_1S);
+
+  // Test code
+  MCUSR = 0x00;
+  cli();
+  wdt_reset();
+  WDTCSR |= B00011000;
+  WDTCSR = (1<<WDE)|(1<<WDP2)|(1<<WDP1);
+  sei();
+  // Test code
+ 
   while (millis() < tout) {};
   // Should never reach here....
   if (isVerb) {
     arSerial->println(F("Reset FAILED."));
   };
 #else
-  // Otherwise restart program
-  resetProg();
+  // Otherwise restart program (soft reset)
+  asm volatile ("  jmp 0");
+//  resetProg();
 #endif
+*/
 }
 
 
