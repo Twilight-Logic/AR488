@@ -6,7 +6,6 @@
 /***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
 
 
-
 /***** Firmware version *****/
 #define FWVER "AR488 GPIB controller, ver. 0.47.59, 30/11/2019"
 
