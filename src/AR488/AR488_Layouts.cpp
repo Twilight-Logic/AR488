@@ -6,7 +6,6 @@
 /***** AR488_Hardware.cpp, ver. 0.47.57, 03/11/2019 *****/
 
 
-
 volatile bool isATN = false;  // has ATN been asserted?
 volatile bool isSRQ = false;  // has SRQ been asserted?
 
