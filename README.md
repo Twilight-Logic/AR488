@@ -22,8 +22,6 @@ Once uploaded, the firmware should respond to the ++ver command with its version
 
 <b><i>Wireless Communication:</i></b>
 
-Wireless connectivity can be added to the AR488 GPIB controller using an ESP8266 WiFi module. The AR488-ESP8266-addon sketch must be first uploaded to the board an once uploaded, the module must be connected to the AR488 via the Rx/Tx serial pins. Do not attempt to program the ESP8266 board while it is connected via serial to the AR488. This will result in an error.
-
 <i>Please note that Bluetooth support has been temporarily removed in this version as the code needs to be updated to work with the current version. The previous version (0.46.32) is still available in Archive/Uno or Archive/Mega, and documentation in Archive/Docs directories if required.</i>
 
 <b><i>Obtaining support:</i></b>
