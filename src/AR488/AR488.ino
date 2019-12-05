@@ -2,7 +2,6 @@
 //#pragma GCC diagnostic ignored "-Wtype-limits"
 //#pragma GCC diagnostic ignored "-Wunused-variable"
 
-
 #ifdef __AVR__
   #include <avr/wdt.h>
 #endif
