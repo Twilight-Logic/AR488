@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.47.60, 05/12/2019"
+#define FWVER "AR488 GPIB controller, ver. 0.48.03, 03/01/2020"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -46,8 +46,8 @@
 /*** UNO and NANO boards ***/
 #elif __AVR_ATmega328P__
   /* Board/layout selection */
-  //#define AR488_UNO
-  #define AR488_NANO
+  #define AR488_UNO
+  //#define AR488_NANO
   //#define AR488_CUSTOM
   /*** Serial ports ***/
   //Select HardwareSerial or SoftwareSerial (default = HardwareSerial) ***/
@@ -106,6 +106,17 @@
  */
 
 
+/***** SerialEvent support *****/
+/*
+ * AVR boards support SerialEvent but other boards do not
+ * SerialEvent cannot be used wit SoftwareSerial
+ */
+#if defined (__AVR__) && not defined (AR_SW_SERIAL)
+  // Use serial interrupt handler
+  #define USE_SERIALEVENT
+#endif
+
+
 /***** Pin State Detection *****/
 /*
  * With UNO. NANO and MEGA boards with pre-defined layouts,
@@ -116,10 +127,11 @@
  * can be supported with any board layout.
  */
 #ifdef __AVR__
+  // For supported boards use interrupt handlers
   #if defined (AR488_UNO) || defined (AR488_NANO) || defined (AR488_MEGA2560) || defined (AR488_MEGA32U4)
     #define USE_INTERRUPTS
-//    #define USE_PINHOOKS
   #else
+    // For other boards use in-loop checking
     #define USE_PINHOOKS
   #endif
 #else
@@ -142,9 +154,21 @@
 //#define RUN_STARTUP   // Run MACRO_0 (the startup macro)
 
 
-/***** Bluetooth (HC05) support *****/
+/***** Enable SN7516x chips *****/
+/*
+ * Uncomment to enable the use of SN7516x GPIB tranceiver ICs.
+ * This will require the use of an additional GPIO pin to control
+ * the read and write modes of the ICs.
+ */
+//#define SN7516X
+#ifdef SN7516X
+  #define SN7516X_TE 6
+//  #define SN75161_DC 13
+#endif
 
-#define AR_BT_EN 6            // Bluetooth enable and control pin
+
+/***** Bluetooth (HC05) support *****/
+//#define AR_BT_EN 6              // Bluetooth enable and control pin
 #ifdef AR_BT_EN
   #define AR_BT_BAUD "57600"    // Bluetooth module preferred baud rate
   #define AR_BT_NAME "AR488-BT" // Bluetooth device name

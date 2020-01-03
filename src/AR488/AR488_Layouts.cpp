@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.47.57, 03/11/2019 *****/
+/***** AR488_Hardware.cpp, ver. 0.48.03, 03/01/2020 *****/
 
 
 volatile bool isATN = false;  // has ATN been asserted?
@@ -270,15 +270,7 @@ ISR(PCINT0_vect) {
   srqPinMem = SRQPREG;
 }
 
-/***** Catchall interrupt vector *****/
-/*
-  ISR(BADISR_vect) {
-  // ISR to catch ISR firing without handler
-  isBAD = true;
-  }
-*/
 #endif //USE_INTERRUPTS
-
 
 #endif //MEGA2560
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
@@ -448,15 +440,7 @@ ISR(PCINT0_vect) {
   srqPinMem = SRQPREG;
 }
 
-/***** Catchall interrupt vector *****/
-/*
-  ISR(BADISR_vect) {
-  // ISR to catch ISR firing without handler
-  isBAD = true;
-  }
-*/
 #endif //USE_INTERRUPTS
-
 
 #endif //MEGA2560
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
@@ -620,17 +604,10 @@ ISR(PCINT0_vect) {
   srqPinMem = SRQPREG;
 }
 
-/***** Catchall interrupt vector *****/
-/*
-  ISR(BADISR_vect) {
-  // ISR to catch ISR firing without handler
-  isBAD = true;
-  }
-*/
 #endif //USE_INTERRUPTS
 
-
 #endif //MEGA2560
+
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MEGA2560 BOARD LAYOUT E2 *****/
 /************************************/
@@ -863,7 +840,6 @@ void setGpibDbus(uint8_t db) {
 */
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
-
   switch (mode) {
     case 0:
       // Set pin state
@@ -878,7 +854,6 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
       }
       break;
   }
-
 
 }
 

@@ -25,7 +25,7 @@
 #endif
 */
 
-/***** FWVER "AR488 GPIB controller, ver. 0.47.60, 05/12/2019" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.48.03, 03/01/2020" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -53,7 +53,7 @@
    - Commands received from USB are buffered and whole terminated lines processed
    - Interface commands prefixed with "++" are passed to the command handler
    - Instrument commands and data not prefixed with '++' are sent directly to the GPIB bus.
-   - To receive from the instrument, issue a ++read command or put the controller in auto mode (++auto 1)
+   - To receive from the instrument, issue a ++read command or put the controller in auto mode (++auto 1|2)
    - Characters received over the GPIB bus are unbuffered and sent directly to USB
    NOTES:
    - GPIB line in a HIGH state is un-asserted
@@ -89,25 +89,24 @@
 */
 
 /*
-    Proprietry commands:
+   Proprietry commands:
 
    ++aspoll       - serial poll all instruments (alias: ++spoll all)
    ++default      - set configuration to controller default settings
    ++dcl          - send unaddressed (all) device clear  [power on reset] (is the rst?)
-   //++ren          - assert or unassert the REN signal
+   ++ren          - assert or unassert the REN signal
    ++ppoll        - conduct a parallel poll
    ++setvstr      - set custom version string (to identify controller, e.g. "GPIB-USB"). Max 47 chars, excess truncated.
+   ++srqauto      - automatically condiuct serial poll when SRQ is asserted
    ++ton          - put controller in talk-only mode (send data only)
    ++verbose      - verbose (human readable) mode
-
 */
 
 /*
    NOT YET IMPLEMENTED
 
    ++help     - show summary of commands
-   ++debug    - debug mode (0=off, 1=basic, 2=verbose) [maybe best left in ifdef statements?]
-   ++myaddr   - aset the controller address
+   ++myaddr   - set the controller address
 */
 
 /*
@@ -277,7 +276,7 @@ struct AR488conf {
   uint8_t paddr;    // Primary device address
   uint8_t saddr;    // Secondary device address
   uint8_t eos;      // EOS (end of send - to GPIB) character flag [0=CRLF, 1=CR, 2=LF, 3=None]
-  uint8_t stat;     // Status byte to return in response to a poll
+  uint8_t stat;     // Status byte to return in response to a serial poll
   uint8_t amode;    // Auto mode setting (0=off; 1=Prologix; 2=onquery; 3=continuous;
   int rtmo;         // Read timout (read_tmo_ms) in milliseconds - 0-3000 - value depends on instrument
   char eot_ch;      // EOT character to append to USB output when EOI signal detected
@@ -297,18 +296,18 @@ uint8_t cstate = 0;
 bool isVerb = false;
 
 // We have a line
-//bool crFl = false;          // Carriage return flag
+//bool crFl = false;      // Carriage return flag
 uint8_t lnRdy = 0;      // Line ready to process
 
 // GPIB data receive flags
 bool isReading = false; // Is a GPIB read in progress?
 bool aRead = false;     // GPIB data read in progress
-bool rEoi = false;      // read eoi requested
-bool rEbt = false;      // read with specified terminator character
+bool rEoi = false;      // Read eoi requested
+bool rEbt = false;      // Read with specified terminator character
 bool isQuery = false;   // Direct instrument command is a query
 //uint8_t aMode = 0;      // Auto read mode: 0=off; 1=Prologix; 2=on query (CMD?); 3=continuous;
-uint8_t tranBrk = 0;    // transmission break on 1=++, 2=EOI, 3=ATN 4=UNL
-uint8_t eByte = 0;      // termination character
+uint8_t tranBrk = 0;    // Transmission break on 1=++, 2=EOI, 3=ATN 4=UNL
+uint8_t eByte = 0;      // Termination character
 
 // Device mode - send data
 bool snd = false;
@@ -351,6 +350,7 @@ uint8_t runMacro = 0;
 /***** COMMON CODE SECTION *****/
 /***** vvvvvvvvvvvvvvvvvvv *****/
 
+
 /******  Arduino standard SETUP procedure *****/
 void setup() {
 
@@ -374,15 +374,23 @@ void setup() {
   flushPbuf();
 
   // Initialise serial comms over USB or Bluetooth
-//#ifdef AR_BT_EN
-  // Initialise Bluetooth  
-//  btInit();
-//  arSerial->begin(AR_BT_BAUD);
-//#else
-  // Start the serial port
-  arSerial->begin(AR_SERIAL_BAUD);
-
+  // ! Bluetooth disabled pending new module !
 /*
+#ifdef AR_BT_EN
+  // Initialise Bluetooth  
+  btInit();
+  arSerial->begin(AR_BT_BAUD);
+#else
+  // Start the serial port
+*/
+  arSerial->begin(AR_SERIAL_BAUD);
+/*
+#endif
+ */
+  // ! Bluetooth disabled pending new module !
+
+// Comment in for diagnostic purposes
+/* 
   #if defined(__AVR_ATmega32U4__)
     while(!*arSerial)
     ;
@@ -394,8 +402,7 @@ void setup() {
     Serial.println("@>");
   #endif // __AVR_ATmega32U4__
 */
-  
-//#endif
+// Comment in for diagnostic purposes
 
   // Initialise
   initAR488();
@@ -406,12 +413,26 @@ void setup() {
   epGetCfg();
 #endif
 
-  // Print version string
-  //  if (strlen(AR488.vstr)>0) {
-  //    arSerial->println(AR488.vstr);
-  //  }else{
-  //    arSerial->println(FWVER);
-  //  }
+  // SN7516x IC support
+#ifdef SN7516X
+  pinMode(SN7516X_TE, OUTPUT);
+  #ifdef SN75161_DC
+    pinMode(SN75161_DC, OUTPUT);
+  #endif
+  if (AR488.cmode==2) {
+    // Set controller mode on SN75161
+    digitalWrite(SN7516X_TE, LOW);
+    #ifdef SN75161_DC 
+      digitalWrite(SN75161_DC, LOW);
+    #endif
+  }else{
+    // Set listen mode on SN75161 (default)
+    digitalWrite(SN7516X_TE, HIGH);
+    #ifdef SN75161_DC
+      digitalWrite(SN75161_DC, HIGH);
+    #endif
+  }
+#endif
 
   // Initialize the interface in device mode
   if (AR488.cmode == 1) initDevice();
@@ -428,6 +449,7 @@ void setup() {
 #endif
 
 }
+/****** End of Arduino standard SETUP procedure *****/
 
 
 /***** ARDUINO MAIN LOOP *****/
@@ -460,12 +482,12 @@ void loop() {
 /* SerialEvent() handles the serial interrupt but some boards 
  * do not support SerialEvent. In this case use in-loop checking
  */
-//#ifndef USE_SERIALEVENT 
+#ifndef USE_SERIALEVENT 
   // Serial input handler
   while (arSerial->available()) {
     lnRdy = parseInput(arSerial->read());
   }
-//#endif
+#endif
 
 /*** Process the buffer ***/
 /* Each received char is passed through parser until an un-escaped 
@@ -538,13 +560,7 @@ void initAR488() {
 void initDevice() {
   // Set GPIB control bus to device idle mode
   setGpibControls(DINI);
-/*  
-  // Disable SRQ and enable ATN interrupt
-  cli();
-  //  PCMSK2 &= SRQint; // SRQ interrupt now controlled by ++status command
-  PCMSK2 |= ATNint;
-  sei();
-*/  
+
   // Initialise GPIB data lines (sets to INPUT_PULLUP)
   readGpibDbus();
 }
@@ -562,25 +578,15 @@ void initController() {
 
 
 /***** Serial event interrupt handler *****/
-/*
 #ifdef USE_SERIALEVENT
 void serialEvent() {
   lnRdy = parseInput(arSerial->read());
 }
 #endif
-*/
 
 
 /***** Interrupt data transfer when escape pressed *****/
 void readBreak() {
-  // Check whether EOI is asserted
-/*  
-  if (digitalRead(EOI) == LOW) {
-    tranBrk = 5;
-    return;
-  }
-*/
-
   // Check serial input to see if we need to break on ++ character
   if (arSerial->available()) {   // Only need to parse if a character is available
     lnRdy = parseInput(arSerial->read());
@@ -615,7 +621,11 @@ void epGetCfg() {
 
 /*****Save configuraton to EEPROM ****/
 /*
- * At present requires a 128 byte 'page'  
+ * At present requires no more than 128 bytes 
+ * (Planned to have 4 x 128 byte 'pages' or  
+ * 2 x 256 byte 'pages' to support 4 possible 
+ * or 2 possible configurations. Awaiting
+ * development of WiFi module)
  */
 //uint8_t epSaveCfg(uint8_t page){
 uint8_t epSaveCfg() {
@@ -669,7 +679,6 @@ uint8_t parseInput(char c) {
 #endif
             // Buffer starts with ++ and contains at least 3 characters - command?
             if (pbPtr > 2 && isCmd(pBuf) && !isPle) {
-              //                if (isReading) tranBrk = 7;
               r = 1;
               // Buffer has at least 1 character
             } else if (pbPtr > 0) { // Its other data (or instrument commands from user) so pass characters to GPIB bus
@@ -698,14 +707,6 @@ uint8_t parseInput(char c) {
         }
         addPbuf(c);
         if (isVerb) arSerial->print(c);
-
-        // Break on '++'?
-        //          if (pbPtr==2 && isCmd(pBuf)) {
-        //            if (isReading){
-        //              tranBrk = 1;
-        //              isAuto = false;
-        //            }
-        //          }
         break;
       // Something else?
       default: // any char other than defined above
@@ -853,7 +854,6 @@ void processLine(char *buffr, uint8_t dsize, uint8_t mode) {
   }
 
   // This line is not a ++command, so if in controller mode, pass characters to GPIB
-  //  if (mode==2 && AR488.cmode==2){
   if (mode == 2) {
 #ifdef DEBUG1
     arSerial->print(F("processLine: Sent to the instrument: ")); printHex(line, dsize);
@@ -994,8 +994,7 @@ void execMacro(uint8_t idx) {
   char c;
   const char * macro = pgm_read_word(macros + idx);
   int ssize = strlen_P(macro);
-  //    arSerial->print("Idx:  ");arSerial->println(idx);
-  //    arSerial->print("Size: ");arSerial->println(ssize);
+
   // Read characters from macro character array
   for (int i = 0; i < ssize; i++) {
     c = pgm_read_byte_near(macro + i);
@@ -1011,7 +1010,6 @@ void execMacro(uint8_t idx) {
           return;
         }
       }
-//      arSerial->println(pBuf);
       if (isCmd(pBuf)){
         processLine(pBuf, strlen(pBuf), 1);
       }else{
@@ -1047,15 +1045,10 @@ void addr_h(char *params) {
   char *param;
   uint16_t val;
   if (params != NULL) {
+
     // Primary address
     param = strtok(params, " \t");
     if (notInRange(param, 1, 30, val)) return;
-    //    if (strlen(param) > 0) {
-    //      val = atoi(param);
-    //      if (val < 1 || val > 30) {
-    //        errBadCmd();
-    //        if (isVerb) arSerial->println(F("Invalid: GPIB primary address is in the range 1 - 30")); return;
-    //      }
     if (val == AR488.caddr) {
       errBadCmd();
       if (isVerb) arSerial->println(F("That is my address! Address of a remote device is required."));
@@ -1066,26 +1059,20 @@ void addr_h(char *params) {
       arSerial->print(F("Set device primary address to: "));
       arSerial->println(val);
     }
-    //  }
+
     // Secondary address
     AR488.saddr = 0;
     val = 0;
     param = strtok(NULL, " \t");
     if (param != NULL) {
       if (notInRange(param, 96, 126, val)) return;
-      //    val = atoi(param);
-      //    if (val > 0) {
-      //      if (val < 96 || val > 126) {
-      //        errBadCmd();
-      //        if (isVerb) arSerial->println(F("Invalid: GPIB secondary address is in the range 96 - 126"));
-      //        return;
-      //      }
       AR488.saddr = val;
       if (isVerb) {
         arSerial->print("Set device secondary address to: ");
         arSerial->println(val);
       }
     }
+
   } else {
     arSerial->print(AR488.paddr);
     if (AR488.saddr > 0) {
@@ -1201,7 +1188,7 @@ void eot_en_h(char *params) {
     }
     AR488.eot_en = val ? true : false;
     if (isVerb) {
-      arSerial->print(F("Set append of EOT character: "));
+      arSerial->print(F("Appending of EOT character: "));
       arSerial->println(val ? "ON" : "OFF");
     }
   } else {
@@ -1245,7 +1232,6 @@ void amode_h(char *params) {
       arSerial->println(F("WARNING: automode ON can cause some devices to generate"));
       arSerial->println(F("         'addressed to talk but nothing to say' errors"));
     }
-    //    isAuto = val ? true : false; if (isVerb) {arSerial->print(F("Auto mode: ")); arSerial->println(val ? "ON" : "OFF") ;}
     AR488.amode = val;
     if (AR488.amode < 3) aRead = false;
     if (isVerb) {
@@ -1282,8 +1268,7 @@ void read_h(char *params) {
   // Read any parameters
   if (params != NULL) {
     if (strlen(params) > 3) {
-      if (isVerb) arSerial->println(F("Invalid termination character - ignored.")); void addr_h(char *params);
-
+      if (isVerb) arSerial->println(F("Invalid termination character - ignored!")); void addr_h(char *params);
     } else if (strncmp(params, "eoi", 3) == 0) { // Read with eoi detection
       rEoi = true;
     } else { // Assume ASCII character given and convert to an 8 bit byte
@@ -1292,7 +1277,7 @@ void read_h(char *params) {
     }
   }
   if (AR488.amode == 3) {
-    // in auto continumous mode we set this flag to indicate we are ready for continuous read
+    // In auto continumous mode we set this flag to indicate we are ready for continuous read
     aRead = true;
   } else {
     // If auto mode is disabled we do a single read
@@ -1381,7 +1366,6 @@ void loc_h(char *params) {
     } else {
       // De-assert REN
       setGpibState(0b00100000, 0b00100000, 0);
-      //      setGpibState(0b00100000, 0b00100000, 0b00100000);
       // Address device to listen
       if (addrDev(AR488.paddr, 0)) {
         if (isVerb) arSerial->println(F("Failed to address device."));
@@ -1417,11 +1401,9 @@ void ifc_h() {
   if (AR488.cmode) {
     // Assert IFC
     setGpibState(0b00000000, 0b00000001, 0);
-    //    setGpibState(0b00000001, 0b00000000, 0b00000001);
     delayMicroseconds(150);
     // De-assert IFC
     setGpibState(0b00000001, 0b00000001, 0);
-    //    setGpibState(0b00000001, 0b00000001, 0b00000001);
     if (isVerb) arSerial->println(F("IFC signal asserted for 150 microseconds"));
   }
 }
@@ -1494,34 +1476,18 @@ void trg_h(char *params) {
 
 /***** Reset the controller *****/
 /*
- * Arduinos can use the watchdot timer to reset the MCU
+ * Arduinos can use the watchdog timer to reset the MCU
  * For other devices, we restart the program instead by
  * jumping to address 0x0000. This is not a hardware reset
  * and will not reset a crashed MCU, but it will re-start
  * the interface program and re-initialise all parameters. 
  */
 void rst_h() {
-
-asm volatile ("jmp 0");
-
-
-/*
 #ifdef WDTO_1S
-//#ifdef NOTUSED
   // Where defined, reset controller using watchdog timeout
   unsigned long tout;
   tout = millis() + 2000;
   wdt_enable(WDTO_1S);
-
-  // Test code
-  MCUSR = 0x00;
-  cli();
-  wdt_reset();
-  WDTCSR |= B00011000;
-  WDTCSR = (1<<WDE)|(1<<WDP2)|(1<<WDP1);
-  sei();
-  // Test code
- 
   while (millis() < tout) {};
   // Should never reach here....
   if (isVerb) {
@@ -1530,9 +1496,7 @@ asm volatile ("jmp 0");
 #else
   // Otherwise restart program (soft reset)
   asm volatile ("  jmp 0");
-//  resetProg();
 #endif
-*/
 }
 
 
@@ -1747,23 +1711,10 @@ void stat_h(char *params) {
 void save_h() {
 #ifdef E2END
   epSaveCfg();
+  if (isVerb) arSerial->println(F("Settings saved."));
 #else
   arSerial->println(F("EEPROM not supported."));
 #endif
-
-  //  epSaveCfg(1);
-
-
-  /*
-    sz = sizeof(AR488);
-    #ifdef DEBUG6
-    arSerial->print(F("Size of structure: "));
-    arSerial->println(sz);
-    #endif
-    EEPROM.put(epaddr, AR488);
-    if (isVerb) arSerial->println(F("Settings saved."));
-  */
-
 }
 
 
@@ -1893,6 +1844,10 @@ void ppoll_h() {
 
 /***** Assert or de-assert REN 0=de-assert; 1=assert *****/
 void ren_h(char *params) {
+#if defined (SN7516X) && not defined (SN75161_DC)
+  params = params;
+  arSerial->println(F("Unavailable")) ;
+#else
   // char *stat;
   int val;
   if (params != NULL) {
@@ -1908,6 +1863,7 @@ void ren_h(char *params) {
   } else {
     arSerial->println(digitalRead(REN) ? 0 : 1);
   }
+#endif
 }
 
 
@@ -2155,17 +2111,6 @@ void attnRequired() {
 
       // Device is addressed to talk
       if (AR488.paddr == (db ^ 0x40)) { // MLA = db^0x40
-
-/*
-        if (isRO) {
-#ifdef DEBUG5
-          arSerial->println(F("attnRequired: cannot respond in listen-only [++lon 1] mode"));
-          // Clear the buffer to prevent it getting blocked
-          if (lnRdy==2) flushPbuf();
-#endif
-        }else{
-*/ 
-
           // Call talk handler to send data
           mta = true;
 #ifdef DEBUG5
@@ -2174,22 +2119,7 @@ void attnRequired() {
           }
 #endif
 
-/*
-        }
-*/        
-
       }
-      
-/*
-      // Some other device being addressed to talk (LON mode -> isRO = true)
-      if (db > 0x3F && db < 0x5F && isRO) {
-        // Can't talk - no point listening to self!
-        // Listen only to other devices on the bus
-        if (AR488.paddr != (db ^ 0x40)) {
-          mla = true; // Not actually MLA, but need to listen as if it were
-        }
-      }
-*/
 
       // Serial poll enable request
       if (db==GC_SPE) spe = true;
@@ -2211,9 +2141,6 @@ void attnRequired() {
   arSerial->println(F("End ATN loop."));
 #endif
 
-//setGpibControls(DIDS);
-
-
   if (mla) { 
 #ifdef DEBUG5
     arSerial->println(F("Listening..."));
@@ -2234,7 +2161,6 @@ void attnRequired() {
       spe = false;
     // Otherwise just send data
     }else{
-//      Wait_on_pin_state(HIGH, ATN, AR488.rtmo);
       mta_h();
       mta = false;
     }
@@ -2321,7 +2247,6 @@ void unt_h() {
 #ifdef DEBUG5
   arSerial->println(F("Untalk received."));
 #endif
-//  tranBrk = 3;  // Stop sending transmission
 }
 
 
@@ -2475,6 +2400,7 @@ void gpibSendData(char *data, uint8_t dsize) {
     // Device mode - set control lines to idle
     if (AR488.cmode == 1) setGpibControls(DIDS);
   }
+
 #ifdef DEBUG3
     arSerial->println(F("<- End of send."));
 #endif
@@ -2811,40 +2737,63 @@ void setGpibControls(uint8_t state) {
   // Switch state
   switch (state) {
     // Controller states
+
     case CINI:  // Initialisation
       // Set pin direction
       setGpibState(0b10111000, 0b11111111, 1);
       // Set pin state
       setGpibState(0b11011111, 0b11111111, 0);
+#ifdef SN7516X
+      digitalWrite(SN7516X_TE,LOW);
+  #ifdef SN75161_DC
+        digitalWrite(SN75161_DC,LOW);
+  #endif
+#endif      
 #ifdef DEBUG2
       arSerial->println(F("Initialised GPIB control mode"));
 #endif
       break;
+
     case CIDS:  // Controller idle state
       setGpibState(0b10111000, 0b10011110, 1);
       setGpibState(0b11011111, 0b10011110, 0);
+#ifdef SN7516X
+      digitalWrite(SN7516X_TE,LOW);
+#endif      
 #ifdef DEBUG2
       arSerial->println(F("Set GPIB lines to idle state"));
 #endif
       break;
+
     case CCMS:  // Controller active - send commands
       setGpibState(0b10111001, 0b10011111, 1);
       setGpibState(0b01011111, 0b10011111, 0);
+#ifdef SN7516X
+      digitalWrite(SN7516X_TE,HIGH);
+#endif      
 #ifdef DEBUG2
       arSerial->println(F("Set GPIB lines for sending a command"));
 #endif
       break;
+
     case CLAS:  // Controller - read data bus
       // Set state for receiving data
       setGpibState(0b10100110, 0b10011110, 1);
       setGpibState(0b11011000, 0b10011110, 0);
+#ifdef SN7516X
+      digitalWrite(SN7516X_TE,LOW);
+#endif      
 #ifdef DEBUG2
       arSerial->println(F("Set GPIB lines for reading data"));
 #endif
       break;
+
     case CTAS:  // Controller - write data bus
       setGpibState(0b10111001, 0b10011110, 1);
       setGpibState(0b11011111, 0b10011110, 0);
+#ifdef SN7516X
+      digitalWrite(SN7516X_TE,HIGH);
+#endif      
 #ifdef DEBUG2
       arSerial->println(F("Set GPIB lines for writing data"));
 #endif
@@ -2856,32 +2805,51 @@ void setGpibControls(uint8_t state) {
     case DINI:  // Listner initialisation
       setGpibState(0b00000000, 0b11111111, 1);
       setGpibState(0b11111111, 0b11111111, 0);
+#ifdef SN7516X
+      digitalWrite(SN7516X_TE,HIGH);
+  #ifdef SN75161_DC
+        digitalWrite(SN75161_DC,HIGH);
+  #endif
+#endif      
 #ifdef DEBUG2
       arSerial->println(F("Initialised GPIB listener mode"));
 #endif
       break;
+
     case DIDS:  // Device idle state
       setGpibState(0b00000000, 0b00001110, 1);
       setGpibState(0b11111111, 0b00001110, 0);
+#ifdef SN7516X
+      digitalWrite(SN7516X_TE,HIGH);
+#endif      
 #ifdef DEBUG2
       arSerial->println(F("Set GPIB lines to idle state"));
 #endif
       break;
+
     case DLAS:  // Device listner active (actively listening - can handshake)
       setGpibState(0b00000110, 0b00001110, 1);
       setGpibState(0b11111001, 0b00001110, 0);
+#ifdef SN7516X
+      digitalWrite(SN7516X_TE,LOW);
+#endif      
 #ifdef DEBUG2
       arSerial->println(F("Set GPIB lines to idle state"));
 #endif
       break;
+
     case DTAS:  // Device talker active (sending data)
       setGpibState(0b00001000, 0b00001110, 1);
       setGpibState(0b11111001, 0b00001110, 0);
+#ifdef SN7516X
+      digitalWrite(SN7516X_TE,HIGH);
+#endif      
 #ifdef DEBUG2
       arSerial->println(F("Set GPIB lines for listening as addresed device"));
 #endif
       break;
 #ifdef DEBUG2
+
     default:
       // Should never get here!
       //      setGpibState(0b00000110, 0b10111001, 0b11111111);
