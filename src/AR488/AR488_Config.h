@@ -48,7 +48,6 @@
   /* Board/layout selection */
   #define AR488_UNO
   //#define AR488_NANO
-  //#define AR488_CUSTOM
   /*** Serial ports ***/
   //Select HardwareSerial or SoftwareSerial (default = HardwareSerial) ***/
   #define AR_HW_SERIAL
@@ -60,7 +59,6 @@
 #elif __AVR_ATmega32U4__
   /*** Board/layout selection ***/
   #define AR488_MEGA32U4_MICRO
-  //#define AR488_CUSTOM
   /*** Serial ports ***/
   // Comment out if using RXI, TXO pins
   #define AR_CDC_SERIAL
@@ -81,12 +79,12 @@
   #define AR_SERIAL_PORT Serial
   //#define AR_SERIAL_PORT Serial1
   //#define AR_SERIAL_PORT Serial3
-    
+
 #endif  // Board/layout selection
 
 
 
-/***** Software serial support *****/
+/***** Software Serial Support *****/
 /*
  * Configure the SoftwareSerial TX/RX pins and baud rate here
  * Note: SoftwareSerial support conflicts with PCINT support
@@ -106,7 +104,7 @@
  */
 
 
-/***** SerialEvent support *****/
+/***** SerialEvent Support *****/
 /*
  * AVR boards support SerialEvent but other boards do not
  * SerialEvent cannot be used wit SoftwareSerial
