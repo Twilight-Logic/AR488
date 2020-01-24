@@ -50,8 +50,9 @@ void setGpibDbus(uint8_t db) {
 /***** Set the direction and state of the GPIB control lines ****/
 /*
    Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
-   pdir:  0=input, 1=output;
-   pstat: 0=LOW, 1=HIGH/INPUT_PULLUP
+    bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
+    mask (mask)     : 0=unaffected, 1=enabled
+    mode (mode)     : 0=set pin state, 1=set pin direction
    Arduino pin to Port/bit to direction/state byte map:
    IFC   8   PORTB bit 0 byte bit 0
    NDAC  9   PORTB bit 1 byte bit 1
@@ -189,8 +190,9 @@ void setGpibDbus(uint8_t db) {
 /***** Set the direction and state of the GPIB control lines ****/
 /*
    Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
-   pdir:  0=input, 1=output;
-   pstat: 0=LOW, 1=HIGH/INPUT_PULLUP
+    bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
+    mask (mask)     : 0=unaffected, 1=enabled
+    mode (mode)     : 0=set pin state, 1=set pin direction
    Arduino pin to Port/bit to direction/state byte map:
    IFC   17  PORTH bit 0 byte bit 0
    NDAC  16  PORTH bit 1 byte bit 1
@@ -344,8 +346,9 @@ void setGpibDbus(uint8_t db) {
 /***** Set the direction and state of the GPIB control lines ****/
 /*
    Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
-   pdir:  0=input, 1=output;
-   pstat: 0=LOW, 1=HIGH/INPUT_PULLUP
+    bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
+    mask (mask)     : 0=unaffected, 1=enabled
+    mode (mode)     : 0=set pin state, 1=set pin direction
    Arduino pin to Port/bit to direction/state byte map:
    IFC   48  PORTL bit 1 byte bit 0
    NDAC  46  PORTL bit 3 byte bit 1
@@ -515,8 +518,9 @@ void setGpibDbus(uint8_t db) {
 /***** Set the direction and state of the GPIB control lines ****/
 /*
    Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
-   pdir:  0=input, 1=output;
-   pstat: 0=LOW, 1=HIGH/INPUT_PULLUP
+    bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
+    mask (mask)     : 0=unaffected, 1=enabled
+    mode (mode)     : 0=set pin state, 1=set pin direction
    Arduino pin to Port/bit to direction/state byte map:
    IFC   48  PORTL bit 1 byte bit 0
    NDAC  46  PORTL bit 3 byte bit 1
@@ -674,8 +678,9 @@ void setGpibDbus(uint8_t db) {
 /***** Set the direction and state of the GPIB control lines *****/
 /*
  * Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
- * pdir:  0=input, 1=output;
- * pstat: 0=LOW, 1=HIGH/INPUT_PULLUP
+    bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
+    mask (mask)     : 0=unaffected, 1=enabled
+    mode (mode)     : 0=set pin state, 1=set pin direction
  * Arduino pin to Port/bit to direction/state byte map:
  * IFC   4   PORTD bit 4   byte bit 0
  * NDAC  A3  PORTF bit 4   byte bit 1
