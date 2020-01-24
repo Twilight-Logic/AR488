@@ -1803,7 +1803,7 @@ void eor_h(char *params) {
       arSerial->println(val);
     };
   } else {
-    if (AR488.eor>15) AR488.eor = 0;  // Needed to reset FF read from EEPROM after FW upgrade
+    if (AR488.eor>7) AR488.eor = 0;  // Needed to reset FF read from EEPROM after FW upgrade
     arSerial->println(AR488.eor);
   }
 }
