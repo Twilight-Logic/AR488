@@ -68,9 +68,9 @@
 /*** MEGA 2560 board ***/
 #elif __AVR_ATmega2560__
   /*** Board/layout selection ***/
-  //#define AR488_MEGA2560_D
+  #define AR488_MEGA2560_D
   //#define AR488_MEGA2560_E1
-  #define AR488_MEGA2560_E2
+  //#define AR488_MEGA2560_E2
   /*** Serial ports ***/
   // Mega 2560 supports Serial, Serial1, Serial2, Serial3. Since the pins 
   // associated with Serial2 are used in the default pin layout, Serial2
