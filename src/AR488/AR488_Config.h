@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.48.07, 23/01/2020"
+#define FWVER "AR488 GPIB controller, ver. 0.48.08, 27/01/2020"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -50,9 +50,12 @@
   //#define AR488_NANO
   /*** Serial ports ***/
   //Select HardwareSerial or SoftwareSerial (default = HardwareSerial) ***/
+  // The UNO/NANO default hardware port is 'Serial'
+  // (Comment out the 3 defines below if using SoftwareSerial)
   #define AR_HW_SERIAL
-  // The UNO/NANO default port is 'Serial'
   #define AR_SERIAL_PORT Serial
+  #define USE_SERIALEVENT
+  // Select software serial port
   //#define AR_SW_SERIAL
 
 /*** MEGA 32U4 based boards (Micro, Leonardo) ***/
@@ -68,20 +71,23 @@
 /*** MEGA 2560 board ***/
 #elif __AVR_ATmega2560__
   /*** Board/layout selection ***/
-  #define AR488_MEGA2560_D
+  //#define AR488_MEGA2560_D
   //#define AR488_MEGA2560_E1
-  //#define AR488_MEGA2560_E2
+  #define AR488_MEGA2560_E2
   /*** Serial ports ***/
   // Mega 2560 supports Serial, Serial1, Serial2, Serial3. Since the pins 
   // associated with Serial2 are used in the default pin layout, Serial2
-  // is unavailable. The default port is 'Serial'. Choose ONE port.
+  // is unavailable. The default port is 'Serial'. Choose ONE port and
+  // associated SERIALEVENT definition
   #define AR_HW_SERIAL
   #define AR_SERIAL_PORT Serial
+  #define USE_SERIALEVENT
   //#define AR_SERIAL_PORT Serial1
+  //#define USE_SERIALEVENT1
   //#define AR_SERIAL_PORT Serial3
+  //#define USE_SERIALEVENT3
 
 #endif  // Board/layout selection
-
 
 
 /***** Software Serial Support *****/
@@ -98,21 +104,9 @@
 #else
   #define AR_SERIAL_BAUD 115200
 #endif
-
 /*
  * Note: SoftwareSerial reliable only up to a MAX of 57600 baud only
  */
-
-
-/***** SerialEvent Support *****/
-/*
- * AVR boards support SerialEvent but other boards do not.
- * SerialEvent cannot be used wit SoftwareSerial.
- */
-#if defined (__AVR__) && not defined (AR_SW_SERIAL) && not defined (__AVR_ATmega32U4__)
-  // Use serial interrupt handler
-  #define USE_SERIALEVENT
-#endif
 
 
 /***** Pin State Detection *****/
@@ -167,12 +161,14 @@
 
 
 /***** Bluetooth (HC05) support *****/
-//#define AR_BT_EN 6              // Bluetooth enable and control pin
+/*
+ * Uses built-in LED on GPIO pin 13 to signal status
+ */
+//#define AR_BT_EN 10             // Bluetooth enable and control pin
 #ifdef AR_BT_EN
-  #define AR_BT_BAUD "57600"    // Bluetooth module preferred baud rate
+  #define AR_BT_BAUD 57600      // Bluetooth module preferred baud rate
   #define AR_BT_NAME "AR488-BT" // Bluetooth device name
   #define AR_BT_CODE "488488"   // Bluetooth pairing code
-  #define AR_BT_LED 13          // Internal LED
 #endif
 
 
@@ -185,6 +181,7 @@
 //#define DEBUG6  // EEPROM
 //#define DEBUG7  // gpibReceiveData
 //#define DEBUG8  // ppoll_h
+//#define DEBUG9  // bluetooth
 
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/

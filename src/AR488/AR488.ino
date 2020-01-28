@@ -19,13 +19,13 @@
 #ifdef E2END
   #include <EEPROM.h>
 #endif
-/*
-#ifdef AR_BT_EN
-  #include "AR488_Bluetooth.h"
-#endif
-*/
 
-/***** FWVER "AR488 GPIB controller, ver. 0.48.07, 23/01/2020" *****/
+#ifdef AR_BT_EN
+  #include "AR488_BT.h"
+#endif
+
+
+/***** FWVER "AR488 GPIB controller, ver. 0.48.08, 27/01/2020" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -374,23 +374,19 @@ void setup() {
   // Initialise parse buffer
   flushPbuf();
 
-  // Initialise serial comms over USB or Bluetooth
-  // ! Bluetooth disabled pending new module !
-/*
+
+ // Initialise serial comms over USB or Bluetooth
 #ifdef AR_BT_EN
   // Initialise Bluetooth  
   btInit();
   arSerial->begin(AR_BT_BAUD);
 #else
   // Start the serial port
-*/
   arSerial->begin(AR_SERIAL_BAUD);
-/*
+  arSerial->println("Hello from AR_SERIAL :-)");
 #endif
- */
-  // ! Bluetooth disabled pending new module !
 
-// Comment in for diagnostic purposes
+// Un-comment for diagnostic purposes
 /* 
   #if defined(__AVR_ATmega32U4__)
     while(!*arSerial)
@@ -403,7 +399,7 @@ void setup() {
     Serial.println("@>");
   #endif // __AVR_ATmega32U4__
 */
-// Comment in for diagnostic purposes
+// Un-comment for diagnostic purposes
 
   // Initialise
   initAR488();
@@ -489,12 +485,13 @@ void loop() {
 /* SerialEvent() handles the serial interrupt but some boards 
  * do not support SerialEvent. In this case use in-loop checking
  */
-#ifndef USE_SERIALEVENT 
+#if not defined (USE_SERIALEVENT) || not defined (SERIALEVENT1) || not defined (SERIALEVENT2) || not defined (SERIALEVENT3)
   // Serial input handler
   while (arSerial->available()) {
     lnRdy = parseInput(arSerial->read());
   }
 #endif
+
 
 /*** Process the buffer ***/
 /* Each received char is passed through parser until an un-escaped 
@@ -587,6 +584,21 @@ void initController() {
 /***** Serial event interrupt handler *****/
 #ifdef USE_SERIALEVENT
 void serialEvent() {
+  lnRdy = parseInput(arSerial->read());
+}
+#endif
+#ifdef USE_SERIALEVENT1
+void serialEvent1() {
+  lnRdy = parseInput(arSerial->read());
+}
+#endif
+#ifdef USE_SERIALEVENT2
+void serialEvent2() {
+  lnRdy = parseInput(arSerial->read());
+}
+#endif
+#ifdef USE_SERIALEVENT3
+void serialEvent3() {
   lnRdy = parseInput(arSerial->read());
 }
 #endif

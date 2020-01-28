@@ -4,7 +4,9 @@
 #include "AR488_Layouts.h"
 
 /***** AR488_Hardware.cpp, ver. 0.48.03, 03/01/2020 *****/
-
+/*
+ * Hardware layout function definitions
+ */
 
 volatile bool isATN = false;  // has ATN been asserted?
 volatile bool isSRQ = false;  // has SRQ been asserted?
