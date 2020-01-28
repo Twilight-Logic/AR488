@@ -71,9 +71,9 @@
 /*** MEGA 2560 board ***/
 #elif __AVR_ATmega2560__
   /*** Board/layout selection ***/
-  //#define AR488_MEGA2560_D
+  #define AR488_MEGA2560_D
   //#define AR488_MEGA2560_E1
-  #define AR488_MEGA2560_E2
+  //#define AR488_MEGA2560_E2
   /*** Serial ports ***/
   // Mega 2560 supports Serial, Serial1, Serial2, Serial3. Since the pins 
   // associated with Serial2 are used in the default pin layout, Serial2
@@ -164,9 +164,9 @@
 /*
  * Uses built-in LED on GPIO pin 13 to signal status
  */
-//#define AR_BT_EN 10             // Bluetooth enable and control pin
+//#define AR_BT_EN 12             // Bluetooth enable and control pin
 #ifdef AR_BT_EN
-  #define AR_BT_BAUD 57600      // Bluetooth module preferred baud rate
+  #define AR_BT_BAUD 115200     // Bluetooth module preferred baud rate
   #define AR_BT_NAME "AR488-BT" // Bluetooth device name
   #define AR_BT_CODE "488488"   // Bluetooth pairing code
 #endif
