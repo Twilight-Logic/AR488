@@ -24,7 +24,7 @@ Once uploaded, the firmware should respond to the ++ver command with its version
 
 <b><i>Wireless Communication:</i></b>
 
-<i>Please note that Bluetooth support has been temporarily removed pending further development. If BlueTooth support is required, then version (0.46.32 for Uno/Nano) is still available in Archive/Uno directories, however the latest features, including SN7561x support will not be available.</i>
+The AR488 interface can communicate over Bluetooth using a Bluetooth HC05 or HC06 module. The firmware sketch supports auto-configuration of the Bluetooth HC05 module, the details of which can be found in the <i>AR488 Bluetooth Support<i> supplement. Although it can still be used to provide Bluetooth communication for the AR488, automatic configuration is not possible with a HC06 module so a HC06 module will have to be configured manually.
 
 <b><i>Obtaining support:</i></b>
 
