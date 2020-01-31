@@ -18,6 +18,7 @@
  * Only ONE Serial port can be used to receive output
  */
 
+
 /*** Custom layout ***/
 /*
  * Uncomment to use custom board layout
@@ -51,22 +52,32 @@
   /*** Serial ports ***/
   //Select HardwareSerial or SoftwareSerial (default = HardwareSerial) ***/
   // The UNO/NANO default hardware port is 'Serial'
-  // (Comment out the 3 defines below if using SoftwareSerial)
+  // (Comment out #define AR_HW_SERIAL if using SoftwareSerial)
   #define AR_HW_SERIAL
-  #define AR_SERIAL_PORT Serial
-  #define USE_SERIALEVENT
-  // Select software serial port
-  //#define AR_SW_SERIAL
+  #ifdef AR_HW_SERIAL
+    #define AR_SERIAL_PORT Serial
+    #define USE_SERIALEVENT
+  #else
+    // Select software serial port
+    #define AR_SW_SERIAL
+  #endif
 
 /*** MEGA 32U4 based boards (Micro, Leonardo) ***/
 #elif __AVR_ATmega32U4__
   /*** Board/layout selection ***/
   #define AR488_MEGA32U4_MICRO
   /*** Serial ports ***/
-  // Comment out if using RXI, TXO pins
+  // By default the CDC serial port is used
+  // Comment out #define AR_CDC_SERIAL if using RXI, TXO pins
   #define AR_CDC_SERIAL
-  // The Mega 32u4 default port is a virtual USB CDC port named 'Serial'
-  #define AR_SERIAL_PORT Serial
+  #ifdef AR_CDC_SERIAL
+    // The Mega 32u4 default port is a virtual USB CDC port named 'Serial'
+    #define AR_SERIAL_PORT Serial
+  #else
+    // Use hardware port Serial1
+    #define AR_HW_SERIAL
+    #define AR_SERIAL_PORT Serial1
+  #endif
   
 /*** MEGA 2560 board ***/
 #elif __AVR_ATmega2560__
