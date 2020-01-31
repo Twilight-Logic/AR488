@@ -24,7 +24,8 @@ Once uploaded, the firmware should respond to the ++ver command with its version
 
 <b><i>Wireless Communication:</i></b>
 
-The AR488 interface can communicate over Bluetooth using a Bluetooth HC05 or HC06 module. The firmware sketch supports auto-configuration of the Bluetooth HC05 module, the details of which can be found in the <i>AR488 Bluetooth Support</i> supplement. Although it can still be used to provide Bluetooth communication for the AR488, automatic configuration is not possible with a HC06 module so a HC06 module will have to be configured manually.
+The AR488 interface can communicate over Bluetooth using a Bluetooth HC05 or HC06 module. The firmware sketch supports auto-configuration of the Bluetooth HC05 module, the details of which can be found in the <a href="https://github.com/Twilight-Logic/AR488/blob/master/AR488-Bluetooth.pdf">AR488 Bluetooth Support</a> supplement. Although it can still be used to provide Bluetooth communication for the AR488, automatic configuration is not possible with a HC06 module so a HC06 module will have to be configured manually.
+
 
 <b><i>Obtaining support:</i></b>
 
