@@ -383,7 +383,6 @@ void setup() {
 #else
   // Start the serial port
   arSerial->begin(AR_SERIAL_BAUD);
-  arSerial->println("Hello from AR_SERIAL :-)");
 #endif
 
 // Un-comment for diagnostic purposes
