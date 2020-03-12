@@ -11,56 +11,58 @@
  * See Tools | Manage Libraries
  */
 
+/*
 //#define _DISABLE_TLS_
+*/
 
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
 //#include <Crypto.h>
 //#include <SHA256.h>
 
-#define VERSION "0.04.10" // 25-02-2020
-
+#define VERSION "0.04.11" // 25-02-2020
 
 
 //#define DISABLE_SSL
+
 #ifdef DISABLE_SSL
   #include <ESP8266WebServer.h>
-  ESP8266WebServer *AR488srv;
+  ESP8266WebServer AR488srv(80);
 #else
   #include <ESP8266WebServerSecure.h>
 static const char serverCert[] PROGMEM = R"EOF(
 -----BEGIN CERTIFICATE-----
-MIIB7DCCAVUCFBro/mMMDId0k3BfQ245XI9re76IMA0GCSqGSIb3DQEBCwUAMDUx
-HDAaBgNVBAoME0FSNDg4X0VTUDgyNjZfQURET04xFTATBgNVBAMMDDE5Mi4xNjgu
-NC44ODAeFw0yMDAyMjUwODA2MzFaFw00NjAyMTYwODA2MzFaMDUxHDAaBgNVBAoM
-E0FSNDg4X0VTUDgyNjZfQURET04xFTATBgNVBAMMDDE5Mi4xNjguNC44ODCBnzAN
-BgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAy+a5C9WKNVu1+7M+hnVs1f3cut2yrzjO
-kLrcuzWIS1T8LENYHc9XR0JlWB3aJUb1ehHW4P9dft7/eTB9LgM2gsjJQlKHrand
-fi344E1Ev/IB6KakPkf78beXqEbgy/jukERETDAds8RhufXG4TxpuXFz9q7Ud+5M
-xtgyUkjGwV8CAwEAATANBgkqhkiG9w0BAQsFAAOBgQASulQqLQ5Bn0KXoFrHN6Pw
-PNQmZ9tgsnbpwgKW5gsfTgF9mu8Hk2ercwtcdd2gm4tFjRdFgfdRrC4mthx1GxA/
-0vAUXgdpvEt1p27Gru5DShkNn9SxIwEJ+uO5ZrILR71MbV0NFqJBOlQOlft57oKe
-05FUxbW75fh3LrXXDW/oYQ==
+MIIB6jCCAVMCFEhQVUoACz86dEhgIysUeu6NaYBAMA0GCSqGSIb3DQEBCwUAMDQx
+HDAaBgNVBAoME0FSNDg4X0VTUDgyNjZfQURET04xFDASBgNVBAMMC2FyNDg4Lmxv
+Y2FsMB4XDTIwMDIyNTE1NDUzMloXDTQ2MDIxNjE1NDUzMlowNDEcMBoGA1UECgwT
+QVI0ODhfRVNQODI2Nl9BRERPTjEUMBIGA1UEAwwLYXI0ODgubG9jYWwwgZ8wDQYJ
+KoZIhvcNAQEBBQADgY0AMIGJAoGBAM2mgDoIcHccM991vWvq6hd+fOm/5zjECrbU
+04jV3qR5E+9TMRps2NkuDghNbHLIo3cBm15WvgVPNjHI8hK36gymMWKH/QoVYap9
+lkQyE0gFsC77UlSMDRLAcUmAsI0qsI2X0W5py5P6eV/XMFoDf9s1rN6MrcME1Tqg
+S2TZomrzAgMBAAEwDQYJKoZIhvcNAQELBQADgYEAk+PvSU2Q11FS7lhHuNEnmBoc
+DNNGwl7bxR13GlYlapTsT3mkQb+YK06O8Ygvs240avZfJ/+0YX7A2eDVWZb27Gxq
+V//FM5w/AT4SQydD0X+4fuUVXC05Jk7zjBgoKP+EWGBmJlOY0/9RyTCBR1MCMONC
+V05pZpLtOCqP0R4Unfk=
 -----END CERTIFICATE-----
 )EOF";
 static const char serverKey[] PROGMEM =  R"EOF(
 -----BEGIN RSA PRIVATE KEY-----
-MIICXQIBAAKBgQDL5rkL1Yo1W7X7sz6GdWzV/dy63bKvOM6Quty7NYhLVPwsQ1gd
-z1dHQmVYHdolRvV6Edbg/11+3v95MH0uAzaCyMlCUoetqd1+LfjgTUS/8gHopqQ+
-R/vxt5eoRuDL+O6QRERMMB2zxGG59cbhPGm5cXP2rtR37kzG2DJSSMbBXwIDAQAB
-AoGAIV/PdA9swtUTEXLCTjHUMaaOxYtaHvIWZXwgewgFGgd8Cyauuppgd8p3Whfw
-x984eNWIrWU/AXAwsr5sDub5ud1Nmiu7C23oWxVZ6TIOJvBx3wB/OqAFBxL4vQ7j
-KZdt+Tz/kp9541w1F5u3syfW58iM5E45KCcsuK9+hW+kgekCQQD7mBi32mHczwU5
-7AQJ6B9O7uJr6UxSNT5DSq8qL7w94c1rSR7cd/21wsDTII6PNxK2VaQh4rO0nrwx
-p9UKdN+LAkEAz3jRXgfiRWOZZJLrxrThZHUA3/dSGzRuGkMwDuqQkFFnotwdJSVk
-lGW/0O20y+8923B+PqHbgnicdexKKxwf/QJAWu77KCBHNK6iXe/++bGq9zWCIqyc
-yC20RlANBXthVyBwxXEVNWwtB+/PD7/5pquqGLrVauXsO8EPlgbqCjB5xwJBAJHl
-PiXHmYB+J7In9xFGxXElLjZQ7zYeSobBVJxIqtwxwpUuAHjMsMwCOT8syYTXekJD
-+yMEIx6+vhfWz9k87+kCQQDHqQiV3B/7z0lM8DlvKu20v1O55Lgv2ho7dq2QJMRL
-aaKCfSXvCSgiltXqsVsHzdZPgmMlNJwoiNuygS+JJ+hd
+MIICXAIBAAKBgQDNpoA6CHB3HDPfdb1r6uoXfnzpv+c4xAq21NOI1d6keRPvUzEa
+bNjZLg4ITWxyyKN3AZteVr4FTzYxyPISt+oMpjFih/0KFWGqfZZEMhNIBbAu+1JU
+jA0SwHFJgLCNKrCNl9FuacuT+nlf1zBaA3/bNazejK3DBNU6oEtk2aJq8wIDAQAB
+AoGASh/HfCNqliQeNl8z5WAI/GrlD0PSTc2rpvbTQDEGTPYvT0YHHuU4zB8jg66U
+dlMHSG/V1o0hdLx2Zj9tsX2E6GCnrmSgydlK67EOltjMIhXzdQU5fMZh3Z62tbCl
+rx3PJSvS9zHgSv0fqaRIfWinvdkHkhLLy0eujRvjwKiFqxECQQDxdtIZdOqwCS01
+o5Tn0cZupFCHFp3//07SNK32ddp6jscPtb13MqVK0x+DLeeRL/e/ih91HrWUyfJQ
+1V9ca8PXAkEA2gfCFc3o+EUqorf4DwerI7heET1GDodRLazQLFHOSRDbzkSJeAhP
+MDHvvf9Z1VTTLOc3OyDhDbUuk+aB2wouRQJBANEjJAhOfrLnz9OEkoVS6TaNdP38
+Ne8zd1aTsBUmsIu0PG+77pVeNVIgmEurJ8VVsZShkmuDpKxxWUJv/L90y1MCQB6s
+YL24jkH/WRQzVY6nwYfw9Crwt95rYxxN56uUhrT4zjOiqMReRuW84MGWHwlIOb1j
+ef2zjnXjO35LO5GZSRECQFGirtquoY76VE0/a2eccACzllXi+kKIM9Lpmkpk5tl3
+q0nU1TGSF3zN4hdWR07e7B22Qkg1UT9vQKCDbkYTI4Q=
 -----END RSA PRIVATE KEY-----
 )EOF";
-  BearSSL::ESP8266WebServerSecure *AR488srv;
+  BearSSL::ESP8266WebServerSecure AR488srv(443);
 #endif
 
 // EEPROM size and start address
@@ -68,7 +70,7 @@ aaKCfSXvCSgiltXqsVsHzdZPgmMlNJwoiNuygS+JJ+hd
 #define EESTART 2
 
 // Uncomment this to clear the EEPROM, then comment out again
-#define EEPROM_CLEAR
+//#define EEPROM_CLEAR
 
 // Hash and salt sizes
 #define HSZ 32
@@ -84,7 +86,6 @@ aaKCfSXvCSgiltXqsVsHzdZPgmMlNJwoiNuygS+JJ+hd
 // Terminators
 #define CR 0x13
 #define LF 0x10
-
 
 
 /***** Enable debug modes *****/
@@ -127,7 +128,7 @@ union cfgObj {
 union cfgObj AP;
 
 
-/***** Web server and client objects *****/
+/***** Server and client objects *****/
 
 WiFiServer *passSrv = new WiFiServer(8488);
 WiFiClient passCli;
@@ -791,7 +792,7 @@ function SHA1(msg){
 static const char redirectPage[] PROGMEM = R"EOF(
 <html>
 <head>
-<meta http-equiv="refresh" content="%d; URL='%s://%d.%d.%d.%d'"/>
+<meta http-equiv="refresh" content="%d; URL="http%c://%d.%d.%d.%d:%d""/>
 <style>
 body {width: 320; height: 424;}
 .mpage  {width: 320;
@@ -904,7 +905,7 @@ void setup() {
 void loop() {
 
   // Handle requests for web server
-  AR488srv->handleClient();
+  AR488srv.handleClient();
 
   // Is GPIB passthrough enabled?
   if (AP.gpib) {
@@ -955,7 +956,6 @@ void loop() {
       }
     }
   }
-
 }
 
 
@@ -968,7 +968,7 @@ void setDefaultCfg() {
 #ifdef DISABLE_SSL
   AP = {80,8488,false,false,false,false,{192,168,4,88},{192,168,4,88},{255,255,255,0},{'\0'},{'\0'}};
 #else
-  AP = {443,8488,false,false,false,false,{192,168,4,88},{192,168,4,88},{255,255,255,0},{'\0'},{'\0'}};
+  AP = {443,8488,true,false,false,false,{192,168,4,88},{192,168,4,88},{255,255,255,0},{'\0'},{'\0'}};
 #endif
 }
 
@@ -1117,7 +1117,6 @@ bool startWifiStn(String ssid, String psks, uint8_t addr[4], uint8_t gate[4], ui
   }
 
   // Enable and start station mode
-//  if (!WiFi.enableSTA()) WiFi.enableSTA(true);
   WiFi.enableSTA(true);
   WiFi.mode(WIFI_STA);
   WiFi.setSleepMode(WIFI_NONE_SLEEP);
@@ -1142,41 +1141,41 @@ bool startWifiStn(String ssid, String psks, uint8_t addr[4], uint8_t gate[4], ui
 
 /***** Start the web server *****/
 void startWebServer() {
-  delete AR488srv;
 
+#ifndef DISABLE_SSL
+  AR488srv.getServer().setRSACert(new BearSSL::X509List(serverCert), new BearSSL::PrivateKey(serverKey));
+#endif
 
-#ifdef DISABLE_SSL
-  AR488srv = new ESP8266WebServer(AP.webp);
-#else
-  AR488srv = new ESP8266WebServerSecure(AP.webp);
-//  AR488srv->getServer().setServerKeyAndCert_P(rsakey, sizeof(rsakey), x509, sizeof(x509));
-  AR488srv->getServer().setRSACert(new BearSSL::X509List(serverCert), new BearSSL::PrivateKey(serverKey));
+#ifdef DEBUG_2
+  Serial.println(F("Configuring web pages..."));  
 #endif
 
   // Pages being served
-  AR488srv->on("/", wwwMain);         // Default web page
-  AR488srv->on("/seeStat", seeStat);  // Status page
-  AR488srv->on("/cfgGen", cfgGen);    // General options
-  AR488srv->on("/cfgWifi", cfgWifi);  // WiFi config
-  AR488srv->on("/cfg488", cfg488);    // AR488 config
-  AR488srv->on("/cfgAdm", cfgAdm);    // Admin options
-  AR488srv->on("/style", lnkStyle);   // Stylesheet
-  AR488srv->on("/script", lnkScript);     // Main Script
-  AR488srv->on("/cfgGenjs", cfgGenjs);    // General page Script
-  AR488srv->on("/cfgWiFijs", cfgWiFijs);  // WiFi config Script
-  AR488srv->on("/cfg488js", cfg488js);    // AR488 config Script
-  AR488srv->on("/cfgAdmjs", cfgAdmjs);    // Admin Script
-  AR488srv->on("/SHA1js", SHA1js);        // SHA1 Script
+  AR488srv.on("/", wwwMain);         // Default web page
+  AR488srv.on("/seeStat", seeStat);  // Status page
+  AR488srv.on("/cfgGen", cfgGen);    // General options
+  AR488srv.on("/cfgWifi", cfgWifi);  // WiFi config
+  AR488srv.on("/cfg488", cfg488);    // AR488 config
+  AR488srv.on("/cfgAdm", cfgAdm);    // Admin options
+  AR488srv.on("/style", lnkStyle);   // Stylesheet
+  AR488srv.on("/script", lnkScript);     // Main Script
+  AR488srv.on("/cfgGenjs", cfgGenjs);    // General page Script
+  AR488srv.on("/cfgWiFijs", cfgWiFijs);  // WiFi config Script
+  AR488srv.on("/cfg488js", cfg488js);    // AR488 config Script
+  AR488srv.on("/cfgAdmjs", cfgAdmjs);    // Admin Script
+  AR488srv.on("/SHA1js", SHA1js);        // SHA1 Script
 
   // Argument handlers for pages
-  AR488srv->on("/setWifi", setWifi);  // Set WiFi parameters
-  AR488srv->on("/setGen", setGen);    // Set WiFi parameters
-  AR488srv->on("/set488", set488);    // Set GPIB parameters
-  AR488srv->on("/admin", admin);      // Set WiFi parameters
+  AR488srv.on("/setWifi", setWifi);  // Set WiFi parameters
+  AR488srv.on("/setGen", setGen);    // Set WiFi parameters
+  AR488srv.on("/set488", set488);    // Set GPIB parameters
+  AR488srv.on("/admin", admin);      // Set WiFi parameters
 
+#ifdef DEBUG_2
+  Serial.println(F("Initialising webserver..."));  
+#endif
   // Start the server
-  AR488srv->begin(); // Start the HTTP server
-
+  AR488srv.begin(AP.webp); // Start the HTTP server
 #ifdef DEBUG_2
   Serial.println("Web server started.");
 #endif
@@ -1191,7 +1190,6 @@ void wwwMain() {
   char *vp;
 
   rsz = getReply("++ver real", reply, 47);
-
   if (rsz > 0) {
     vp = strstr(reply, "ver.") + 5;
     for (int i = 0; i < 7; i++) {
@@ -1205,7 +1203,7 @@ void wwwMain() {
            VERSION,
            fwver
           );
-  AR488srv->send(200, "text/html", html);
+  AR488srv.send(200, "text/html", html);
 }
 
 
@@ -1312,7 +1310,8 @@ void seeStat() {
            gpibmode,
            gpibaddr
           );  
-  AR488srv->send(200, "text/html", html);
+//  AR488srv->send(200, "text/html", html);
+  AR488srv.send(200, "text/html", html);
   /*
      reply   <tr><th>Instrument:</th><td>%s</td></tr>\
   */
@@ -1337,7 +1336,8 @@ void cfgGen() {
            AP.gpibp,
            disd
           );
-  AR488srv->send(200, "text/html", html);
+//  AR488srv->send(200, "text/html", html);
+  AR488srv.send(200, "text/html", html);
 }
 
 
@@ -1413,7 +1413,7 @@ void cfgWifi() {
            mask[3],
            disd2
           );
-  AR488srv->send(200, "text/html", html);
+  AR488srv.send(200, "text/html", html);
 }
 
 
@@ -1493,91 +1493,71 @@ void cfg488() {
            geotch,
            vstr
           );
-  AR488srv->send(200, "text/html", html);
+  AR488srv.send(200, "text/html", html);
 }
 
 
 /***** Admin functions page *****/
 void cfgAdm() {
-//  snprintf(html, htmlSize, cfgAdmPage);
-//  AR488srv->send(200, "text/html", html);
-  AR488srv->send(200, "text/html", cfgAdmPage);
+  AR488srv.send(200, "text/html", cfgAdmPage);
 }
 
 
 /***** Return CSS stylesheet *****/
 void lnkStyle() {
-//  snprintf(html, htmlSize, css);
-//  AR488srv->send(200, "text/html", html);
-  AR488srv->send(200, "text/html", css);
+  AR488srv.send(200, "text/html", css);
 }
 
 
 /***** Return main JavaScript code *****/
 void lnkScript() {
-//  snprintf(html, htmlSize, lnkScriptJs);
-//  AR488srv->send(200, "text/html", html);
-  AR488srv->send(200, "text/html", lnkScriptJs);
+  AR488srv.send(200, "text/html", lnkScriptJs);
 }
 
 
 /***** JavaScript code for Ceneral config page *****/
 void cfgGenjs() {
-//  snprintf(html, htmlSize,cfgGenJs);
-//  AR488srv->send(200, "text/html", html);
-  AR488srv->send(200, "text/html", cfgGenJs);
+  AR488srv.send(200, "text/html", cfgGenJs);
 }
 
 
 /***** JavaScript code for WiFi config page *****/
 void cfgWiFijs() {
-//  snprintf(html, htmlSize, cfgWifiJs);
-//  AR488srv->send(200, "text/html", html);
-  AR488srv->send(200, "text/html", cfgWifiJs);
+  AR488srv.send(200, "text/html", cfgWifiJs);
 }
 
 
 /***** JavaScript code for AR488 config page *****/
 void cfg488js() {
-//  snprintf(html, htmlSize, cfg488Js);
-//  AR488srv->send(200, "text/html", html);
-  AR488srv->send(200, "text/html", cfg488Js);
+  AR488srv.send(200, "text/html", cfg488Js);
 }
 
 
 /***** JavaScript code for Admin page *****/
 void cfgAdmjs() {
-//  snprintf(html, htmlSize, cfgAdmJs);
-//  AR488srv->send(200, "text/html", html);
-  AR488srv->send(200, "text/html", cfgAdmJs);
+  AR488srv.send(200, "text/html", cfgAdmJs);
 }
 
 
 void SHA1js() {
-//  snprintf(html, htmlSize, SHA1funcJs);
-//  AR488srv->send(200, "text/html", html);
-  AR488srv->send(200, "text/html", SHA1funcJs);
+  AR488srv.send(200, "text/html", SHA1funcJs);
 }
 
 
 /***** Set WiFi parameters *****/
 void setWifi() {
-  bool stat = false;
+//  bool stat = false;
   char msg[35] = {"Re-directing to "};
   uint8_t dly = 10;
 
-//  if (!AP.wclient) dly = 10;
-
-
   // Checksum current config
-//  chkAPb = chkSumCfg(APp, apsz);
 #ifdef DEBUG_2
   Serial.println(F("Received WiFi config page..."));
   showArgs();
 #endif
 
-  AP.wclient = ((AR488srv->arg("chkM").length()>0) ? true : false);
-  AP.dhcp = ((AR488srv->arg("chkD").length()>0) ? true : false);
+  AP.wclient = ((AR488srv.arg("chkM").length()>0) ? true : false);
+  AP.dhcp = ((AR488srv.arg("chkD").length()>0) ? true : false);
 
 #ifdef DEBUG_2
 if (AP.wclient) {
@@ -1596,36 +1576,37 @@ if (AP.dhcp) {
     // Station (client) mode requested
     if (!AP.dhcp) { // Static IP provided
       // Get IP address
-      if (AR488srv->arg("addr1") != "") {
-        AP.addr[0] = AR488srv->arg("addr1").toInt();
-        AP.addr[1] = AR488srv->arg("addr2").toInt();
-        AP.addr[2] = AR488srv->arg("addr3").toInt();
-        AP.addr[3] = AR488srv->arg("addr4").toInt();
+      if (AR488srv.arg("addr1") != "") {
+        AP.addr[0] = AR488srv.arg("addr1").toInt();
+        AP.addr[1] = AR488srv.arg("addr2").toInt();
+        AP.addr[2] = AR488srv.arg("addr3").toInt();
+        AP.addr[3] = AR488srv.arg("addr4").toInt();
       }
-      if (AR488srv->arg("gate1")) {
-        AP.gate[0] = AR488srv->arg("gate1").toInt();
-        AP.gate[1] = AR488srv->arg("gate2").toInt();
-        AP.gate[2] = AR488srv->arg("gate3").toInt();
-        AP.gate[3] = AR488srv->arg("gate4").toInt();
+      if (AR488srv.arg("gate1")) {
+        AP.gate[0] = AR488srv.arg("gate1").toInt();
+        AP.gate[1] = AR488srv.arg("gate2").toInt();
+        AP.gate[2] = AR488srv.arg("gate3").toInt();
+        AP.gate[3] = AR488srv.arg("gate4").toInt();
       }
-      if (AR488srv->arg("mask1")) {
-        AP.mask[0] = AR488srv->arg("mask1").toInt();
-        AP.mask[1] = AR488srv->arg("mask2").toInt();
-        AP.mask[2] = AR488srv->arg("mask3").toInt();
-        AP.mask[3] = AR488srv->arg("mask4").toInt();
+      if (AR488srv.arg("mask1")) {
+        AP.mask[0] = AR488srv.arg("mask1").toInt();
+        AP.mask[1] = AR488srv.arg("mask2").toInt();
+        AP.mask[2] = AR488srv.arg("mask3").toInt();
+        AP.mask[3] = AR488srv.arg("mask4").toInt();
       }
     }
   }else{
     // AP mode requested (no DHCP available)
-    if (AR488srv->arg("addr1") != "") {
-      AP.addr[0] = AR488srv->arg("addr1").toInt();
-      AP.addr[1] = AR488srv->arg("addr2").toInt();
-      AP.addr[2] = AR488srv->arg("addr3").toInt();
-      AP.addr[3] = AR488srv->arg("addr4").toInt();
-      AP.gate[0] = AR488srv->arg("addr1").toInt();
-      AP.gate[1] = AR488srv->arg("addr2").toInt();
-      AP.gate[2] = AR488srv->arg("addr3").toInt();
-      AP.gate[3] = AR488srv->arg("addr4").toInt();
+    if (AR488srv.arg("addr1") != "") {
+      AP.addr[0] = AR488srv.arg("addr1").toInt();
+      AP.addr[1] = AR488srv.arg("addr2").toInt();
+      AP.addr[2] = AR488srv.arg("addr3").toInt();
+      AP.addr[3] = AR488srv.arg("addr4").toInt();
+      AP.gate[0] = AR488srv.arg("addr1").toInt();
+      AP.gate[1] = AR488srv.arg("addr2").toInt();
+      AP.gate[2] = AR488srv.arg("addr3").toInt();
+      AP.gate[3] = AR488srv.arg("addr4").toInt();
+
       AP.mask[0] = 255;
       AP.mask[1] = 255;
       AP.mask[2] = 255;
@@ -1637,49 +1618,55 @@ if (AP.dhcp) {
   epWriteData(EESTART, &AP, sizeof(AP));
 
   // Create re-direct message
-//  if (AP.wclient) {
   if (AP.wclient && AP.dhcp) {   // Note: we can't determine the DHCP address so no re-direct message!
     strcpy(msg,"\0\0");
-    dly = 10;
   }else{
-    strncat(msg, AR488srv->arg("addr1").c_str(), sizeof(AR488srv->arg("addr1")));
+    strncat(msg, AR488srv.arg("addr1").c_str(), sizeof(AR488srv.arg("addr1")));
     strncat(msg, ".",1);
-    strncat(msg, AR488srv->arg("addr2").c_str(), sizeof(AR488srv->arg("addr2")));
+    strncat(msg, AR488srv.arg("addr2").c_str(), sizeof(AR488srv.arg("addr2")));
     strncat(msg, ".",1);
-    strncat(msg, AR488srv->arg("addr3").c_str(), sizeof(AR488srv->arg("addr3")));
+    strncat(msg, AR488srv.arg("addr3").c_str(), sizeof(AR488srv.arg("addr3")));
     strncat(msg, ".",1);
-    strncat(msg, AR488srv->arg("addr4").c_str(), sizeof(AR488srv->arg("addr4")));
+    strncat(msg, AR488srv.arg("addr4").c_str(), sizeof(AR488srv.arg("addr4")));
     strncat(msg,"...\0",4);
+
+   if (AP.ssl==true) dly = 15;
   }
+
   // Re-direct page
-  redirect(dly,AP.addr, msg);
+  redirect(dly,AP.addr, AP.webp, msg);
   delay(200);
   
   // Stop webserver
-  AR488srv->stop();
+  AR488srv.stop();
   
   // Disconnect stations (AP mode) or from network (Station mode)
   if (AP.wclient) {
 #ifdef DEBUG_1
     Serial.println(F("Station mode>"));
 #endif
-    startWifiStn(AR488srv->arg("essid"), AR488srv->arg("pword"), AP.addr, AP.gate, AP.mask);
+    startWifiStn(AR488srv.arg("essid"), AR488srv.arg("pword"), AP.addr, AP.gate, AP.mask);
 //      stat = hasWifiStarted();
   }else{
 #ifdef DEBUG_1
     Serial.println(F("SoftAP mode>"));
 #endif
-    startWifiAP(AR488srv->arg("essid"), AR488srv->arg("pword"), AP.addr, AP.addr, AP.mask);
+    startWifiAP(AR488srv.arg("essid"), AR488srv.arg("pword"), AP.addr, AP.addr, AP.mask);
   }
 
   // Restart webserver (AP mode needs reset?)
   if (AP.wclient) {
+#ifdef DEBUG_1
+  Serial.println(F("Starting webserver..."));
+#endif
     startWebServer();
   }else{
     if (!AP.wclient) ESP.restart();
   }
+//  if (stat) updatePage("cfgWifi");
 
-  if (stat) updatePage("cfgWifi");
+//  ESP.restart();
+
 }
 
 
@@ -1689,30 +1676,19 @@ void setGen() {
   uint16_t gpibp;
   bool sc = false; // State change
 
-  // Checksum current config
-  //  chkAPb = chkSumCfg(APp, apsz);
-
 #ifdef DEBUG_2
   Serial.println(F("Received general config page..."));
   showArgs();
 #endif
 
-  webp = AR488srv->arg("webp").toInt();
-  if (webp != AP.webp) {
-    AP.webp = webp;
-    delete AR488srv;
-    startWebServer();
-
-    //    ESP.reset();
-  }
-
-  if (AR488srv->arg("pass") == "on") {
+// Change state of GPIB pass-through
+  if (AR488srv.arg("pass") == "on") {
 #ifdef DEBUG_2
     Serial.println(F("Passthrough turned on."));
 #endif
     if (!AP.gpib) sc = true;
     AP.gpib = true;
-    gpibp = AR488srv->arg("gpibp").toInt();
+    gpibp = AR488srv.arg("gpibp").toInt();
     if (AP.gpibp != gpibp) {
       sc = true;
       AP.gpibp = gpibp;
@@ -1736,9 +1712,21 @@ void setGen() {
       //      delete passSrv;
     }
   }
+
+  // Save settings
+  webp = AR488srv.arg("webp").toInt();
   epWriteData(EESTART, &AP, sizeof(AP));
-  //  wwwMain();
-  updatePage("cfgGen");
+
+  // If neccessary, restart web server
+  if (webp != AP.webp) {
+    AP.webp = webp;
+    redirect(3, AP.addr, AP.webp, "Redirecting...");
+    AR488srv.stop();
+    startWebServer();
+  }else{
+    // Update the page
+    updatePage("cfgGen");
+  }
 }
 
 
@@ -1751,16 +1739,16 @@ void set488() {
   showArgs();
 #endif
 
-  if (AR488srv->arg("cmode") == "on") ctrlr = true;
+  if (AR488srv.arg("cmode") == "on") ctrlr = true;
 
   // Process switches
-  if (AR488srv->arg("eoi") == "on") {
+  if (AR488srv.arg("eoi") == "on") {
     Serial.println(F("++eoi 1"));
   } else {
     Serial.println(F("++eoi 0"));
   }
   flushIncoming();
-  if (AR488srv->arg("eot") == "on") {
+  if (AR488srv.arg("eot") == "on") {
     Serial.println(F("++eot_enable 1"));
   } else {
     Serial.println(F("++eot_enable 0"));
@@ -1769,20 +1757,21 @@ void set488() {
   delay(200);
 
   // Process parameters
-  Serial.print(F("++addr ")); Serial.println(AR488srv->arg("gpib"));
+  Serial.print(F("++addr ")); Serial.println(AR488srv.arg("gpib"));
   flushIncoming();
-  Serial.print(F("++eos ")); Serial.println(AR488srv->arg("eosch"));
+  Serial.print(F("++eos ")); Serial.println(AR488srv.arg("eosch"));
   flushIncoming();
-  Serial.print(F("++eot_char ")); Serial.println(AR488srv->arg("eotch"));
+  Serial.print(F("++eot_char ")); Serial.println(AR488srv.arg("eotch"));
   flushIncoming();
-  Serial.print(F("++setvstr ")); Serial.println(AR488srv->arg("vstr"));
+  Serial.print(F("++setvstr ")); Serial.println(AR488srv.arg("vstr"));
   flushIncoming();
+
 
   // Set these only of controller mode is on
   if (ctrlr) {
-    Serial.print(F("++auto ")); Serial.println(AR488srv->arg("auto"));
+    Serial.print(F("++auto ")); Serial.println(AR488srv.arg("auto"));
     flushIncoming();
-    Serial.print(F("++read_tmo_ms ")); Serial.println(AR488srv->arg("readtmo"));
+    Serial.print(F("++read_tmo_ms ")); Serial.println(AR488srv.arg("readtmo"));
     flushIncoming();
   }
   delay(200);
@@ -1797,7 +1786,7 @@ void set488() {
   delay(200);
 
   // Save configuration
-  if (AR488srv->arg("opt") == "2") {
+  if (AR488srv.arg("opt") == "2") {
     Serial.println(F("++savecfg"));
   }
   delay(200);
@@ -1817,8 +1806,8 @@ void admin() {
   showArgs();
 #endif
 
-  opt = AR488srv->arg("opt").toInt();
-  AR488srv->arg("chk1").toCharArray(hash, 20);
+  opt = AR488srv.arg("opt").toInt();
+  AR488srv.arg("chk1").toCharArray(hash, 20);
   if (memcmp(hash, AP.pwdH, 20) == 0) {
     switch (opt) {
       case 1:
@@ -1834,13 +1823,13 @@ void admin() {
 #ifdef DEBUG_5
         Serial.println(F("Rebooting..."));
 #endif
-        redirect(10, AP.addr, "Success!");
+        redirect(10, AP.addr, AP.webp, "Success!");
         delay(500);
         ESP.restart();
         break;
     }
   } else {
-    redirect(3, AP.addr, "Fail - check password!");
+    redirect(3, AP.addr, AP.webp, "Fail - check password!");
   }
   // Update the page
   updatePage("cfgAdm");
@@ -1848,32 +1837,37 @@ void admin() {
 
 
 /***** Redirect to status page*****/
-void redirect(uint8_t dly, uint8_t addr[4], const char *msg) {
-  char pfx[6] = {0x68, 0x74, 0x74, 0x70, 0x73, 0x0};
+void redirect(uint8_t dly, uint8_t addr[4], uint16_t port, const char *msg) {
+//  char pfx[6] = {0x68, 0x74, 0x74, 0x70, 0x73, 0x0};
 //  IPAddress addr;
 
-  if (!AP.ssl) strncpy(pfx, "http\0", 5);
+  char s = '\0';
+
+//  if (AP.ssl==false) strncpy(pfx, "http\0", 5);
+  if (AP.ssl==true) s = 0x73;
 
   snprintf(html, htmlSize, redirectPage,
            dly,
-           pfx,
+           s,
            addr[0],
            addr[1],
            addr[2],
            addr[3],
+           port,
            msg
           );
-  AR488srv->send(200, "text/html", html);
+//  AR488srv->send(200, "text/html", html);
+  AR488srv.send(200, "text/html", html);
 }
 
 
 #ifdef DEBUG_2
 /***** Display submitted arguments *****/
 void showArgs() {
-  uint8_t acnt = AR488srv->args();
+  uint8_t acnt = AR488srv.args();
   for (uint8_t i = 0; i < acnt; i++) {
-    Serial.print(AR488srv->argName(i) + ":\t");
-    Serial.println(AR488srv->arg(i));
+    Serial.print(AR488srv.argName(i) + ":\t");
+    Serial.println(AR488srv.arg(i));
   }
 }
 #endif
