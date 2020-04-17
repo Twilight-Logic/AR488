@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.48.03, 03/01/2020 *****/
+/***** AR488_Hardware.cpp, ver. 0.48.20, 06/04/2020 *****/
 /*
  * Hardware layout function definitions
  */
@@ -55,7 +55,7 @@ void setGpibDbus(uint8_t db) {
     bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
     mask (mask)     : 0=unaffected, 1=enabled
     mode (mode)     : 0=set pin state, 1=set pin direction
-   Arduino pin to Port/bit to direction/state byte map:
+   Arduino Uno/Nano pin to Port/bit to direction/state byte map:
    IFC   8   PORTB bit 0 byte bit 0
    NDAC  9   PORTB bit 1 byte bit 1
    NRFD  10  PORTB bit 2 byte bit 2
@@ -195,7 +195,7 @@ void setGpibDbus(uint8_t db) {
     bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
     mask (mask)     : 0=unaffected, 1=enabled
     mode (mode)     : 0=set pin state, 1=set pin direction
-   Arduino pin to Port/bit to direction/state byte map:
+   Arduino Mega 2560 Layout D pin to Port/bit to direction/state byte map:
    IFC   17  PORTH bit 0 byte bit 0
    NDAC  16  PORTH bit 1 byte bit 1
    NRFD  6   PORTH bit 3 byte bit 2
@@ -351,7 +351,7 @@ void setGpibDbus(uint8_t db) {
     bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
     mask (mask)     : 0=unaffected, 1=enabled
     mode (mode)     : 0=set pin state, 1=set pin direction
-   Arduino pin to Port/bit to direction/state byte map:
+   Arduino Mega 2560 Layout E1 pin to Port/bit to direction/state byte map:
    IFC   48  PORTL bit 1 byte bit 0
    NDAC  46  PORTL bit 3 byte bit 1
    NRFD  44  PORTL bit 5 byte bit 2
@@ -523,7 +523,7 @@ void setGpibDbus(uint8_t db) {
     bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
     mask (mask)     : 0=unaffected, 1=enabled
     mode (mode)     : 0=set pin state, 1=set pin direction
-   Arduino pin to Port/bit to direction/state byte map:
+   Arduino Mega 2560 Layout E2 pin to Port/bit to direction/state byte map:
    IFC   48  PORTL bit 1 byte bit 0
    NDAC  46  PORTL bit 3 byte bit 1
    NRFD  44  PORTL bit 5 byte bit 2
@@ -666,7 +666,7 @@ void setGpibDbus(uint8_t db) {
   db = ~db;
 
   // Set data bus
-  PORTB = (PORTB & ~0b01111110) | (db & 0b01111110) ;
+  PORTB = (PORTB & ~0b01111110) | (db & 0b01111110);
   PORTD = (PORTD & ~0b10000001) | (db & 0b10000001);
 
 #ifdef MICRODEBUG
@@ -683,7 +683,7 @@ void setGpibDbus(uint8_t db) {
     bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
     mask (mask)     : 0=unaffected, 1=enabled
     mode (mode)     : 0=set pin state, 1=set pin direction
- * Arduino pin to Port/bit to direction/state byte map:
+ * Arduino Pro Micro pin to Port/bit to direction/state byte map:
  * IFC   4   PORTD bit 4   byte bit 0
  * NDAC  A3  PORTF bit 4   byte bit 1
  * NRFD  A2  PORTF bit 5   byte bit 2
@@ -793,7 +793,7 @@ void interruptsEn(){
 
 #endif  // USE_INTERRUPTS
 
-#endif  // MEGA32U4
+#endif  // AR488_MEGA32U4_MICRO
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MICRO PRO (32u4) BOARD LAYOUT for MICRO (Artag) *****/
 /***********************************************************/

@@ -6,7 +6,7 @@
 #ifdef AR_BT_EN
 
 
-/***** AR488_BT.cpp, ver. 0.48.08, 27/01/2020 *****/
+/***** AR488_BT.cpp, ver. 0.48.21, 27/01/2020 *****/
 /*
 * AR488 HC05 BlueTooth module
 */

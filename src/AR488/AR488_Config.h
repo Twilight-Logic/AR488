@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.48.08, 27/01/2020"
+#define FWVER "AR488 GPIB controller, ver. 0.48.21, 06/04/2020"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -82,9 +82,9 @@
 /*** MEGA 2560 board ***/
 #elif __AVR_ATmega2560__
   /*** Board/layout selection ***/
-  #define AR488_MEGA2560_D
+  //#define AR488_MEGA2560_D
   //#define AR488_MEGA2560_E1
-  //#define AR488_MEGA2560_E2
+  #define AR488_MEGA2560_E2
   /*** Serial ports ***/
   // Mega 2560 supports Serial, Serial1, Serial2, Serial3. Since the pins 
   // associated with Serial2 are used in the default pin layout, Serial2
@@ -295,7 +295,6 @@ M3\n\
 /***** ^^^^^^^^^^^^^^^^^^^^ *****/
 /***** AR488 MACROS SECTION *****/
 /********************************/
-
 
 
 #endif // AR488_CONFIG_H

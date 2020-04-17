@@ -25,7 +25,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.48.08, 27/01/2020" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.48.21, 06/04/2020" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -314,8 +314,8 @@ uint8_t eByte = 0;      // Termination character
 bool snd = false;
 
 // Escaped character flag
-bool isEsc = false;   // Charcter escaped
-bool isPle = false;   // Plus escaped
+bool isEsc = false;           // Charcter escaped
+bool isPlusEscaped = false;   // Plus escaped
 
 // Received serial poll request?
 //bool isSprq = false;
@@ -329,6 +329,10 @@ bool isTO = false;
 // GPIB command parser
 bool aTt = false;
 bool aTl = false;
+
+// Data send mode flags
+bool deviceAddressing = true;   // Suppress sending commands to address the instrument
+bool dataBufferFull = false;    // Flag when parse buffer is full
 
 // State flags
 extern volatile bool isATN;  // has ATN been asserted?
@@ -505,14 +509,16 @@ void loop() {
 
   // lnRdy=1: received a command so execute it...
   if (lnRdy == 1) {
-    processLine(pBuf, pbPtr, 1);
+//    processLine(pBuf, pbPtr, 1);
+    execCmd(pBuf, pbPtr);
   }
 
   // Controller mode:
   if (AR488.cmode == 2) {
     // lnRdy=2: received data - send it to the instrument...
     if (lnRdy == 2) {
-      processLine(pBuf, pbPtr, 2);
+//      processLine(pBuf, pbPtr, 2);
+      sendToInstrument(pBuf, pbPtr);
       // Auto-read data from GPIB bus following any command
       if (AR488.amode == 1) {
         //        delay(10);
@@ -539,11 +545,13 @@ void loop() {
   // Device mode:
   if (AR488.cmode == 1) {
     if (isTO) {
-      if (lnRdy == 2) processLine(pBuf, pbPtr, 2);
+//      if (lnRdy == 2) processLine(pBuf, pbPtr, 2);
+      if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
     }else if (isRO) {
       lonMode();
     }else{
       if (isATN) attnRequired();
+      if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
     }
   }
 
@@ -672,38 +680,36 @@ uint8_t parseInput(char c) {
   uint8_t r = 0;
 
   // Read until buffer full (buffer-size - 2 characters)
-  if (pbPtr < PBSIZE - 2) {
+  if (pbPtr < PBSIZE) {
     // Actions on specific characters
     switch (c) {
       // Carriage return or newline? Then process the line
       case CR:
       case LF:
-        // Character must not be escaped
+        // If escaped just add to buffer
         if (isEsc) {
           addPbuf(c);
           isEsc = false;
         } else {
           // Carriage return on blank line?
+          // Note: for data CR and LF will always be escaped
           if (pbPtr == 0) {
             flushPbuf();
-            if (isVerb) {
-              arSerial->println();
-              arSerial->print("> ");
-            }
+            if (isVerb) showPrompt();
             return 0;
           } else {
 #ifdef DEBUG1
             arSerial->print(F("parseInput: Received ")); arSerial->println(pBuf);
 #endif
             // Buffer starts with ++ and contains at least 3 characters - command?
-            if (pbPtr > 2 && isCmd(pBuf) && !isPle) {
+            if (pbPtr > 2 && isCmd(pBuf) && !isPlusEscaped) {
               r = 1;
               // Buffer has at least 1 character
             } else if (pbPtr > 0) { // Its other data (or instrument commands from user) so pass characters to GPIB bus
               r = 2;
             }
-            isPle = false;
-            return r;
+            isPlusEscaped = false;
+//            return r;
           }
         }
         break;
@@ -721,7 +727,7 @@ uint8_t parseInput(char c) {
       case PLUS:
         if (isEsc) {
           isEsc = false;
-          if (pbPtr < 2) isPle = true;
+          if (pbPtr < 2) isPlusEscaped = true;
         }
         addPbuf(c);
         if (isVerb) arSerial->print(c);
@@ -733,9 +739,19 @@ uint8_t parseInput(char c) {
         addPbuf(c);
         isEsc = false;
     }
-  } else {
-    // Buffer full - cannot be a command so treat as data and pass to GPIB bus
-    r = 2;
+  }
+  if (pbPtr >= PBSIZE) {
+    if (isCmd(pBuf) && !r) {
+      // Command without terminator and buffer full
+      if (isVerb) {
+        arSerial->println(F("ERROR - Command buffer overflow!"));
+      }
+      flushPbuf();
+    }else{  // Buffer contains data and is full
+      // Buffer full of data (cannot be a command) so pass to GPIB bus
+      dataBufferFull = true;
+      r = 2;
+    }
   }
   return r;
 }
@@ -841,6 +857,7 @@ static cmdRec cmdHidx [] = {
  * Executes a ++command or sends characters to instrument
  * mode: 1=command; 2=data;
 */
+/*
 void processLine(char *buffr, uint8_t dsize, uint8_t mode) {
   char line[PBSIZE];
 
@@ -878,11 +895,13 @@ void processLine(char *buffr, uint8_t dsize, uint8_t mode) {
     arSerial->print(F("processLine: Sent to the instrument: ")); printHex(line, dsize);
 #endif
 
-    // Is this a query command (string ending with ?)
+    // Is this an instrument query command (string ending with ?)
     if (line[dsize-1] == '?') isQuery = true;
 
     // Send string to instrument
     gpibSendData(line, dsize);
+    // Clear data buffer full flag
+    if (dataBufferFull) dataBufferFull = false;
   }
 
   // Show a prompt on completion?
@@ -892,6 +911,83 @@ void processLine(char *buffr, uint8_t dsize, uint8_t mode) {
     arSerial->print("> ");
   }
 
+}
+*/
+
+
+/***** Show a prompt *****/
+void showPrompt() {
+  // Print prompt
+  arSerial->println();
+  arSerial->print("> ");
+}
+
+
+
+/****** Send data to instrument *****/
+/* Processes the parse buffer whenever a full CR or LF
+ * and sends data to the instrument
+ */
+void sendToInstrument(char *buffr, uint8_t dsize) {
+
+#ifdef DEBUG1
+  arSerial->print(F("sendData: Received: ")); printHex(buffr, dsize);
+#endif
+
+#ifdef DEBUG1
+    arSerial->print(F("sendToInstrument: Sent to the instrument: ")); printHex(line, dsize);
+#endif
+
+  // Is this an instrument query command (string ending with ?)
+  if (buffr[dsize-1] == '?') isQuery = true;
+
+  // Send string to instrument
+  gpibSendData(buffr, dsize);
+  // Clear data buffer full flag
+  if (dataBufferFull) dataBufferFull = false;
+
+  // Show a prompt on completion?
+  if (isVerb) showPrompt();
+
+  // Flush the parse buffer
+  flushPbuf();
+  lnRdy = 0;
+
+}
+
+
+
+/***** Execute a command *****/
+void execCmd(char *buffr, uint8_t dsize) {
+  char line[PBSIZE];
+
+  // Copy collected chars to line buffer
+  memcpy(line, buffr, dsize);
+
+  // Flush the parse buffer
+  flushPbuf();
+  lnRdy = 0;
+
+#ifdef DEBUG1
+  arSerial->print(F("execCmd: Command received: ")); printHex(line, dsize);
+#endif
+
+  // Its a ++command so shift everything two bytes left (ignore ++) and parse
+  for (int i = 0; i < dsize-2; i++) {
+    line[i] = line[i + 2];
+  }
+  // Replace last two bytes with a null (\0) character
+  line[dsize - 2] = '\0';
+  line[dsize - 1] = '\0';
+#ifdef DEBUG1
+  arSerial->print(F("execCmd: Sent to the command processor: ")); printHex(line, dsize-2);
+#endif
+  // Execute the command
+  if (isVerb) arSerial->println(); // Shift output to next line
+  getCmd(line);
+
+  // Show a prompt on completion?
+  if (isVerb) showPrompt();
 }
 
 
@@ -2099,6 +2195,60 @@ void tmbus_h(char *params) {
 }
 
 
+/***** Addressed test plot (to plotter address 5) *****/
+/*
+void plot_h(){
+  char c;
+  const char *plot = (const char PROGMEM *)testPlot;
+
+  // Address the device
+  addrDev(AR488.paddr, 0);
+
+ // Set control lines to write data (ATN unasserted)
+ setGpibControls(CTAS);
+
+  // Write the data string
+  while ((c = pgm_read_byte(plot++)))
+    gpibWriteByte(c);
+
+  // Assert EOI
+  setGpibState(0b00000000, 0b00010000, 0);
+  delayMicroseconds(40);
+  setGpibState(0b00010000, 0b00010000, 0);
+
+  // Unaddress
+  uaddrDev();
+
+  // Idle
+  setGpibControls(CIDS);
+
+}
+*/
+
+/***** Unaddressed test plot *****/
+/*
+void plotu_h(){
+  char c;
+  const char *plot = (const char PROGMEM *)testPlot;
+
+ // Set control lines to write data (ATN unasserted)
+ setGpibControls(CTAS);
+
+  // Write the data string
+  while ((c = pgm_read_byte(plot++)))
+    gpibWriteByte(c);
+
+  // Assert EOI
+  setGpibState(0b00000000, 0b00010000, 0);
+  delayMicroseconds(40);
+  setGpibState(0b00010000, 0b00010000, 0);
+
+  // Idle
+  setGpibControls(CIDS);
+
+}
+*/
+
 /******************************************************/
 /***** Device mode GPIB command handling routines *****/
 /******************************************************/
@@ -2213,7 +2363,7 @@ void attnRequired() {
   setGpibControls(DIDS);
 
 #ifdef DEBUG5
-  arSerial->println(F("END attnReceived."));
+  arSerial->println(F("attnRequired: END attnReceived."));
 #endif
 
 }
@@ -2227,7 +2377,7 @@ void mla_h(){
 
 /***** Device is addressed to talk - so send data *****/
 void mta_h(){
-  if (lnRdy == 2) processLine(pBuf, pbPtr, 2);
+  if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
 }
 
 
@@ -2342,15 +2492,19 @@ void gpibSendData(char *data, uint8_t dsize) {
   // Controler can unlisten bus and address devices
   if (AR488.cmode == 2) {
 
-    // Address device to listen
-    if (addrDev(AR488.paddr, 0)) {
-      if (isVerb) {
-        arSerial->print(F("gpibSendData: failed to address device "));
-        arSerial->print(AR488.paddr);
-        arSerial->println(F(" to listen"));
+    if (deviceAddressing) {
+      // Address device to listen
+      if (addrDev(AR488.paddr, 0)) {
+        if (isVerb) {
+          arSerial->print(F("gpibSendData: failed to address device "));
+          arSerial->print(AR488.paddr);
+          arSerial->println(F(" to listen"));
+        }
+        return;
       }
-      return;
     }
+
+    deviceAddressing = dataBufferFull ? false : true;
 
 #ifdef DEBUG3
     arSerial->println(F("Device addressed."));
@@ -2402,8 +2556,8 @@ void gpibSendData(char *data, uint8_t dsize) {
 #endif
   }
 
-  // If EOI enabled then assert EOI
-  if (AR488.eoi) {
+  // If EOI enabled and no more data to follow then assert EOI
+  if (AR488.eoi && !dataBufferFull) {
     setGpibState(0b00000000, 0b00010000, 0);
     //    setGpibState(0b00010000, 0b00000000, 0b00010000);
     delayMicroseconds(40);
@@ -2414,22 +2568,23 @@ void gpibSendData(char *data, uint8_t dsize) {
 #endif
   }
 
-  if (AR488.cmode == 2) {
-
-    // Untalk controller and unlisten bus
-    if (uaddrDev()) {
-      if (isVerb) arSerial->println(F("gpibSendData: Failed to unlisten bus"));
-    }
+  if (AR488.cmode == 2) {   // Controller mode
+    if (deviceAddressing) {
+      // Untalk controller and unlisten bus
+      if (uaddrDev()) {
+        if (isVerb) arSerial->println(F("gpibSendData: Failed to unlisten bus"));
+      }
 
 #ifdef DEBUG3
-    arSerial->println(F("Unlisten done"));
+      arSerial->println(F("Unlisten done"));
 #endif
+    }
 
     // Controller - set lines to idle?
     setGpibControls(CIDS);
 
-  } else {
-    // Device mode - set control lines to idle
+  } else {    // Device mode
+    // Set control lines to idle
     if (AR488.cmode == 1) setGpibControls(DIDS);
   }
 
@@ -2466,9 +2621,7 @@ bool gpibReceiveData() {
   eoi = rEoi;
   if (AR488.eor==7) rEoi = true;    // Using EOI as terminator
 
-  // If we are a controller
-  if (AR488.cmode == 2) {
-
+  if (AR488.cmode == 2) {   // Controler mode
     // Address device to talk
     if (addrDev(AR488.paddr, 1)) {
       if (isVerb) {
@@ -2484,20 +2637,19 @@ bool gpibReceiveData() {
     // Set GPIB control lines to controller read mode
     setGpibControls(CLAS);
 
-  } else {
+  } else {  // Device mode
     // Set GPIB controls to device read mode
     setGpibControls(DLAS);
-
+    rEoi = true;  // In device mode we read with EOI by default
   }
 
 #ifdef DEBUG7
-    arSerial->println(F("Start listen ->"));
+    arSerial->println(F("gpibReceiveData: Start listen ->\nBefore loop flags:"));
     arSerial->print(F("TRNb: "));
     arSerial->println(tranBrk);
     arSerial->print(F("rEOI: "));
     arSerial->println(rEoi);
     arSerial->print(F("ATN:  "));
-//    arSerial->println(isATN);
     arSerial->println(digitalRead(ATN) ? "HIGH" : "LOW");
 #endif
 
@@ -2508,12 +2660,8 @@ bool gpibReceiveData() {
   // Perform read of data (r: 0=data; 1=cmd; >1=error;
   while ( tranBrk == 0 && digitalRead(ATN)==HIGH && !(r = gpibReadByte(&bytes[0])) ) {
 
-    // When reading with EOI=1 or aMode=3 Check for break condition
-//    if (rEoi || (AR488.amode == 3)) readBreak();
-
     // When reading with aMode=3 Check for break condition
     if (AR488.amode == 3) readBreak();   // readBrk returns tranBrk=7
-
 
 #ifdef DEBUG7
     if (tranBrk ==5) {
@@ -2531,80 +2679,67 @@ bool gpibReceiveData() {
     arSerial->print((char)bytes[0]);
 #endif
 
-    // Reading with EOI and EOI detected - print last character and then break on EOI
-//    readBreak();
-//    if (rEoi && tranBrk == 5) break;
+    // Byte counter
+    x++;
 
-    // Stop if byte = specified EOT character
-//    if (bytes[0] == eByte && rEbt) break;
-
-/* New terminator detect code here -> */
-
-  if (rEoi) {
-    // Stop on EOI
-    if (tranBrk==5) break;
-  }else if (rEbt) {
-    // Stop on specified <char> if appended to ++read command
-    if (bytes[0] == eByte) break;
-  }else{
-    // Look for specified terminator (CR+LF by default)
-    switch (eor) {
-      case 0:
-          // CR+LF terminator
-          if (bytes[0]==LF && bytes[1]==CR) trm=true;
-          break;
-      case 1:
-          // CR only as terminator
-          if (bytes[0]==CR) trm=true;
-          break;
-      case 2:
-          // LF only as terminator
-          if (bytes[0]==LF) trm=true;
-          break;
-      case 3:
-          // No terminator (will rely on timeout)
-          break;
-      case 4:
-         // Keithley can use LF+CR instead of CR+LF
-         if (bytes[0]==CR && bytes[1]==LF) trm=true;
-         break;
-      case 5:
-         // Solarton (possibly others) can also use ETX (0x03)
-         if (bytes[0]==0x03) trm=true;
-         break;
-      case 6:
-         // Solarton (possibly others) can also use CR+LF+ETX (0x03)
-         if (bytes[0]==0x03 && bytes[1]==LF && bytes[2]==CR) trm=true;
-         break;
-      default:
-          // Use CR+LF terminator by default
-          if (bytes[0]==LF && bytes[1]==CR) trm=true;
-          break;
+    // Cause for termination of loop
+    if (rEoi) {
+      // Stop on EOI
+      if (tranBrk==5) break;
+    }else if (rEbt) {
+      // Stop on specified <char> if appended to ++read command
+      if (bytes[0] == eByte) break;
+    }else{
+      // Look for specified terminator (CR+LF by default)
+      switch (eor) {
+        case 0:
+            // CR+LF terminator
+            if (bytes[0]==LF && bytes[1]==CR) trm=true;
+            break;
+        case 1:
+            // CR only as terminator
+            if (bytes[0]==CR) trm=true;
+            break;
+        case 2:
+            // LF only as terminator
+            if (bytes[0]==LF) trm=true;
+            break;
+        case 3:
+            // No terminator (will rely on timeout)
+            break;
+        case 4:
+            // Keithley can use LF+CR instead of CR+LF
+            if (bytes[0]==CR && bytes[1]==LF) trm=true;
+            break;
+        case 5:
+            // Solarton (possibly others) can also use ETX (0x03)
+            if (bytes[0]==0x03) trm=true;
+            break;
+        case 6:
+            // Solarton (possibly others) can also use CR+LF+ETX (0x03)
+            if (bytes[0]==0x03 && bytes[1]==LF && bytes[2]==CR) trm=true;
+            break;
+        default:
+            // Use CR+LF terminator by default
+            if (bytes[0]==LF && bytes[1]==CR) trm=true;
+            break;
+      }
+      if (trm) break;
     }
-    if (trm) break;
-  }
-
-/* <- new code ends here */
-
-    
-    // Stop on CR+LF unless expecting EOI
-//    if (bytes[0] == LF && bytes[1] == CR && !rEoi) break;
 
     // Stop on timeout
     if (r > 0) break;
 
-    // Byte counter
-    x++;
+    // Shift last three bytes in memory
     bytes[2] = bytes[1];
     bytes[1] = bytes[0];
   }
 
 #ifdef DEBUG7
-  arSerial->println(F("After loop:"));
+  arSerial->println(F("After loop flags:"));
   arSerial->print(F("TRNb: "));
   arSerial->println(tranBrk);
-  arSerial->print(F("ATN:  "));
-//  arSerial->println(isATN);
+  arSerial->print(F("TMO:  "));
   arSerial->println(r);
 #endif
 
@@ -2624,12 +2759,13 @@ bool gpibReceiveData() {
   // Return rEoi to previous state
   rEoi = eoi;
 
-  // Timeout error?
+  // Verbose timeout error
   if (r > 0) {
-    if (isVerb && r == 1) arSerial->println(F("gpibReceiveData: timeout waiting for talker"));
-    if (isVerb && r == 2) arSerial->println(F("gpibReceiveData: timeout waiting for transfer to complete"));
+    if (isVerb && r == 1) arSerial->println(F("Timeout waiting for sender!"));
+    if (isVerb && r == 2) arSerial->println(F("Timeout waiting for transfer to complete!"));
   }
 
+  // Return controller to idle state
   if (AR488.cmode == 2) {
 
     // Untalk bus and unlisten controller

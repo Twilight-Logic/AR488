@@ -5,7 +5,7 @@
 
 #include "AR488_Config.h"
 
-/***** AR488_Hardware.h, ver. 0.48.03, 03/01/2020 *****/
+/***** AR488_Hardware.h, ver. 0.48.20, 06/04/2020 *****/
 /*
  * Hardware pin layout definitions
  */
@@ -103,7 +103,7 @@
   void interruptsEn();
 #endif  // USE_INTERRUPTS
 
-#endif  // AR488_MEGA2560
+#endif  // AR488_MEGA2560_D
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MEGA2560 LAYOUT DEFINITION (Default) *****/
 /************************************************/
@@ -142,7 +142,7 @@
   void interruptsEn();
 #endif  // USE_INTERRUPTS
 
-#endif  // AR488_MEGA2560
+#endif  // AR488_MEGA2560_E1
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MEGA2560 LAYOUT DEFINITION E1 *****/
 /*****************************************/
@@ -181,7 +181,7 @@
   void interruptsEn();
 #endif  // USE_INTERRUPTS
 
-#endif  // AR488_MEGA2560
+#endif  // AR488_MEGA2560_E2
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MEGA2560 LAYOUT DEFINITION E2 *****/
 /*****************************************/
@@ -217,11 +217,10 @@
   void interruptsEn();
 #endif  // USE_INTERRUPTS
 
-#endif  // AR488_32U4
+#endif  // AR488_MEGA32U4_MICRO
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MICRO PRO (32u4) LAYOUT DEFINITION for MICRO (Artag) *****/
 /****************************************************************/
-
 
 
 
