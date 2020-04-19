@@ -25,7 +25,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.48.21, 06/04/2020" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.48.22, 18/04/2020" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -2195,60 +2195,6 @@ void tmbus_h(char *params) {
 }
 
 
-/***** Addressed test plot (to plotter address 5) *****/
-/*
-void plot_h(){
-  char c;
-  const char *plot = (const char PROGMEM *)testPlot;
-
-  // Address the device
-  addrDev(AR488.paddr, 0);
-
- // Set control lines to write data (ATN unasserted)
- setGpibControls(CTAS);
-
-  // Write the data string
-  while ((c = pgm_read_byte(plot++)))
-    gpibWriteByte(c);
-
-  // Assert EOI
-  setGpibState(0b00000000, 0b00010000, 0);
-  delayMicroseconds(40);
-  setGpibState(0b00010000, 0b00010000, 0);
-
-  // Unaddress
-  uaddrDev();
-
-  // Idle
-  setGpibControls(CIDS);
-
-}
-*/
-
-/***** Unaddressed test plot *****/
-/*
-void plotu_h(){
-  char c;
-  const char *plot = (const char PROGMEM *)testPlot;
-
- // Set control lines to write data (ATN unasserted)
- setGpibControls(CTAS);
-
-  // Write the data string
-  while ((c = pgm_read_byte(plot++)))
-    gpibWriteByte(c);
-
-  // Assert EOI
-  setGpibState(0b00000000, 0b00010000, 0);
-  delayMicroseconds(40);
-  setGpibState(0b00010000, 0b00010000, 0);
-
-  // Idle
-  setGpibControls(CIDS);
-
-}
-*/
-
 /******************************************************/
 /***** Device mode GPIB command handling routines *****/
 /******************************************************/
@@ -2486,6 +2432,8 @@ void gpibSendStatus() {
 /***** Send a series of characters as data to the GPIB bus *****/
 void gpibSendData(char *data, uint8_t dsize) {
 
+  bool err = false;
+
   // If lon is turned on we cannot send data so exit
   if (isRO) return;
 
@@ -2526,34 +2474,37 @@ void gpibSendData(char *data, uint8_t dsize) {
     // If EOI asserting is on
     if (AR488.eoi) {
       // Send all characters
-      gpibWriteByte(data[i]);
+      err = gpibWriteByte(data[i]);
     } else {
       // Otherwise ignore non-escaped CR, LF and ESC
-      if ((data[i] != CR) || (data[i] != LF) || (data[i] != ESC)) gpibWriteByte(data[i]);
+      if ((data[i] != CR) || (data[i] != LF) || (data[i] != ESC)) err = gpibWriteByte(data[i]);
     }
 #ifdef DEBUG3
     arSerial->print(data[i]);
 #endif
+    if (err) break;
   }
 
 #ifdef DEBUG3
   arSerial->println("<-End.");
 #endif
 
-  // Write terminators according to EOS setting
-  // Do we need to write a CR?
-  if ((AR488.eos & 0x2) == 0) {
-    gpibWriteByte(CR);
+  if (!err) {
+    // Write terminators according to EOS setting
+    // Do we need to write a CR?
+    if ((AR488.eos & 0x2) == 0) {
+      gpibWriteByte(CR);
 #ifdef DEBUG3
-    arSerial->println(F("Appended CR"));
+      arSerial->println(F("Appended CR"));
 #endif
-  }
-  // Do we need to write an LF?
-  if ((AR488.eos & 0x1) == 0) {
-    gpibWriteByte(LF);
+    }
+    // Do we need to write an LF?
+    if ((AR488.eos & 0x1) == 0) {
+      gpibWriteByte(LF);
 #ifdef DEBUG3
-    arSerial->println(F("Appended LF"));
+      arSerial->println(F("Appended LF"));
 #endif
+    }
   }
 
   // If EOI enabled and no more data to follow then assert EOI
@@ -2569,21 +2520,23 @@ void gpibSendData(char *data, uint8_t dsize) {
   }
 
   if (AR488.cmode == 2) {   // Controller mode
-    if (deviceAddressing) {
-      // Untalk controller and unlisten bus
-      if (uaddrDev()) {
-        if (isVerb) arSerial->println(F("gpibSendData: Failed to unlisten bus"));
-      }
+    if (!err) {
+      if (deviceAddressing) {
+        // Untalk controller and unlisten bus
+        if (uaddrDev()) {
+          if (isVerb) arSerial->println(F("gpibSendData: Failed to unlisten bus"));
+        }
 
 #ifdef DEBUG3
-      arSerial->println(F("Unlisten done"));
+        arSerial->println(F("Unlisten done"));
 #endif
+      }
     }
 
     // Controller - set lines to idle?
     setGpibControls(CIDS);
 
-  } else {    // Device mode
+  }else{    // Device mode
     // Set control lines to idle
     if (AR488.cmode == 1) setGpibControls(DIDS);
   }
@@ -2856,7 +2809,28 @@ uint8_t gpibReadByte(uint8_t *db) {
  */
 bool gpibWriteByte(uint8_t db) {
 
-  // Wait for NDAC to go LOW (indicating that devices are at attention)
+  bool err;
+
+  err = gpibWriteByteHandshake(db);
+
+  // Unassert DAV
+  setGpibState(0b00001000, 0b00001000, 0);
+
+  // Reset the data bus
+  setGpibDbus(0);
+
+  // GPIB bus DELAY
+  delayMicroseconds(AR488.tmbus);
+
+  // Exit successfully
+  return err;
+}
+
+
+/***** GPIB send byte handshake *****/
+bool gpibWriteByteHandshake(uint8_t db) {
+  
+    // Wait for NDAC to go LOW (indicating that devices are at attention)
   if (Wait_on_pin_state(LOW, NDAC, AR488.rtmo)) {
     if (isVerb) arSerial->println(F("gpibWriteByte: timeout waiting for receiver attention [NDAC asserted]"));
     return true;
@@ -2873,28 +2847,18 @@ bool gpibWriteByte(uint8_t db) {
   // Assert DAV (data is valid - ready to collect)
   setGpibState(0b00000000, 0b00001000, 0);
 
-  // Wait for NRFD to go LOW (receiving)
+  // Wait for NRFD to go LOW (receiver accepting data)
   if (Wait_on_pin_state(LOW, NRFD, AR488.rtmo))  {
-    if (isVerb) arSerial->println(F("gpibWriteByte: timeout receiving - [NRFD asserted]"));
+    if (isVerb) arSerial->println(F("gpibWriteByte: timeout waiting for data to be accepted - [NRFD asserted]"));
     return true;
   }
 
   // Wait for NDAC to go HIGH (data accepted)
   if (Wait_on_pin_state(HIGH, NDAC, AR488.rtmo))  {
-    if (isVerb) arSerial->println(F("gpibWriteByte: timeout waiting for data accepted [NDAC unasserted]"));
+    if (isVerb) arSerial->println(F("gpibWriteByte: timeout waiting for data accepted signal - [NDAC unasserted]"));
     return true;
   }
 
-  // Unassert DAV
-  setGpibState(0b00001000, 0b00001000, 0);
-
-  // Reset the data bus
-  setGpibDbus(0);
-
-  // GPIB bus DELAY
-  delayMicroseconds(AR488.tmbus);
-
-  // Exit successfully
   return false;
 }
 

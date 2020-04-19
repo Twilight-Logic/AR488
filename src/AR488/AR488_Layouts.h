@@ -5,7 +5,7 @@
 
 #include "AR488_Config.h"
 
-/***** AR488_Hardware.h, ver. 0.48.20, 06/04/2020 *****/
+/***** AR488_Hardware.h, ver. 0.48.22, 08/04/2020 *****/
 /*
  * Hardware pin layout definitions
  */
@@ -221,6 +221,52 @@
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MICRO PRO (32u4) LAYOUT DEFINITION for MICRO (Artag) *****/
 /****************************************************************/
+
+
+
+/*****************************************/
+/***** LEONARDO R3 LAYOUT DEFINITION *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef AR488_MEGA32U4_LR3
+
+/***** NOTE: LEONARDO R3 pinout last updated 06/04/2020 *****/
+#define DIO1  A0  /* GPIB 1  : PORTF bit 7 */
+#define DIO2  A1  /* GPIB 2  : PORTF bit 6 */
+#define DIO3  A2  /* GPIB 3  : PORTF bit 5 */
+#define DIO4  A3  /* GPIB 4  : PORTF bit 4 */
+#define DIO5  A4  /* GPIB 13 : PORTF bit 3 */
+#define DIO6  A5  /* GPIB 14 : PORTF bit 2 */
+#define DIO7   4  /* GPIB 15 : PORTD bit 4 */
+#define DIO8   5  /* GPIB 16 : PORTC bit 6 */
+
+#define IFC    8  /* GPIB 9  : PORTB bit 4 */
+#define NDAC   9  /* GPIB 8  : PORTB bit 5 */
+#define NRFD  10  /* GPIB 7  : PORTB bit 6 */
+#define DAV   11  /* GPIB 6  : PORTD bit 6 */
+#define EOI   12  /* GPIB 5  : PORTC bit 7 */
+
+#define SRQ    2  /* GPIB 10 : PORTD bit 1 */
+#define REN    3  /* GPIB 17 : PORTD bit 0 */
+#define ATN    7  /* GPIB 11 : PORTE bit 6 */
+
+/***** PIN interrupts ******/
+
+// Interrupt registers
+#ifdef USE_INTERRUPTS
+//  #define ATNPREG PIND
+//  #define SRQPREG PIND
+  void atnISR();
+  void srqISR();
+  void interruptsEn();
+#endif
+
+uint8_t reverseBits(uint8_t dbyte);
+
+
+#endif // AR488_MEGA32U4_LR3
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** LEONARDO R3 LAYOUT DEFINITION *****/
+/*****************************************/
 
 
 

@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.48.21, 06/04/2020"
+#define FWVER "AR488 GPIB controller, ver. 0.48.22, 18/04/2020"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -47,8 +47,8 @@
 /*** UNO and NANO boards ***/
 #elif __AVR_ATmega328P__
   /* Board/layout selection */
-  #define AR488_UNO
-  //#define AR488_NANO
+  //#define AR488_UNO
+  #define AR488_NANO
   /*** Serial ports ***/
   //Select HardwareSerial or SoftwareSerial (default = HardwareSerial) ***/
   // The UNO/NANO default hardware port is 'Serial'
@@ -65,7 +65,8 @@
 /*** MEGA 32U4 based boards (Micro, Leonardo) ***/
 #elif __AVR_ATmega32U4__
   /*** Board/layout selection ***/
-  #define AR488_MEGA32U4_MICRO
+  #define AR488_MEGA32U4_MICRO  // Artag's design for Micro board
+  //#define AR488_MEGA32U4_LR3  // Leonardo R3 (same pin layout as Uno)
   /*** Serial ports ***/
   // By default the CDC serial port is used
   // Comment out #define AR_CDC_SERIAL if using RXI, TXO pins
