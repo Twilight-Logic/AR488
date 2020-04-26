@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.48.22, 18/04/2020"
+#define FWVER "AR488 GPIB controller, ver. 0.48.24, 25/04/2020"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -83,8 +83,8 @@
 /*** MEGA 2560 board ***/
 #elif __AVR_ATmega2560__
   /*** Board/layout selection ***/
-  #define AR488_MEGA2560_D
-  //#define AR488_MEGA2560_E1
+  //#define AR488_MEGA2560_D
+  #define AR488_MEGA2560_E1
   //#define AR488_MEGA2560_E2
   /*** Serial ports ***/
   // Mega 2560 supports Serial, Serial1, Serial2, Serial3. Since the pins 
@@ -112,7 +112,7 @@
 #ifdef AR_SW_SERIAL
   #define AR_SW_SERIAL_RX 53
   #define AR_SW_SERIAL_TX 51
-  #define AR_SERIAL_BAUD 57600
+  #define AR_SW_SERIAL_BAUD 57600
 #else
   #define AR_SERIAL_BAUD 115200
 #endif
@@ -185,6 +185,16 @@
 
 
 /***** Debug options *****/
+// Uncomment to send debug messages to another port
+//#define DB_SERIAL_PORT Serial1
+// Configure alternative port for debug messages
+#define DB_SERIAL_BAUD 115200
+#define DB_HW_SERIAL
+#ifdef DB_SW_SERIAL
+  #define DB_SW_SERIAL_RX 53
+  #define DB_SW_SERIAL_TX 51
+#endif
+// Configure debug level
 //#define DEBUG1  // getCmd
 //#define DEBUG2  // setGpibControls
 //#define DEBUG3  // gpibSendData
@@ -296,6 +306,58 @@ M3\n\
 /***** ^^^^^^^^^^^^^^^^^^^^ *****/
 /***** AR488 MACROS SECTION *****/
 /********************************/
+
+
+/******************************************/
+/***** !!! DO NOT EDIT BELOW HERE !!! *****/
+/******vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv******/
+
+
+/*********************************************/
+/***** SERIAL PORT EXTERNAL DECLARATIONS *****/
+/******vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv******/
+
+#ifdef AR_CDC_SERIAL
+  extern Serial_ *arSerial;
+  #ifndef DB_SERIAL_PORT
+    extern Serial_ *dbSerial;
+  #endif
+#endif
+#ifdef AR_HW_SERIAL
+  extern HardwareSerial *arSerial;
+  #ifndef DB_SERIAL_PORT
+    extern HardwareSerial *dbSerial;
+  #endif
+#endif
+// Note: SoftwareSerial support conflicts with PCINT support
+#ifdef AR_SW_SERIAL
+  #include <SoftwareSerial.h>
+  extern SoftwareSerial *arSerial;
+  #ifndef DB_SERIAL_PORT
+    extern SoftwareSerial *dbSerial;
+  #endif
+#endif
+
+
+/***** Debug Port *****/
+#ifdef DB_SERIAL_PORT
+  #ifdef DB_CDC_SERIAL
+    extern Serial_ *dbSerial;
+  #endif
+  #ifdef DB_HW_SERIAL
+    extern HardwareSerial *dbSerial;
+  #endif
+  // Note: SoftwareSerial support conflicts with PCINT support
+  #ifdef DB_SW_SERIAL
+    #include <SoftwareSerial.h>
+    extern SoftwareSerial *dbSerial;
+  #endif
+#endif
+
+/******^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^******/
+/***** SERIAL PORT EXTERNAL DECLARATIONS *****/
+/*********************************************/
+
 
 
 #endif // AR488_CONFIG_H

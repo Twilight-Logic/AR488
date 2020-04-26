@@ -25,7 +25,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.48.22, 18/04/2020" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.48.24, 25/04/2020" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -146,14 +146,18 @@
 /***************************************/
 
 
-/*****  USER DEFINED MACROS  *****/
-
+/*************************************/
+/***** MACRO STRUCTRURES SECTION *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvvv *****/
 #ifdef USE_MACROS
+
+/*** DO NOT MODIFY ***/
+/*** vvvvvvvvvvvvv ***/
 
 /***** STARTUP MACRO *****/
 const char startup_macro[] PROGMEM = {MACRO_0};
 
-/***** USER MACROS 1 - 9 *****/
+/***** Consts holding USER MACROS 1 - 9 *****/
 const char macro_1 [] PROGMEM = {MACRO_1};
 const char macro_2 [] PROGMEM = {MACRO_2};
 const char macro_3 [] PROGMEM = {MACRO_3};
@@ -164,14 +168,8 @@ const char macro_7 [] PROGMEM = {MACRO_7};
 const char macro_8 [] PROGMEM = {MACRO_8};
 const char macro_9 [] PROGMEM = {MACRO_9};
 
-/***** END OF USER MACROS *****/
-/** DO NOT MODIFY BELOW HERE **/
-/******************************/
 
-/*
-   Macro pointer array
- *** DO NOT MODIFY ***
-*/
+/* Macro pointer array */
 const char * const macros[] PROGMEM = {
   startup_macro,
   macro_1,
@@ -184,31 +182,59 @@ const char * const macros[] PROGMEM = {
   macro_8,
   macro_9
 };
-/*** DO NOT MODIFY ***/
-#endif
 
+/*** ^^^^^^^^^^^^^ ***/
+/*** DO NOT MODIFY ***/
+
+#endif
 /***** ^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MACRO CONFIG SECTION *****/
 /********************************/
 
 
 
-/*********************************/
-/***** COMMON CONFIG SECTION *****/
-/***** vvvvvvvvvvvvvvvvvvvvv *****/
+/************************************/
+/***** COMMON VARIABLES SECTION *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvv *****/
 
-/***** Serial Port *****/
+/***** Serial/debug port *****/
 #ifdef AR_CDC_SERIAL
   Serial_ *arSerial = &(AR_SERIAL_PORT);
+  #ifndef DB_SERIAL_PORT
+    Serial_ *dbSerial = arSerial;
+  #endif
 #endif
 #ifdef AR_HW_SERIAL
   HardwareSerial *arSerial = &(AR_SERIAL_PORT);
+  #ifndef DB_SERIAL_PORT
+    HardwareSerial *dbSerial = arSerial;
+  #endif
 #endif
 // Note: SoftwareSerial support conflicts with PCINT support
 #ifdef AR_SW_SERIAL
   #include <SoftwareSerial.h>
-  SoftwareSerial swSerial(AR_SW_SERIAL_RX, AR_SW_SERIAL_TX);
-  SoftwareSerial *arSerial = &swSerial;
+  SoftwareSerial swArSerial(AR_SW_SERIAL_RX, AR_SW_SERIAL_TX);
+  SoftwareSerial *arSerial = &swArSerial;
+  #ifndef DB_SERIAL_PORT
+    SoftwareSerial *dbSerial = arSerial;
+  #endif
+#endif
+
+
+/***** Debug Port *****/
+#ifdef DB_SERIAL_PORT
+  #ifdef DB_CDC_SERIAL
+    Serial_ *dbSerial = &(DB_SERIAL_PORT);
+  #endif
+  #ifdef DB_HW_SERIAL
+    HardwareSerial *dbSerial = &(DB_SERIAL_PORT);
+  #endif
+  // Note: SoftwareSerial support conflicts with PCINT support
+  #ifdef DB_SW_SERIAL
+    #include <SoftwareSerial.h>
+    SoftwareSerial swDbSerial(DB_SW_SERIAL_RX, DB_SW_SERIAL_TX);
+    SoftwareSerial *dbSerial = &swDbSerial;
+  #endif
 #endif
 
 
@@ -346,9 +372,9 @@ volatile bool isBAD = false;
 uint8_t runMacro = 0;
 
 
-/***** ^^^^^^^^^^^^^^^^^^^^^ *****/
-/***** COMMON CONFIG SECTION *****/
-/*********************************/
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** COMMON VARIABLES SECTION *****/
+/************************************/
 
 
 /*******************************/
@@ -378,6 +404,10 @@ void setup() {
   // Initialise parse buffer
   flushPbuf();
 
+// Initialise debug port
+#ifdef DB_SERIAL_PORT
+  if (dbSerial != arSerial) dbSerial->begin(DB_SERIAL_BAUD);
+#endif
 
  // Initialise serial comms over USB or Bluetooth
 #ifdef AR_BT_EN
@@ -388,6 +418,9 @@ void setup() {
   // Start the serial port
   arSerial->begin(AR_SERIAL_BAUD);
 #endif
+
+
+
 
 // Un-comment for diagnostic purposes
 /* 
@@ -661,8 +694,8 @@ uint8_t epSaveCfg() {
 #ifdef debug5
   long int sz;
   sz = sizeof(AR488);
-  arSerial->print(F("Size of structure: "));
-  arSerial->println(sz);
+  dbSerial->print(F("Size of structure: "));
+  dbSerial->println(sz);
 #endif
   int epaddr = 0;
   //  epaddr = 128 * (page-1);
@@ -699,7 +732,7 @@ uint8_t parseInput(char c) {
             return 0;
           } else {
 #ifdef DEBUG1
-            arSerial->print(F("parseInput: Received ")); arSerial->println(pBuf);
+            dbSerial->print(F("parseInput: Received ")); dbSerial->println(pBuf);
 #endif
             // Buffer starts with ++ and contains at least 3 characters - command?
             if (pbPtr > 2 && isCmd(pBuf) && !isPlusEscaped) {
@@ -761,7 +794,7 @@ uint8_t parseInput(char c) {
 bool isCmd(char *buffr) {
   if (buffr[0] == PLUS && buffr[1] == PLUS) {
 #ifdef DEBUG1
-    arSerial->println(F("isCmd: Command detected."));
+    dbSerial->println(F("isCmd: Command detected."));
 #endif
     return true;
   }
@@ -851,77 +884,12 @@ static cmdRec cmdHidx [] = {
 };
 
 
-/****** Buffer processor *****/
-/* Processes the parse buffer whenever a full CR or LF
- * delimeted line is detected.
- * Executes a ++command or sends characters to instrument
- * mode: 1=command; 2=data;
-*/
-/*
-void processLine(char *buffr, uint8_t dsize, uint8_t mode) {
-  char line[PBSIZE];
-
-  // Copy collected chars to line buffer
-  memcpy(line, buffr, dsize);
-
-  // Flush the parse buffer
-  flushPbuf();
-  lnRdy = 0;
-
-#ifdef DEBUG1
-  arSerial->print(F("processLine: Received: ")); printHex(line, dsize);
-#endif
-
-  // Line contains a valid command after the ++
-  if (mode == 1) {
-    // Its a ++command so shift everything two bytes left (ignore ++) and parse
-    for (int i = 0; i < dsize-2; i++) {
-      line[i] = line[i + 2];
-    }
-    // Replace last two bytes with a null (\0) character
-    line[dsize - 2] = '\0';
-    line[dsize - 1] = '\0';
-#ifdef DEBUG1
-    arSerial->print(F("processLine: Sent to the command processor: ")); printHex(line, dsize-2);
-#endif
-    // Execute the command
-    if (isVerb) arSerial->println(); // Shift output to next line
-    getCmd(line);
-  }
-
-  // This line is not a ++command, so if in controller mode, pass characters to GPIB
-  if (mode == 2) {
-#ifdef DEBUG1
-    arSerial->print(F("processLine: Sent to the instrument: ")); printHex(line, dsize);
-#endif
-
-    // Is this an instrument query command (string ending with ?)
-    if (line[dsize-1] == '?') isQuery = true;
-
-    // Send string to instrument
-    gpibSendData(line, dsize);
-    // Clear data buffer full flag
-    if (dataBufferFull) dataBufferFull = false;
-  }
-
-  // Show a prompt on completion?
-  if (isVerb) {
-    // Print prompt
-    arSerial->println();
-    arSerial->print("> ");
-  }
-
-}
-*/
-
-
 /***** Show a prompt *****/
 void showPrompt() {
   // Print prompt
   arSerial->println();
   arSerial->print("> ");
 }
-
 
 
 /****** Send data to instrument *****/
@@ -931,12 +899,14 @@ void showPrompt() {
 void sendToInstrument(char *buffr, uint8_t dsize) {
 
 #ifdef DEBUG1
-  arSerial->print(F("sendData: Received: ")); printHex(buffr, dsize);
+  dbSerial->print(F("sendToInstrument: Received for sending: ")); printHex(buffr, dsize);
 #endif
 
+/*
 #ifdef DEBUG1
     arSerial->print(F("sendToInstrument: Sent to the instrument: ")); printHex(line, dsize);
 #endif
+*/
 
   // Is this an instrument query command (string ending with ?)
   if (buffr[dsize-1] == '?') isQuery = true;
@@ -953,8 +923,11 @@ void sendToInstrument(char *buffr, uint8_t dsize) {
   flushPbuf();
   lnRdy = 0;
 
-}
+#ifdef DEBUG1
+  dbSerial->print(F("sendToInstrument: Sent."));
+#endif
 
+}
 
 
 /***** Execute a command *****/
@@ -969,7 +942,7 @@ void execCmd(char *buffr, uint8_t dsize) {
   lnRdy = 0;
 
 #ifdef DEBUG1
-  arSerial->print(F("execCmd: Command received: ")); printHex(line, dsize);
+  dbSerial->print(F("execCmd: Command received: ")); printHex(line, dsize);
 #endif
 
   // Its a ++command so shift everything two bytes left (ignore ++) and parse
@@ -980,7 +953,7 @@ void execCmd(char *buffr, uint8_t dsize) {
   line[dsize - 2] = '\0';
   line[dsize - 1] = '\0';
 #ifdef DEBUG1
-  arSerial->print(F("execCmd: Sent to the command processor: ")); printHex(line, dsize-2);
+  dbSerial->print(F("execCmd: Sent to the command processor: ")); printHex(line, dsize-2);
 #endif
   // Execute the command
   if (isVerb) arSerial->println(); // Shift output to next line
@@ -1002,15 +975,15 @@ void getCmd(char *buffr) {
   memset(params, '\0', 64);
 
 #ifdef DEBUG1
-  arSerial->print("getCmd: ");
-  arSerial->print(buffr); arSerial->print(F(" - length:")); arSerial->println(strlen(buffr));
+  dbSerial->print("getCmd: ");
+  dbSerial->print(buffr); dbSerial->print(F(" - length:")); dbSerial->println(strlen(buffr));
 #endif
 
   if (*buffr == (NULL || CR || LF) ) return; // empty line: nothing to parse.
   token = strtok(buffr, " \t");
 
 #ifdef DEBUG1
-  arSerial->print("getCmd: process token: "); arSerial->println(token);
+  dbSerial->print("getCmd: process token: "); dbSerial->println(token);
 #endif
 
   // Look for a valid command token
@@ -1023,8 +996,7 @@ void getCmd(char *buffr) {
   if (i < casize) {
     // We have found a valid command and handler
 #ifdef DEBUG1
-    arSerial->print("getCmd: ");
-    arSerial->print("found handler for: "); arSerial->println(plusCmdIdx[i].token);
+    dbSerial->print("getCmd: found handler for: "); dbSerial->println(cmdHidx[i].token);
 #endif
     // If command is relevant to controller mode then execute it
     if (cmdHidx[i].opmode & AR488.cmode) {
@@ -1043,7 +1015,7 @@ void getCmd(char *buffr) {
       // If command parameters were specified
       if (strlen(params) > 0) {
 #ifdef DEBUG1
-        arSerial->print(F("Calling handler with parameters: ")); arSerial->println(params);
+        dbSerial->print(F("Calling handler with parameters: ")); dbSerial->println(params);
 #endif
         // Call handler with parameters specified
         cmdHidx[i].handler(params);
@@ -1067,9 +1039,9 @@ void getCmd(char *buffr) {
 /***** Prints charaters as hex bytes *****/
 void printHex(char *buffr, int dsize) {
   for (int i = 0; i < dsize; i++) {
-    arSerial->print(buffr[i], HEX); arSerial->print(" ");
+    dbSerial->print(buffr[i], HEX); dbSerial->print(" ");
   }
-  arSerial->println();
+  dbSerial->println();
 }
 
 
@@ -1657,7 +1629,7 @@ void spoll_h(char *params) {
   // Send Unlisten [UNL] to all devices
   if ( gpibSendCmd(GC_UNL) )  {
 #ifdef DEBUG4
-    arSerial->println(F("spoll_h: failed to send UNL"));
+    dbSerial->println(F("spoll_h: failed to send UNL"));
 #endif
     return;
   }
@@ -1665,7 +1637,7 @@ void spoll_h(char *params) {
   // Controller addresses itself as listner
   if ( gpibSendCmd(GC_LAD + AR488.caddr) )  {
 #ifdef DEBUG4
-    arSerial->println(F("spoll_h: failed to send LAD"));
+    dbSerial->println(F("spoll_h: failed to send LAD"));
 #endif
     return;
   }
@@ -1673,7 +1645,7 @@ void spoll_h(char *params) {
   // Send Serial Poll Enable [SPE] to all devices
   if ( gpibSendCmd(GC_SPE) )  {
 #ifdef DEBUG4
-    arSerial->println(F("spoll_h: failed to send SPE"));
+    dbSerial->println(F("spoll_h: failed to send SPE"));
 #endif
     return;
   }
@@ -1695,7 +1667,7 @@ void spoll_h(char *params) {
       if ( gpibSendCmd(GC_TAD + val) )  {
 
 #ifdef DEBUG4
-        arSerial->println(F("spoll_h: failed to send TAD"));
+        dbSerial->println(F("spoll_h: failed to send TAD"));
 #endif
         return;
       }
@@ -1736,7 +1708,7 @@ void spoll_h(char *params) {
   // Send Serial Poll Disable [SPD] to all devices
   if ( gpibSendCmd(GC_SPD) )  {
 #ifdef DEBUG4
-    arSerial->println(F("spoll_h: failed to send SPD"));
+    dbSerial->println(F("spoll_h: failed to send SPD"));
 #endif
     return;
   }
@@ -1744,7 +1716,7 @@ void spoll_h(char *params) {
   // Send Untalk [UNT] to all devices
   if ( gpibSendCmd(GC_UNT) )  {
 #ifdef DEBUG4
-    arSerial->println(F("spoll_h: failed to send UNT"));
+    dbSerial->println(F("spoll_h: failed to send UNT"));
 #endif
     return;
   }
@@ -1752,7 +1724,7 @@ void spoll_h(char *params) {
   // Unadress listners [UNL] to all devices
   if ( gpibSendCmd(GC_UNL) )  {
 #ifdef DEBUG4
-    arSerial->println(F("spoll_h: failed to send UNL"));
+    dbSerial->println(F("spoll_h: failed to send UNL"));
 #endif
     return;
   }
@@ -2216,7 +2188,7 @@ void attnRequired() {
   setGpibControls(DLAS);
 
 #ifdef DEBUG5
-  arSerial->println(F("Answering attention!"));
+  dbSerial->println(F("Answering attention!"));
 #endif
 
   // Read bytes
@@ -2226,13 +2198,13 @@ void attnRequired() {
     if (!stat) {
 
 #ifdef DEBUG5
-      arSerial->println(db, HEX);
+      dbSerial->println(db, HEX);
 #endif
 
       // Device is addressed to listen
       if (AR488.paddr == (db ^ 0x20)) { // MLA = db^0x20
 #ifdef DEBUG5
-        arSerial->println(F("attnRequired: Controller wants me to data accept data <<<"));
+        dbSerial->println(F("attnRequired: Controller wants me to data accept data <<<"));
 #endif
         mla = true;
       }
@@ -2242,11 +2214,8 @@ void attnRequired() {
           // Call talk handler to send data
           mta = true;
 #ifdef DEBUG5
-          if (!spe) {
-            arSerial->println(F("attnRequired: Controller wants me to send data >>>"));
-          }
+          if (!spe) dbSerial->println(F("attnRequired: Controller wants me to send data >>>"));
 #endif
-
       }
 
       // Serial poll enable request
@@ -2266,12 +2235,12 @@ void attnRequired() {
   }
 
 #ifdef DEBUG5
-  arSerial->println(F("End ATN loop."));
+  dbSerial->println(F("End ATN loop."));
 #endif
 
   if (mla) { 
 #ifdef DEBUG5
-    arSerial->println(F("Listening..."));
+    dbSerial->println(F("Listening..."));
 #endif
     // Call listen handler (receive data)
     mla_h();
@@ -2283,7 +2252,7 @@ void attnRequired() {
     // Serial poll enabled
     if (spe) {
 #ifdef DEBUG5
-      arSerial->println(F("attnRequired: Received serial poll enable."));
+      dbSerial->println(F("attnRequired: Received serial poll enable."));
 #endif
       spe_h();
       spe = false;
@@ -2297,7 +2266,7 @@ void attnRequired() {
   // Serial poll disable received
   if (spd) {
 #ifdef DEBUG5
-    arSerial->println(F("attnRequired: Received serial poll disable."));
+    dbSerial->println(F("attnRequired: Received serial poll disable."));
 #endif
     spd_h();
     mta = false;
@@ -2309,7 +2278,7 @@ void attnRequired() {
   setGpibControls(DIDS);
 
 #ifdef DEBUG5
-  arSerial->println(F("attnRequired: END attnReceived."));
+  dbSerial->println(F("attnRequired: END attnReceived."));
 #endif
 
 }
@@ -2332,7 +2301,7 @@ void sdc_h() {
   // If being addressed then reset
   if (isVerb) arSerial->println(F("Resetting..."));
 #ifdef DEBUG5
-  arSerial->print(F("Reset adressed to me: ")); arSerial->println(aTl);
+  dbSerial->print(F("Reset adressed to me: ")); dbSerial->println(aTl);
 #endif
   if (aTl) rst_h();
   if (isVerb) arSerial->println(F("Reset failed."));
@@ -2362,7 +2331,7 @@ void spe_h() {
 void unl_h() {
   // Stop receiving and go to idle
 #ifdef DEBUG5
-  arSerial->println(F("Unlisten received."));
+  dbSerial->println(F("Unlisten received."));
 #endif
   rEoi = false;
   tranBrk = 3;  // Stop receving transmission
@@ -2373,7 +2342,7 @@ void unl_h() {
 void unt_h() {
   // Stop sending data and go to idle
 #ifdef DEBUG5
-  arSerial->println(F("Untalk received."));
+  dbSerial->println(F("Untalk received."));
 #endif
 }
 
@@ -2455,7 +2424,7 @@ void gpibSendData(char *data, uint8_t dsize) {
     deviceAddressing = dataBufferFull ? false : true;
 
 #ifdef DEBUG3
-    arSerial->println(F("Device addressed."));
+    dbSerial->println(F("Device addressed."));
 #endif
 
     // Set control lines to write data (ATN unasserted)
@@ -2465,8 +2434,8 @@ void gpibSendData(char *data, uint8_t dsize) {
     setGpibControls(DTAS);
   }
 #ifdef DEBUG3
-  arSerial->println(F("Set write data mode."));
-  arSerial->print(F("Send->"));
+  dbSerial->println(F("Set write data mode."));
+  dbSerial->print(F("Send->"));
 #endif
 
   // Write the data string
@@ -2480,13 +2449,13 @@ void gpibSendData(char *data, uint8_t dsize) {
       if ((data[i] != CR) || (data[i] != LF) || (data[i] != ESC)) err = gpibWriteByte(data[i]);
     }
 #ifdef DEBUG3
-    arSerial->print(data[i]);
+    dbSerial->print(data[i]);
 #endif
     if (err) break;
   }
 
 #ifdef DEBUG3
-  arSerial->println("<-End.");
+  dbSerial->println("<-End.");
 #endif
 
   if (!err) {
@@ -2495,14 +2464,14 @@ void gpibSendData(char *data, uint8_t dsize) {
     if ((AR488.eos & 0x2) == 0) {
       gpibWriteByte(CR);
 #ifdef DEBUG3
-      arSerial->println(F("Appended CR"));
+      dbSerial->println(F("Appended CR"));
 #endif
     }
     // Do we need to write an LF?
     if ((AR488.eos & 0x1) == 0) {
       gpibWriteByte(LF);
 #ifdef DEBUG3
-      arSerial->println(F("Appended LF"));
+      dbSerial->println(F("Appended LF"));
 #endif
     }
   }
@@ -2515,7 +2484,7 @@ void gpibSendData(char *data, uint8_t dsize) {
     setGpibState(0b00010000, 0b00010000, 0);
     //    setGpibState(0b00010000, 0b00010000, 0b00010000);
 #ifdef DEBUG3
-    arSerial->println(F("Asserted EOI"));
+    dbSerial->println(F("Asserted EOI"));
 #endif
   }
 
@@ -2528,7 +2497,7 @@ void gpibSendData(char *data, uint8_t dsize) {
         }
 
 #ifdef DEBUG3
-        arSerial->println(F("Unlisten done"));
+        dbSerial->println(F("Unlisten done"));
 #endif
       }
     }
@@ -2542,7 +2511,7 @@ void gpibSendData(char *data, uint8_t dsize) {
   }
 
 #ifdef DEBUG3
-    arSerial->println(F("<- End of send."));
+    dbSerial->println(F("<- End of send."));
 #endif
  
 }
@@ -2597,15 +2566,14 @@ bool gpibReceiveData() {
   }
 
 #ifdef DEBUG7
-    arSerial->println(F("gpibReceiveData: Start listen ->\nBefore loop flags:"));
-    arSerial->print(F("TRNb: "));
-    arSerial->println(tranBrk);
-    arSerial->print(F("rEOI: "));
-    arSerial->println(rEoi);
-    arSerial->print(F("ATN:  "));
-    arSerial->println(digitalRead(ATN) ? "HIGH" : "LOW");
+    dbSerial->println(F("gpibReceiveData: Start listen ->\nBefore loop flags:"));
+    dbSerial->print(F("TRNb: "));
+    dbSerial->println(tranBrk);
+    dbSerial->print(F("rEOI: "));
+    dbSerial->println(rEoi);
+    dbSerial->print(F("ATN:  "));
+    dbSerial->println(digitalRead(ATN) ? "HIGH" : "LOW");
 #endif
-
 
   // Ready the data bus
   readyGpibDbus();
@@ -2617,16 +2585,14 @@ bool gpibReceiveData() {
     if (AR488.amode == 3) readBreak();   // readBrk returns tranBrk=7
 
 #ifdef DEBUG7
-    if (tranBrk ==5) {
-      arSerial->println(F("\r\nEOI detected."));
-    }
+    if (tranBrk ==5) dbSerial->println(F("\r\nEOI detected."));
 #endif
 
     // If break condition ocurred or ATN asserted then break here
     if (tranBrk == 7 || digitalRead(ATN)==LOW) break;
 
 #ifdef DEBUG7
-    arSerial->print(bytes[0], HEX), arSerial->print(' ');
+    dbSerial->print(bytes[0], HEX), dbSerial->print(' ');
 #else
     // Output the character to the serial port
     arSerial->print((char)bytes[0]);
@@ -2689,11 +2655,11 @@ bool gpibReceiveData() {
   }
 
 #ifdef DEBUG7
-  arSerial->println(F("After loop flags:"));
-  arSerial->print(F("TRNb: "));
-  arSerial->println(tranBrk);
-  arSerial->print(F("TMO:  "));
-  arSerial->println(r);
+  dbSerial->println(F("After loop flags:"));
+  dbSerial->print(F("TRNb: "));
+  dbSerial->println(tranBrk);
+  dbSerial->print(F("TMO:  "));
+  dbSerial->println(r);
 #endif
 
   // End of data - if verbose, report how many bytes read
@@ -2734,7 +2700,7 @@ bool gpibReceiveData() {
     setGpibControls(DIDS);
 
 #ifdef DEBUG7
-    arSerial->println(F("<- End listen."));
+    dbSerial->println(F("<- End listen."));
 #endif
 
   }
@@ -2947,7 +2913,7 @@ void setGpibControls(uint8_t state) {
   #endif
 #endif      
 #ifdef DEBUG2
-      arSerial->println(F("Initialised GPIB control mode"));
+      dbSerial->println(F("Initialised GPIB control mode"));
 #endif
       break;
 
@@ -2958,7 +2924,7 @@ void setGpibControls(uint8_t state) {
       digitalWrite(SN7516X_TE,LOW);
 #endif      
 #ifdef DEBUG2
-      arSerial->println(F("Set GPIB lines to idle state"));
+      dbSerial->println(F("Set GPIB lines to idle state"));
 #endif
       break;
 
@@ -2969,7 +2935,7 @@ void setGpibControls(uint8_t state) {
       digitalWrite(SN7516X_TE,HIGH);
 #endif      
 #ifdef DEBUG2
-      arSerial->println(F("Set GPIB lines for sending a command"));
+      dbSerial->println(F("Set GPIB lines for sending a command"));
 #endif
       break;
 
@@ -2981,7 +2947,7 @@ void setGpibControls(uint8_t state) {
       digitalWrite(SN7516X_TE,LOW);
 #endif      
 #ifdef DEBUG2
-      arSerial->println(F("Set GPIB lines for reading data"));
+      dbSerial->println(F("Set GPIB lines for reading data"));
 #endif
       break;
 
@@ -2992,7 +2958,7 @@ void setGpibControls(uint8_t state) {
       digitalWrite(SN7516X_TE,HIGH);
 #endif      
 #ifdef DEBUG2
-      arSerial->println(F("Set GPIB lines for writing data"));
+      dbSerial->println(F("Set GPIB lines for writing data"));
 #endif
       break;
 
@@ -3012,7 +2978,7 @@ void setGpibControls(uint8_t state) {
       setGpibState(0b00000000, 0b11111111, 1);
       setGpibState(0b11111111, 0b11111111, 0);
 #ifdef DEBUG2
-      arSerial->println(F("Initialised GPIB listener mode"));
+      dbSerial->println(F("Initialised GPIB listener mode"));
 #endif
       break;
 
@@ -3023,7 +2989,7 @@ void setGpibControls(uint8_t state) {
       setGpibState(0b00000000, 0b00001110, 1);
       setGpibState(0b11111111, 0b00001110, 0);
 #ifdef DEBUG2
-      arSerial->println(F("Set GPIB lines to idle state"));
+      dbSerial->println(F("Set GPIB lines to idle state"));
 #endif
       break;
 
@@ -3034,7 +3000,7 @@ void setGpibControls(uint8_t state) {
       setGpibState(0b00000110, 0b00001110, 1);
       setGpibState(0b11111001, 0b00001110, 0);
 #ifdef DEBUG2
-      arSerial->println(F("Set GPIB lines to idle state"));
+      dbSerial->println(F("Set GPIB lines to idle state"));
 #endif
       break;
 
@@ -3045,7 +3011,7 @@ void setGpibControls(uint8_t state) {
       setGpibState(0b00001000, 0b00001110, 1);
       setGpibState(0b11111001, 0b00001110, 0);
 #ifdef DEBUG2
-      arSerial->println(F("Set GPIB lines for listening as addresed device"));
+      dbSerial->println(F("Set GPIB lines for listening as addresed device"));
 #endif
       break;
 #ifdef DEBUG2
@@ -3053,7 +3019,7 @@ void setGpibControls(uint8_t state) {
     default:
       // Should never get here!
       //      setGpibState(0b00000110, 0b10111001, 0b11111111);
-      arSerial->println(F("Unknown GPIB state requested!"));
+      dbSerial->println(F("Unknown GPIB state requested!"));
 #endif
   }
 

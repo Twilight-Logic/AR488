@@ -5,19 +5,18 @@ The AR488 GPIB controller is an Arduino-based controller for interfacing with IE
 
 This sketch represents a rewrite of that work and implements the full set of Prologix ++ commands in both controller and device mode, with the exception of ++help. Secondary GPIB addressing is not yet supported. A number of additional features are provided, for example, a macro feature is provided to allow automation of frequently used command sequences was well as controller and instrument initialisation at startup. As of version 0.48.x, interfacing with SN75160 and SN75161 GPIB transceiver integrated circuits is supported.
 
-To build an interface, at least one Arduino board will be required to act as the interface hardware. Currently the following boards are supported:
+To build an interface, at least one Arduino board will be required to act as the interface hardware. Arduinos provide a low cost alternative to other commercial interfaces. Currently the following boards are supported:
 
-<UL>
-<LI>Uno</LI>
-<LI>Nano</LI>
-<LI>Mega 2560</LI>
-<LI>Micro</LI>
-<LI>Leonardo R3</LI>
-</UL>
+<table>
+<tr><td><i>MCU</i></td><td><i>Board</i></td><td><i>Serial Ports</i></td><td><i>Layouts</i></td></tr>
+<tr><td>328p</td><td>Uno R3</td><td>Single UART shared with USB</td><td>Layout as per original project by Emanuelle Girlando</td></tr>
+<tr><td>328p</td><td>Nano</td><td>USB/Single UART shared with USB</td><td>Identical to Uno</td></tr>
+<tr><td>32u4</td><td>Micro</td><td>USB/CDC+1 UART</td><td>Compact layout by Artag, designed for his back-of-IEEE488-plug adapter board</td></tr>
+<tr><td>32u4</td><td>Leonardo R3</td><td>USB/CDC+1 UART</td><td>Identical to UNO</td></tr>
+<tr><td>2560</td><td>Mega 2560</td><td>4 x UART, Serial0 shared with USB</td><td>D - (default) using pins on either side of board<br>E1 - using the first row of end connector<br>E2 - using the second row of end connector</td></tr>
+</table>
 
-These provide a low cost alternative to other commercial interfaces.
-
-Uno and Nano boards are both based around the ATmega328p micro-controller and have similar pin-out and features. Only two pins (6 & 13) remain spare as the remainder are all used to interface with the GPIB bus. On the Micro, which is based around the ATmega32u4 micro-controller, all GPIO pins are used and none remain spare. The Leonardo R3 has the same layout as the Uno leaving the same two pins spare. The Mega 2560 costs slightly more but has a design and layout that includes considerably more control pins, additional serial ports and a more powerful ATmega2560 MCU. It therefore provides greater flexibility and potential for further expansion. Currently, 3 layouts are provided for the AtMega2650. These using either the lower numbered pins on the sides of the board ([D]efault), the first row of pins of the two row header at the end of the board (E1), or the second row of the same header (E2). This provides some flexibility and allows various displays and other devices to be connected if desired. Please be aware that when using the [D]efault layout, pins 16 and 17 which correspond to TXD2 and RXD2 (the Serial2 port) cannot be used for serial communication as they are used to drive GPIB signals, however serial ports 0, 1 and 3 remain available for use. Layouts E1 and E2 do not have the same restriction.
+Uno and Nano boards are both based around the ATmega328p micro-controller and have similar pin-out and features. Only two pins (6 & 13) remain spare as the remainder are all used to interface with the GPIB bus. The Micro and Leonardo are based around the ATmega32u4 micro-controller. On the Micro, all GPIO pins are used so none remain spare. The Leonardo R3 uses the same layout as the Uno leaving the same two pins (6 & 13) spare. The Mega 2560 costs slightly more but has a design and layout that includes considerably more control pins, additional serial ports and a more powerful ATmega2560 MCU. It therefore provides greater flexibility and potential for further expansion. Currently, 3 layouts are provided for the AtMega2650 using either the lower numbered pins on the sides of the board (<D>efault), the first row of pins of the two row header at the end of the board (E1), or the second row of the same header (E2). This provides some flexibility and allows various displays and other devices to be connected if desired. Please be aware that when using the <D>efault layout, pins 16 and 17 that correspond to TXD2 and RXD2 (Serial2) cannot be used for serial communication as they are used to drive GPIB signals, however serial ports 0, 1 and 3 remain available for use. Layouts E1 and E2 do not have the same restriction.
 
 Including the SN7516x chipset into the interface design will naturally add to the cost, but has the advantage of providing the full 48mA drive current capacity regardless of the capability of the Arduino board being used, as well as providing proper tri-state output with Hi-Z when the board is powered down. The latter isolates the Arduino micro-controller from the GPIB bus when the interface is powered down, preventing GPIB bus communication problems due to 'parasitic power' from signals present on the GPIB bus, thereby allowing the interface to be safely powered down while not in use. Construction will involve adding a daughter-board between the Arduino GPIO pins and the GPIB bus. This could be constructed using prototyping board or shield, or custom designed using KiCad or other PCB layout design software.
 
@@ -33,8 +32,9 @@ Once uploaded, the firmware should respond to the ++ver command with its version
 
 <b><i>Wireless Communication:</i></b>
 
-The AR488 interface can communicate over Bluetooth using a Bluetooth HC05 or HC06 module. The firmware sketch supports auto-configuration of the Bluetooth HC05 module, the details of which can be found in the <a href="https://github.com/Twilight-Logic/AR488/blob/master/AR488-Bluetooth.pdf">AR488 Bluetooth Support</a> supplement. Although it can still be used to provide Bluetooth communication for the AR488, automatic configuration is not possible with a HC06 module so a HC06 module will have to be configured manually.
+The 32u4 and mega 2560 boards have additional serial ports which can be used to connect the ESP8266 WiFi add-on or the HC05 bluetooth module. The firmware sketch supports auto-configuration of the Bluetooth HC05 module, the details of which can be found in the <a href="https://github.com/Twilight-Logic/AR488/blob/master/AR488-Bluetooth.pdf">AR488 Bluetooth Support</a> supplement. A HC06 module can also be used, but since this is a slave module only and automatic configuration is not possible, the HC06 module will need to be configured manually.
 
+Using these wireless modules in conjunction with the Uno or Nano is not advised as the only available serial UART is also used for USB communication. Serial protocols were not designed to accomodate multiple devices on a single UART. Communication problems may arise when both USB and a serial device on RX0/TX0 are connected and communicating with the MCU at the same time. It is possible instead to use SoftwareSerial (TX = pin 6, RX = pin 13) although at a speed of no more than 57600 baud.
 
 <b><i>Obtaining support:</i></b>
 

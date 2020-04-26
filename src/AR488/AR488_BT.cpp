@@ -6,7 +6,7 @@
 #ifdef AR_BT_EN
 
 
-/***** AR488_BT.cpp, ver. 0.48.21, 27/01/2020 *****/
+/***** AR488_BT.cpp, ver. 0.48.24, 25/04/2020 *****/
 /*
 * AR488 HC05 BlueTooth module
 */
@@ -24,9 +24,29 @@
   SoftwareSerial *btSerial = &swSerial(AR_SW_SERIAL_RX, AR_SW_SERIAL_TX);
 #endif
 
+/*
 #ifdef DEBUG9
   HardwareSerial *dbSerial = &Serial3;
 #endif
+*/
+
+/***** Debug Port *****/
+/*
+#ifdef DB_SERIAL_PORT
+  #ifdef DB_CDC_SERIAL
+    Serial_ *dbBtSerial = &(DB_SERIAL_PORT);
+  #endif
+  #ifdef DB_HW_SERIAL
+    HardwareSerial *dbBtSerial = &(DB_SERIAL_PORT);
+  #endif
+  // Note: SoftwareSerial support conflicts with PCINT support
+  #ifdef DB_SW_SERIAL
+    #include <SoftwareSerial.h>
+    SoftwareSerial swSerial(DB_SW_SERIAL_RX, DB_SW_SERIAL_TX);
+    SoftwareSerial *dbBtSerial = &swSerial;
+  #endif
+#endif
+*/
 
 // Buffer
 #define RBSIZE 64
