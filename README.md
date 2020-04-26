@@ -36,6 +36,8 @@ The 32u4 and mega 2560 boards have additional serial ports which can be used to 
 
 Using these wireless modules in conjunction with the Uno or Nano is not advised as the only available serial UART is also used for USB communication. Serial protocols were not designed to accomodate multiple devices on a single UART. Communication problems may arise when both USB and a serial device on RX0/TX0 are connected and communicating with the MCU at the same time. It is possible instead to use SoftwareSerial (TX = pin 6, RX = pin 13) although at a speed of no more than 57600 baud.
 
+The ESP32 is not supported as yet, but work is progressing to add this to the list of supported boards.
+
 <b><i>Obtaining support:</i></b>
 
 In the event that a problem is found, this can be logged via the Issues feature on the AR488 GitHub page. Please provide at minimum:
@@ -45,8 +47,6 @@ In the event that a problem is found, this can be logged via the Issues feature 
 - the make and model of instrument you are trying to control
 - a description of the issue including;
 - what steps are required to reproduce the issue
-
-Further work to add WiFi and support for additional boards is in progress.
 
 Comments and feedback can be provided here:
 https://www.eevblog.com/forum/projects/ar488-arduino-based-gpib-adapter/
