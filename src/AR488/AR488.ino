@@ -25,7 +25,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.48.24, 25/04/2020" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.48.26, 13/05/2020" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -309,6 +309,9 @@ struct AR488conf {
   char vstr[48];    // Custom version string
   uint16_t tmbus;   // Delay to allow the bus control/data lines to settle (1-30,000 microseconds)
   uint8_t eor;      // EOR (end of receive from GPIB instrument) characters [0=CRLF, 1=CR, 2=LF, 3=None, 4=LFCR, 5=ETX, 6=CRLF+ETX, 7=SPACE]
+  char sname[16];   // Interface short name
+  uint32_t serial;  // Serial number
+  uint8_t idn;      // Send ID in response to *idn? 0=disable, 1=send name; 2=send name+serial
 };
 
 struct AR488conf AR488;
@@ -596,7 +599,7 @@ void loop() {
 /***** Initialise the interface *****/
 void initAR488() {
   // Set default values ({'\0'} sets version string array to null)
-  AR488 = {0xCC, false, false, 2, 0, 1, 0, 0, 0, 0, 1200, 0, {'\0'}, 0, 0};
+  AR488 = {0xCC, false, false, 2, 0, 1, 0, 0, 0, 0, 1200, 0, {'\0'}, 0, 0, {'\0'}, 0};
 }
 
 
@@ -842,6 +845,9 @@ struct cmdRec {
  * Commands without parameters require casting to a pointer
  * requiring a char* parameter. The functon is called with
  * NULL by the command processor.
+ * 
+ * Format: token, mode, function_ptr
+ * Mode: 1=device; 2=controller; 3=both; 
  */
 static cmdRec cmdHidx [] = { 
  
@@ -857,6 +863,8 @@ static cmdRec cmdHidx [] = {
   { "eot_char",    3, eot_char_h  },
   { "eot_enable",  3, eot_en_h    },
   { "ifc",         2, (void(*)(char*)) ifc_h     },
+  { "id",          3, id_h        },
+  { "idn",         3, idn_h       },
   { "llo",         2, llo_h       },
   { "loc",         2, loc_h       },
   { "lon",         1, lon_h       },
@@ -1064,7 +1072,7 @@ bool notInRange(char *param, uint16_t lowl, uint16_t higl, uint16_t &rval) {
   if (rval < lowl || rval > higl) {
     errBadCmd();
     if (isVerb) {
-      arSerial->print(F("Invalid: range is between "));
+      arSerial->print(F("Valid range is between "));
       arSerial->print(lowl);
       arSerial->print(F(" and "));
       arSerial->println(higl);
@@ -1098,9 +1106,9 @@ void execMacro(uint8_t idx) {
         }
       }
       if (isCmd(pBuf)){
-        processLine(pBuf, strlen(pBuf), 1);
+        execCmd(pBuf, strlen(pBuf));
       }else{
-        processLine(pBuf, strlen(pBuf), 2);
+        sendToInstrument(pBuf, strlen(pBuf));
       }
       // Done - clear the buffer
       flushPbuf();
@@ -1792,16 +1800,19 @@ void save_h() {
 
 /***** Show state or enable/disable listen only mode *****/
 void lon_h(char *params) {
-  int val;
+  uint16_t val;
   if (params != NULL) {
+    if (notInRange(params, 0, 1, val)) return;
+/*
     val = atoi(params);
     if (val < 0 || val > 1) {
       errBadCmd();
       if (isVerb) arSerial->println(F("LON: valid range is [0-disable|1-enable]."));
       return;
     }
+*/
     isRO = val ? true : false;
-    isTO = !isRO; // Talk-only mode must be disabled!
+    if (isTO) isTO = false; // Talk-only mode must be disabled!
     if (isVerb) {
       arSerial->print(F("LON: "));
       arSerial->println(val ? "ON" : "OFF") ;
@@ -1954,7 +1965,13 @@ void verb_h() {
  *  NOTE: some instrument software requires a sepcific version string to ID the interface
  */
 void setvstr_h(char *params) {
-  int len;
+//  int len;
+  char idparams[64];
+  memset(idparams, '\0', 64);
+  strncpy(idparams, "verstr ", 7);
+  strncat(idparams, params, strlen(params));
+  id_h(idparams);
+/*  
   if (params != NULL) {
     len = strlen(params);
     if (len>47) len=47; // Ignore anything over 47 characters
@@ -1965,21 +1982,25 @@ void setvstr_h(char *params) {
       arSerial->println(params);
     };
   }
+*/  
 }
 
 
 /***** Talk only mode *****/
 void ton_h(char *params) {
-  int val;
+  uint16_t val;
   if (params != NULL) {
+    if (notInRange(params, 0, 1, val)) return;
+/*    
     val = atoi(params);
     if (val < 0 || val > 1) {
       errBadCmd();
       if (isVerb) arSerial->println(F("TON: valid range is [0-disable|1-enable]."));
       return;
     }
+*/
     isTO = val ? true : false;
-    isRO = !isTO; // Read-only mode must be disabled!
+    if (isTO) isRO = false; // Read-only mode must be disabled in TO mode!
     if (isVerb) {
       arSerial->print(F("TON: "));
       arSerial->println(val ? "ON" : "OFF") ;
@@ -2148,22 +2169,115 @@ void xdiag_h(char *params){
 /****** Timing parameters ******/
 
 void tmbus_h(char *params) {
-  int val;
+  uint16_t val;
   if (params != NULL) {
-    val = atoi(params);
-    if (val < 0 || val > 30000) {
-      errBadCmd();
-      if (isVerb) arSerial->println(F("Invalid: expected EOT character ASCII value in the range 0 - 30,000"));
-      return;
-    }
+//    val = atoi(params);
+    if (notInRange(params, 0, 30000, val)) return;
     AR488.tmbus = val;
     if (isVerb) {
-      arSerial->print(F("TMbus set to: "));
+      arSerial->print(F("TmBus set to: "));
       arSerial->println(val);
     };
   } else {
     arSerial->println(AR488.tmbus, DEC);
   }
+}
+
+
+/***** Set device ID *****/
+/*
+ * Sets the device ID parameters including:
+ * ++id verstr - version string (same as ++setvstr)
+ * ++id name   - short name of device (e.g. HP3478A) up to 15 characters
+ * ++id serial - serial number up to 9 digits long
+ */
+void id_h(char *params) {
+  uint32_t serial = 0;
+  uint8_t len = 0;
+  char * param1;
+  char * param2;
+  char serialStr[10];
+
+arSerial->print(F("Params: "));Serial.println(params);
+  
+  if (params != NULL) {
+    param1 = strtok(params, " \t");
+    param2 = strtok(NULL, " \t");
+
+arSerial->print(F("Param1: "));Serial.println(param1);
+arSerial->print(F("Param2: "));Serial.println(param2);
+    
+    if (param2) {
+      len = strlen(param2);
+      if (strncmp(param1, "verstr", 6)==0) {
+        if (len>0 && len<48) {
+          memset(AR488.vstr, '\0', 48);
+          strncpy(AR488.vstr, param2, len);
+          arSerial->print(F("VerStr: "));arSerial->println(AR488.vstr);
+        }else{
+          if (isVerb) arSerial->println(F("Length of version string must not exceed 48 characters!"));
+          errBadCmd();
+        }
+        return;
+      }
+      if (strncmp(param1, "name", 4)==0) {
+        if (len>0 && len<16) {
+          memset(AR488.sname, '\0', 16);
+          strncpy(AR488.sname, param2, len);
+        }else{
+          if (isVerb) arSerial->println(F("Length of name must not exceed 15 characters!"));
+          errBadCmd();
+        }
+        return;
+      }
+      if (strncmp(param1, "serial", 6)==0) {
+        if (len < 10) {
+          AR488.serial = atol(param2);
+        }else{
+          if (isVerb) arSerial->println(F("Serial number must not exceed 9 characters!"));
+          errBadCmd();
+        }
+        return;
+      }
+//      errBadCmd();
+    }else{
+      if (strlen(param1)>0){
+        if (strncmp(param1, "verstr", 6)==0) {
+          arSerial->println(AR488.vstr);
+          return;
+        }     
+        if (strncmp(param1, "name", 4)==0) {
+          arSerial->println(AR488.sname);
+          return;      
+        }
+        if (strncmp(param1, "serial", 6)==0) {
+          memset(serialStr, '\0', 10);
+          snprintf(serialStr, 10, "%09lu", AR488.serial);  // Max str length = 10-1 i.e 9 digits + null terminator 
+          arSerial->println(serialStr);
+          return;    
+        }
+//        errBadCmd();  
+      }
+    }
+  }
+  errBadCmd();
+}
+
+
+void idn_h(char * params){
+  uint16_t val;
+  if (params != NULL) {
+    if (notInRange(params, 0, 2, val)) return;
+    AR488.idn = val;
+    if (isVerb) {
+      arSerial->print(F("Sending IDN: "));
+      arSerial->print(val ? "Enabled" : "Disabled"); 
+      if (val==2) arSerial->print(F(" with serial number"));
+      arSerial->println();
+    };
+  } else {
+    arSerial->println(AR488.idn, DEC);
+  }  
 }
 
 
