@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.48.26, 13/05/2020"
+#define FWVER "AR488 GPIB controller, ver. 0.48.27, 27/06/2020"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -357,6 +357,19 @@ M3\n\
 /******^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^******/
 /***** SERIAL PORT EXTERNAL DECLARATIONS *****/
 /*********************************************/
+
+
+/*********************************************/
+/***** MISCELLANEOUS DECLARATIONS *****/
+/******vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv******/
+
+#define AR_CFG_SIZE 84
+
+/******^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^******/
+/***** MISCELLANEOUS DECLARATIONS *****/
+/*********************************************/
+
+
 
 
 

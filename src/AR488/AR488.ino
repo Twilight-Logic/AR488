@@ -10,6 +10,7 @@
 
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
+#include "AR488_Eeprom.h"
 
 #ifdef USE_INTERRUPTS
   #ifdef __AVR__
@@ -18,6 +19,7 @@
 #endif
 #ifdef E2END
   #include <EEPROM.h>
+  
 #endif
 
 #ifdef AR_BT_EN
@@ -25,7 +27,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.48.26, 13/05/2020" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.48.27, 27/06/2020" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -94,6 +96,10 @@
    ++aspoll       - serial poll all instruments (alias: ++spoll all)
    ++default      - set configuration to controller default settings
    ++dcl          - send unaddressed (all) device clear  [power on reset] (is the rst?)
+   ++id name      - show/set the name of the interface
+   ++id serial    - show/set the serial number of the interface
+   ++id verstr    - show/set the version string (replaces setvstr)
+   ++idn          - enable/disable reply to *idn? (disabled by default)
    ++ren          - assert or unassert the REN signal
    ++ppoll        - conduct a parallel poll
    ++setvstr      - set custom version string (to identify controller, e.g. "GPIB-USB"). Max 47 chars, excess truncated.
@@ -293,28 +299,33 @@ uint8_t pbPtr = 0;
 /*   
  * Default values set for controller mode
  */
-struct AR488conf {
-  uint8_t ew;       // EEPROM write indicator byte
-  bool eot_en;      // Enable/disable append EOT char to string received from GPIB bus before sending to USB
-  bool eoi;         // Assert EOI on last data char written to GPIB - 0-disable, 1-enable
-  uint8_t cmode;    // Controller mode - 0=unset, 1=device, 2=controller
-  uint8_t caddr;    // Controller address
-  uint8_t paddr;    // Primary device address
-  uint8_t saddr;    // Secondary device address
-  uint8_t eos;      // EOS (end of send to GPIB) characters [0=CRLF, 1=CR, 2=LF, 3=None]
-  uint8_t stat;     // Status byte to return in response to a serial poll
-  uint8_t amode;    // Auto mode setting (0=off; 1=Prologix; 2=onquery; 3=continuous;
-  int rtmo;         // Read timout (read_tmo_ms) in milliseconds - 0-3000 - value depends on instrument
-  char eot_ch;      // EOT character to append to USB output when EOI signal detected
-  char vstr[48];    // Custom version string
-  uint16_t tmbus;   // Delay to allow the bus control/data lines to settle (1-30,000 microseconds)
-  uint8_t eor;      // EOR (end of receive from GPIB instrument) characters [0=CRLF, 1=CR, 2=LF, 3=None, 4=LFCR, 5=ETX, 6=CRLF+ETX, 7=SPACE]
-  char sname[16];   // Interface short name
-  uint32_t serial;  // Serial number
-  uint8_t idn;      // Send ID in response to *idn? 0=disable, 1=send name; 2=send name+serial
+
+union AR488conf{
+  struct{
+//    uint8_t ew;       // EEPROM write indicator byte
+    bool eot_en;      // Enable/disable append EOT char to string received from GPIB bus before sending to USB
+    bool eoi;         // Assert EOI on last data char written to GPIB - 0-disable, 1-enable
+    uint8_t cmode;    // Controller mode - 0=unset, 1=device, 2=controller
+    uint8_t caddr;    // Controller address
+    uint8_t paddr;    // Primary device address
+    uint8_t saddr;    // Secondary device address
+    uint8_t eos;      // EOS (end of send to GPIB) characters [0=CRLF, 1=CR, 2=LF, 3=None]
+    uint8_t stat;     // Status byte to return in response to a serial poll
+    uint8_t amode;    // Auto mode setting (0=off; 1=Prologix; 2=onquery; 3=continuous;
+    int rtmo;         // Read timout (read_tmo_ms) in milliseconds - 0-3000 - value depends on instrument
+    char eot_ch;      // EOT character to append to USB output when EOI signal detected
+    char vstr[48];    // Custom version string
+    uint16_t tmbus;   // Delay to allow the bus control/data lines to settle (1-30,000 microseconds)
+    uint8_t eor;      // EOR (end of receive from GPIB instrument) characters [0=CRLF, 1=CR, 2=LF, 3=None, 4=LFCR, 5=ETX, 6=CRLF+ETX, 7=SPACE]
+    char sname[16];   // Interface short name
+    uint32_t serial;  // Serial number
+    uint8_t idn;      // Send ID in response to *idn? 0=disable, 1=send name; 2=send name+serial
+  };
+  uint8_t db[AR_CFG_SIZE];
 };
 
-struct AR488conf AR488;
+//struct AR488conf AR488;
+union AR488conf AR488;
 
 
 /****** Global variables with volatile values related to controller state *****/
@@ -374,6 +385,7 @@ volatile bool isBAD = false;
 
 uint8_t runMacro = 0;
 
+bool sendIdn = false;
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** COMMON VARIABLES SECTION *****/
@@ -446,7 +458,15 @@ void setup() {
 #ifdef E2END
   // Read data from non-volatile memory
   //(will only read if previous config has already been saved)
-  epGetCfg();
+//  epGetCfg();
+  if (!isEepromClear()) {
+    if (!epReadData(AR488.db, AR_CFG_SIZE)) {
+      // CRC check failed - config data does not match EEPROM
+      epErase();
+      initAR488();
+      epWriteData(AR488.db, AR_CFG_SIZE);
+    }
+  }
 #endif
 
   // SN7516x IC support
@@ -591,6 +611,13 @@ void loop() {
     }
   }
 
+  // IDN query ?
+  if (sendIdn) {
+    if (AR488.idn==1) arSerial->println(AR488.sname);
+    if (AR488.idn==2) {arSerial->print(AR488.sname);arSerial->print("-");arSerial->println(AR488.serial);}
+    sendIdn = false;
+  }
+
   delayMicroseconds(5);
 }
 /***** END MAIN LOOP *****/
@@ -599,7 +626,8 @@ void loop() {
 /***** Initialise the interface *****/
 void initAR488() {
   // Set default values ({'\0'} sets version string array to null)
-  AR488 = {0xCC, false, false, 2, 0, 1, 0, 0, 0, 0, 1200, 0, {'\0'}, 0, 0, {'\0'}, 0};
+//  AR488 = {0xCC, false, false, 2, 0, 1, 0, 0, 0, 0, 1200, 0, {'\0'}, 0, 0, {'\0'}, 0};
+  AR488 = {false, false, 2, 0, 1, 0, 0, 0, 0, 1200, 0, {'\0'}, 0, 0, {'\0'}, 0};
 }
 
 
@@ -669,6 +697,7 @@ void errBadCmd() {
 
 
 /***** Read configuration from EEPROM *****/
+/*
 #ifdef E2END
 void epGetCfg() {
   //  int ew = 0x00;
@@ -679,7 +708,7 @@ void epGetCfg() {
     EEPROM.get(epaddr, AR488);
   }
 }
-
+*/
 
 /*****Save configuraton to EEPROM ****/
 /*
@@ -689,6 +718,7 @@ void epGetCfg() {
  * or 2 possible configurations. Awaiting
  * development of WiFi module)
  */
+/*
 //uint8_t epSaveCfg(uint8_t page){
 uint8_t epSaveCfg() {
 
@@ -708,7 +738,7 @@ uint8_t epSaveCfg() {
   return OK;
 }
 #endif  // E2END
-
+*/
 
 /***** Add character to the buffer and parse *****/
 uint8_t parseInput(char c) {
@@ -738,10 +768,14 @@ uint8_t parseInput(char c) {
             dbSerial->print(F("parseInput: Received ")); dbSerial->println(pBuf);
 #endif
             // Buffer starts with ++ and contains at least 3 characters - command?
-            if (pbPtr > 2 && isCmd(pBuf) && !isPlusEscaped) {
+            if (pbPtr>2 && isCmd(pBuf) && !isPlusEscaped) {
               r = 1;
-              // Buffer has at least 1 character
-            } else if (pbPtr > 0) { // Its other data (or instrument commands from user) so pass characters to GPIB bus
+            // Buffer contains *idn? query and interface to respond
+            }else if (pbPtr>3 && AR488.idn>0 && isIdnQuery(pBuf)){
+              sendIdn = true;
+              flushPbuf();
+            // Buffer has at least 1 character = instrument data to send to gpib bus
+            }else if (pbPtr > 0) {
               r = 2;
             }
             isPlusEscaped = false;
@@ -798,6 +832,19 @@ bool isCmd(char *buffr) {
   if (buffr[0] == PLUS && buffr[1] == PLUS) {
 #ifdef DEBUG1
     dbSerial->println(F("isCmd: Command detected."));
+#endif
+    return true;
+  }
+  return false;
+}
+
+
+/***** Is this an *idn? query? *****/
+bool isIdnQuery(char *buffr) {
+//  if (buffr[0] == PLUS && buffr[1] == PLUS) {
+  if (strncmp(buffr, "*idn?", 5)==0) {
+#ifdef DEBUG1
+    dbSerial->println(F("isIdnQuery: Detected IDN query."));
 #endif
     return true;
   }
@@ -1181,14 +1228,17 @@ void addr_h(char *params) {
 
 /***** Show or set read timout *****/
 void rtmo_h(char *params) {
-  int val;
+  uint16_t val;
   if (params != NULL) {
+    if (notInRange(params, 1, 32000, val)) return;
+/*    
     val = atoi(params);
     if (val < 1 || val > 32000) {
       errBadCmd();
       if (isVerb) arSerial->println(F("Invalid: valid timout range is 1 - 32000 ms."));
       return;
     }
+*/
     AR488.rtmo = val;
     if (isVerb) {
       arSerial->print(F("Set [read_tmo_ms] to: "));
@@ -1203,15 +1253,19 @@ void rtmo_h(char *params) {
 
 /***** Show or set end of send character *****/
 void eos_h(char *params) {
-  int val;
+  uint16_t val;
   if (params != NULL) {
+    if (notInRange(params, 0, 3, val)) return;
+/*    
     val = atoi(params);
     if (val < 0 || val > 3) {
       errBadCmd();
       if (isVerb) arSerial->println(F("Invalid: expected EOS value of 0 - 3"));
       return;
     }
-    AR488.eos = val; if (isVerb) {
+*/
+    AR488.eos = (uint8_t)val;
+    if (isVerb) {
       arSerial->print(F("Set EOS to: "));
       arSerial->println(val);
     };
@@ -1223,15 +1277,19 @@ void eos_h(char *params) {
 
 /***** Show or set EOI assertion on/off *****/
 void eoi_h(char *params) {
-  int val;
+  uint16_t val;
   if (params != NULL) {
+    if (notInRange(params, 0, 1, val)) return;
+/*    
     val = atoi(params);
     if (val < 0 || val > 1) {
       errBadCmd();
       if (isVerb) arSerial->println(F("Invalid: expected EOI value of 0 or 1"));
       return;
     }
-    AR488.eoi = val ? true : false; if (isVerb) {
+*/
+    AR488.eoi = val ? true : false;
+    if (isVerb) {
       arSerial->print(F("Set EOI assertion: "));
       arSerial->println(val ? "ON" : "OFF");
     };
@@ -1243,14 +1301,17 @@ void eoi_h(char *params) {
 
 /***** Show or set interface to controller/device mode *****/
 void cmode_h(char *params) {
-  int val;
+  uint16_t val;
   if (params != NULL) {
+    if (notInRange(params, 0, 1, val)) return;
+/*    
     val = atoi(params);
     if (val < 0 || val > 1) {
       errBadCmd();
       if (isVerb) arSerial->println(F("Invalid: mode must be 0 or 1"));
       return;
     }
+*/
     switch (val) {
       case 0:
         AR488.cmode = 1;
@@ -1273,14 +1334,17 @@ void cmode_h(char *params) {
 
 /***** Show or enable/disable sending of end of transmission character *****/
 void eot_en_h(char *params) {
-  int val;
+  uint16_t val;
   if (params != NULL) {
+    if (notInRange(params, 0, 1, val)) return;
+/*    
     val = atoi(params);
     if (val < 0 || val > 1) {
       errBadCmd();
       if (isVerb) arSerial->println(F("Invalid: expected EOT value of 0 or 1"));
       return;
     }
+*/
     AR488.eot_en = val ? true : false;
     if (isVerb) {
       arSerial->print(F("Appending of EOT character: "));
@@ -1294,15 +1358,18 @@ void eot_en_h(char *params) {
 
 /***** Show or set end of transmission character *****/
 void eot_char_h(char *params) {
-  int val;
+  uint16_t val;
   if (params != NULL) {
+    if (notInRange(params, 0, 255, val)) return;
+/*    
     val = atoi(params);
     if (val < 0 || val > 255) {
       errBadCmd();
       if (isVerb) arSerial->println(F("Invalid: expected EOT character ASCII value in the range 0 - 255"));
       return;
     }
-    AR488.eot_ch = val;
+*/
+    AR488.eot_ch = (uint8_t)val;
     if (isVerb) {
       arSerial->print(F("EOT set to ASCII character: "));
       arSerial->println(val);
@@ -1315,19 +1382,22 @@ void eot_char_h(char *params) {
 
 /***** Show or enable/disable auto mode *****/
 void amode_h(char *params) {
-  int val;
+  uint16_t val;
   if (params != NULL) {
+    if (notInRange(params, 0, 3, val)) return;
+/*    
     val = atoi(params);
     if (val < 0 || val > 3) {
       errBadCmd();
       if (isVerb) arSerial->println(F("Automode: valid range is [0-disable|1-Prologix|2-on-query|3-continuous]."));
       return;
     }
+*/
     if (val > 0 && isVerb) {
       arSerial->println(F("WARNING: automode ON can cause some devices to generate"));
       arSerial->println(F("         'addressed to talk but nothing to say' errors"));
     }
-    AR488.amode = val;
+    AR488.amode = (uint8_t)val;
     if (AR488.amode < 3) aRead = false;
     if (isVerb) {
       arSerial->print(F("Auto mode: "));
@@ -1493,7 +1563,7 @@ void ifc_h() {
 void trg_h(char *params) {
   char *param;
   uint8_t addrs[15];
-  uint8_t val = 0;
+  uint16_t val = 0;
   uint8_t cnt = 0;
 
   // Initialise address array
@@ -1514,6 +1584,8 @@ void trg_h(char *params) {
       } else {
         param = strtok(NULL, " \t");
       }
+      if (notInRange(param, 1, 30, val)) return;
+/*      
       val = atoi(param);
       if (!val) break;
       if (val < 1 || val > 30) {
@@ -1521,7 +1593,8 @@ void trg_h(char *params) {
         if (isVerb) arSerial->println(F("Invalid: GPIB primary address is in the range 1 - 30"));
         return;
       }
-      addrs[cnt] = val;
+*/      
+      addrs[cnt] = (uint8_t)val;
       cnt++;
     }
   }
@@ -1588,7 +1661,7 @@ void spoll_h(char *params) {
   uint8_t r;
   //  uint8_t i = 0;
   uint8_t j = 0;
-  uint8_t val = 0;
+  uint16_t val = 0;
   bool all = false;
 
   // Initialise address array
@@ -1617,6 +1690,8 @@ void spoll_h(char *params) {
         break;
         // Read all address parameters
       } else if (strlen(params) < 3) { // No more than 2 characters
+        if (notInRange(param, 1, 30, val)) return;
+/*        
         val = atoi(param);
         if (!val) break;
         if (val < 1 || val > 30) {
@@ -1624,7 +1699,8 @@ void spoll_h(char *params) {
           if (isVerb) arSerial->println(F("Invalid: GPIB addresses are in the range 1-30"));
           return;
         }
-        addrs[j] = val;
+*/        
+        addrs[j] = (uint8_t)val;
         j++;
       } else {
         errBadCmd();
@@ -1762,17 +1838,20 @@ void srq_h() {
 
 /***** Set the status byte (device mode) *****/
 void stat_h(char *params) {
-  long int val = 0;
+  uint16_t val = 0;
   // A parameter given?
   if (params != NULL) {
     // Byte value given?
+    if (notInRange(params, 0, 255, val)) return;
+/*    
     val = atoi(params);
     if (val < 0 || val > 256) {
       errBadCmd();
       if (isVerb) arSerial->println(F("Invalid: expected byte value in the range 0 - 255"));
       return;
     }
-    AR488.stat = val;
+*/    
+    AR488.stat = (uint8_t)val;
     if (val & 0x40) {
       setSrqSig();
       if (isVerb) arSerial->println(F("SRQ asserted."));
@@ -1790,7 +1869,8 @@ void stat_h(char *params) {
 /***** Save controller configuration *****/
 void save_h() {
 #ifdef E2END
-  epSaveCfg();
+//  epSaveCfg();
+  epWriteData(AR488.db, AR_CFG_SIZE);
   if (isVerb) arSerial->println(F("Settings saved."));
 #else
   arSerial->println(F("EEPROM not supported."));
@@ -1880,15 +1960,19 @@ void default_h() {
 
 /***** Show or set end of receive character(s) *****/
 void eor_h(char *params) {
-  int val;
+  uint16_t val;
   if (params != NULL) {
+    if (notInRange(params, 0, 15, val)) return;
+/*    
     val = atoi(params);
     if (val < 0 || val > 15) {
       errBadCmd();
       if (isVerb) arSerial->println(F("Invalid: expected EOR value of 0 - 7"));
       return;
     }
-    AR488.eor = val; if (isVerb) {
+*/
+    AR488.eor = (uint8_t)val;
+    if (isVerb) {
       arSerial->print(F("Set EOR to: "));
       arSerial->println(val);
     };
@@ -1933,14 +2017,17 @@ void ren_h(char *params) {
   arSerial->println(F("Unavailable")) ;
 #else
   // char *stat;
-  int val;
+  uint16_t val;
   if (params != NULL) {
+    if (notInRange(params, 0, 1, val)) return;
+/*    
     val = atoi(params);
     if (val < 0 || val > 1) {
       if (isVerb) arSerial->println(F("Invalid: expected 0=un-assert, 1=assert"));
       return;
     }
-    digitalWrite(REN, !val);
+*/    
+    digitalWrite(REN, (val ? LOW : HIGH));
     if (isVerb) {
       arSerial->print(F("REN: "));
       arSerial->println(val ? "REN asserted" : "REN un-asserted") ;
@@ -2021,14 +2108,17 @@ void ton_h(char *params) {
  * the status byte.
  */
 void srqa_h(char *params) {
-  int val;
+  uint16_t val;
   if (params != NULL) {
+    if (notInRange(params, 0, 1, val)) return;
+/*    
     val = atoi(params);
     if (val < 0 || val > 1) {
       errBadCmd();
       if (isVerb) arSerial->println(F("Invalid: expected 0=disable or 1=enable"));
       return;
     }
+*/    
     switch (val) {
       case 0:
         isSrqa = false;
@@ -2197,15 +2287,10 @@ void id_h(char *params) {
   char * param1;
   char * param2;
   char serialStr[10];
-
-arSerial->print(F("Params: "));Serial.println(params);
   
   if (params != NULL) {
     param1 = strtok(params, " \t");
     param2 = strtok(NULL, " \t");
-
-arSerial->print(F("Param1: "));Serial.println(param1);
-arSerial->print(F("Param2: "));Serial.println(param2);
     
     if (param2) {
       len = strlen(param2);
@@ -2213,7 +2298,7 @@ arSerial->print(F("Param2: "));Serial.println(param2);
         if (len>0 && len<48) {
           memset(AR488.vstr, '\0', 48);
           strncpy(AR488.vstr, param2, len);
-          arSerial->print(F("VerStr: "));arSerial->println(AR488.vstr);
+          if (isVerb) arSerial->print(F("VerStr: "));arSerial->println(AR488.vstr);
         }else{
           if (isVerb) arSerial->println(F("Length of version string must not exceed 48 characters!"));
           errBadCmd();
@@ -2268,7 +2353,7 @@ void idn_h(char * params){
   uint16_t val;
   if (params != NULL) {
     if (notInRange(params, 0, 2, val)) return;
-    AR488.idn = val;
+    AR488.idn = (uint8_t)val;
     if (isVerb) {
       arSerial->print(F("Sending IDN: "));
       arSerial->print(val ? "Enabled" : "Disabled"); 
