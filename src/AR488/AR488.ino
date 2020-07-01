@@ -27,7 +27,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.48.27, 27/06/2020" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.48.28, 01/07/2020" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -1022,12 +1022,14 @@ void execCmd(char *buffr, uint8_t dsize) {
 /***** Extract command and pass to handler *****/
 void getCmd(char *buffr) {
 
-  char *token;  // pointer to command token
-  char params[64]; // array containing command parameters
+  char *token;  // Pointer to command token
+  char *params; // Pointer to parameters (remaining buffer characters)
+  
+//  char params[64]; // array containing command parameters
   int casize = sizeof(cmdHidx) / sizeof(cmdHidx[0]);
   int i = 0, j = 0;
 
-  memset(params, '\0', 64);
+//  memset(params, '\0', 64);
 
 #ifdef DEBUG1
   dbSerial->print("getCmd: ");
@@ -1057,6 +1059,11 @@ void getCmd(char *buffr) {
     if (cmdHidx[i].opmode & AR488.cmode) {
       // If its a command with parameters
       // Copy command parameters to params and call handler with parameters
+
+      params = token + strlen(token) + 1;
+
+
+/*
       do {
         j++;
         token = strtok(NULL, " \t");
@@ -1067,6 +1074,7 @@ void getCmd(char *buffr) {
           strcat(params, token);
         }
       } while (token != NULL);
+*/      
       // If command parameters were specified
       if (strlen(params) > 0) {
 #ifdef DEBUG1
@@ -2052,12 +2060,26 @@ void verb_h() {
  *  NOTE: some instrument software requires a sepcific version string to ID the interface
  */
 void setvstr_h(char *params) {
-//  int len;
+  uint8_t plen;
   char idparams[64];
+  plen = strlen(params);
   memset(idparams, '\0', 64);
   strncpy(idparams, "verstr ", 7);
-  strncat(idparams, params, strlen(params));
+  strncat(idparams, params, plen);
+
+/*
+arSerial->print(F("Plen: "));
+arSerial->println(plen);
+arSerial->print(F("Params: "));
+arSerial->println(params);
+arSerial->print(F("IdParams: "));
+arSerial->println(idparams);
+*/
+
   id_h(idparams);
+
+
+  
 /*  
   if (params != NULL) {
     len = strlen(params);
@@ -2283,21 +2305,34 @@ void tmbus_h(char *params) {
  */
 void id_h(char *params) {
   uint32_t serial = 0;
-  uint8_t len = 0;
-  char * param1;
-  char * param2;
+  uint8_t dlen = 0;
+  char * keyword; // Pointer to keyword following ++id
+  char * datastr; // Pointer to supplied data (remaining characters in buffer)
   char serialStr[10];
-  
+
+#ifdef DEBUG10
+  arSerial->print(F("Params: "));
+  arSerial->println(params);
+#endif
+
   if (params != NULL) {
-    param1 = strtok(params, " \t");
-    param2 = strtok(NULL, " \t");
-    
-    if (param2) {
-      len = strlen(param2);
-      if (strncmp(param1, "verstr", 6)==0) {
-        if (len>0 && len<48) {
+    keyword = strtok(params, " \t");
+    datastr = keyword + strlen(keyword) + 1;
+    dlen = strlen(datastr);
+    if (dlen) {
+      if (strncmp(keyword, "verstr", 6)==0) {
+#ifdef DEBUG10       
+        arSerial->print(F("Keyword: "));
+        arSerial->println(keyword);
+        arSerial->print(F("DataStr: "));
+        arSerial->println(datastr);
+#endif
+        if (dlen>0 && dlen<48) {
+#ifdef DEBUG10
+        arSerial->println(F("Length OK"));
+#endif
           memset(AR488.vstr, '\0', 48);
-          strncpy(AR488.vstr, param2, len);
+          strncpy(AR488.vstr, datastr, dlen);
           if (isVerb) arSerial->print(F("VerStr: "));arSerial->println(AR488.vstr);
         }else{
           if (isVerb) arSerial->println(F("Length of version string must not exceed 48 characters!"));
@@ -2305,19 +2340,19 @@ void id_h(char *params) {
         }
         return;
       }
-      if (strncmp(param1, "name", 4)==0) {
-        if (len>0 && len<16) {
+      if (strncmp(keyword, "name", 4)==0) {
+        if (dlen>0 && dlen<16) {
           memset(AR488.sname, '\0', 16);
-          strncpy(AR488.sname, param2, len);
+          strncpy(AR488.sname, datastr, dlen);
         }else{
           if (isVerb) arSerial->println(F("Length of name must not exceed 15 characters!"));
           errBadCmd();
         }
         return;
       }
-      if (strncmp(param1, "serial", 6)==0) {
-        if (len < 10) {
-          AR488.serial = atol(param2);
+      if (strncmp(keyword, "serial", 6)==0) {
+        if (dlen < 10) {
+          AR488.serial = atol(datastr);
         }else{
           if (isVerb) arSerial->println(F("Serial number must not exceed 9 characters!"));
           errBadCmd();
@@ -2326,23 +2361,21 @@ void id_h(char *params) {
       }
 //      errBadCmd();
     }else{
-      if (strlen(param1)>0){
-        if (strncmp(param1, "verstr", 6)==0) {
-          arSerial->println(AR488.vstr);
-          return;
-        }     
-        if (strncmp(param1, "name", 4)==0) {
-          arSerial->println(AR488.sname);
-          return;      
-        }
-        if (strncmp(param1, "serial", 6)==0) {
-          memset(serialStr, '\0', 10);
-          snprintf(serialStr, 10, "%09lu", AR488.serial);  // Max str length = 10-1 i.e 9 digits + null terminator 
-          arSerial->println(serialStr);
-          return;    
-        }
-//        errBadCmd();  
+      if (strncmp(keyword, "verstr", 6)==0) {
+        arSerial->println(AR488.vstr);
+        return;
+      }     
+      if (strncmp(keyword, "name", 4)==0) {
+        arSerial->println(AR488.sname);
+        return;      
       }
+      if (strncmp(keyword, "serial", 6)==0) {
+        memset(serialStr, '\0', 10);
+        snprintf(serialStr, 10, "%09lu", AR488.serial);  // Max str length = 10-1 i.e 9 digits + null terminator 
+        arSerial->println(serialStr);
+        return;    
+      }
+//        errBadCmd();  
     }
   }
   errBadCmd();

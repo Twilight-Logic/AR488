@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.48.27, 27/06/2020"
+#define FWVER "AR488 GPIB controller, ver. 0.48.28, 01/07/2020"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -204,6 +204,7 @@
 //#define DEBUG7  // gpibReceiveData
 //#define DEBUG8  // ppoll_h
 //#define DEBUG9  // bluetooth
+//#define DEBUG10 // ID command
 
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
