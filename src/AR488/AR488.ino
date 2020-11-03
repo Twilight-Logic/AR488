@@ -27,7 +27,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.48.28, 01/07/2020" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.48.29, 11/01/2020" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -544,9 +544,9 @@ void loop() {
 /* SerialEvent() handles the serial interrupt but some boards 
  * do not support SerialEvent. In this case use in-loop checking
  */
-#if not defined (USE_SERIALEVENT) || not defined (SERIALEVENT1) || not defined (SERIALEVENT2) || not defined (SERIALEVENT3)
+#if not defined (USE_SERIALEVENT) && not defined (SERIALEVENT1) && not defined (SERIALEVENT2) && not defined (SERIALEVENT3)
   // Serial input handler
-  while (arSerial->available()) {
+  while (arSerial->available() && lnRdy == 0) {
     lnRdy = parseInput(arSerial->read());
   }
 #endif
@@ -1036,7 +1036,9 @@ void getCmd(char *buffr) {
   dbSerial->print(buffr); dbSerial->print(F(" - length:")); dbSerial->println(strlen(buffr));
 #endif
 
-  if (*buffr == (NULL || CR || LF) ) return; // empty line: nothing to parse.
+  // This either needs to be converted to 3 separate compares or removed. Currently its
+  // checking for *buffr == 1 since (0 || 10 || 13) == 1
+  //if (*buffr == (NULL || CR || LF) ) return; // empty line: nothing to parse.
   token = strtok(buffr, " \t");
 
 #ifdef DEBUG1
