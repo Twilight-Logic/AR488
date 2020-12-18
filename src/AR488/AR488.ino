@@ -27,7 +27,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.48.28, 01/07/2020" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.49.03, 18/12/2020" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -544,7 +544,22 @@ void loop() {
 /* SerialEvent() handles the serial interrupt but some boards 
  * do not support SerialEvent. In this case use in-loop checking
  */
-#if not defined (USE_SERIALEVENT) || not defined (SERIALEVENT1) || not defined (SERIALEVENT2) || not defined (SERIALEVENT3)
+#if not defined (USE_SERIALEVENT) && not defined (USE_SERIALEVENT1) && not defined (USE_SERIALEVENT2) && not defined (USE_SERIALEVENT3)
+  #define NO_USE_SERIALEVENT  
+#endif
+#if defined (USE_SERIALEVENT) && not defined (SERIALEVENT)
+  #define NO_SERIALEVENT_AVAILABLE
+#endif
+#if defined (USE_SERIALEVENT1) && not defined (SERIALEVENT1)
+  #define NO_SERIALEVENT_AVAILABLE
+#endif
+#if defined (USE_SERIALEVENT2) && not defined (SERIALEVENT2)
+  #define NO_SERIALEVENT_AVAILABLE
+#endif
+#if defined (USE_SERIALEVENT3) && not defined (SERIALEVENT3)
+  #define NO_SERIALEVENT_AVAILABLE
+#endif
+#if defined (NO_USE_SERIALEVENT) || defined (NO_SERIALEVENT_AVAILABLE) 
   // Serial input handler
   while (arSerial->available()) {
     lnRdy = parseInput(arSerial->read());
@@ -1036,7 +1051,12 @@ void getCmd(char *buffr) {
   dbSerial->print(buffr); dbSerial->print(F(" - length:")); dbSerial->println(strlen(buffr));
 #endif
 
-  if (*buffr == (NULL || CR || LF) ) return; // empty line: nothing to parse.
+//  if (*buffr == (NULL || CR || LF) ) return; // empty line: nothing to parse.
+
+  if (buffr[0] == NULL) return;
+  if (buffr[0] == CR) return;
+  if (buffr[0] == LF) return;
+  
   token = strtok(buffr, " \t");
 
 #ifdef DEBUG1
@@ -2834,6 +2854,8 @@ bool gpibReceiveData() {
     x++;
 
     // Cause for termination of loop
+    if (isTerminatorDetected(bytes, eor)) break;
+/*    
     if (rEoi) {
       // Stop on EOI
       if (tranBrk==5) break;
@@ -2877,6 +2899,8 @@ bool gpibReceiveData() {
       }
       if (trm) break;
     }
+*/
+
 
     // Stop on timeout
     if (r > 0) break;
@@ -2946,6 +2970,182 @@ bool gpibReceiveData() {
   return OK;
 }
 
+
+/***** Receive data controler mode *****/
+bool gpibControllerReceiveData() {
+  uint8_t r = 0;              // read state;
+  uint8_t bytes[3] = {0};     // Terminator detect buffer
+  uint8_t eor = AR488.eor&7;  // End of read (expected terminator) type
+  int x = 0;                  // Byte counter
+  bool eoi = false;           // EOI status
+//  bool trm = false;
+
+  // Flag read in progress...
+  isReading = true;
+
+  // Reset transmission break flag
+  tranBrk = 0;
+
+  // Set status of EOI detection
+  eoi = rEoi;
+  if (AR488.eor==7) rEoi = true;    // Using EOI as terminator
+
+  // Address device to talk
+  if (addrDev(AR488.paddr, 1)) {
+    if (isVerb) {
+      arSerial->print(F("Failed to address the device"));
+      arSerial->print(AR488.paddr);
+      arSerial->println(F(" to talk"));
+    }
+  }
+
+  // Wait for instrument ready
+  Wait_on_pin_state(HIGH, NRFD, AR488.rtmo);
+
+  // Set GPIB control lines to controller read mode
+  setGpibControls(CLAS);
+
+#ifdef DEBUG7
+  dbSerial->println(F("gpibReceiveData: Start listen ->\nBefore loop flags:"));
+  dbSerial->print(F("TRNb: "));
+  dbSerial->println(tranBrk);
+  dbSerial->print(F("rEOI: "));
+  dbSerial->println(rEoi);
+#endif
+
+  // Ready the data bus
+  readyGpibDbus();
+
+  // Perform read of data (r: 0=data; 1=cmd; >1=error;
+  while ( tranBrk == 0 && !(r = gpibReadByte(&bytes[0])) ) {
+
+    // When reading with aMode=3 check for immediate break on ATM condition
+//    if (AR488.amode == 3) readBreak();   // readBrk returns tranBrk=7
+
+#ifdef DEBUG7
+    if (tranBrk==5) dbSerial->println(F("\r\nEOI detected."));
+#endif
+
+#ifdef DEBUG7
+    // Print received characters as HEX
+    dbSerial->print(bytes[0], HEX), dbSerial->print(' ');
+#else
+    // Output the character to the serial port
+    arSerial->print((char)bytes[0]);
+#endif
+
+    // Byte counter
+    x++;
+
+    // Cause for termination of loop
+    if (isTerminatorDetected(bytes, eor)) break;
+
+    // Stop on timeout
+    if (r > 0) break;
+
+    // Shift last three bytes in memory
+    bytes[2] = bytes[1];
+    bytes[1] = bytes[0];
+  }
+
+#ifdef DEBUG7
+  dbSerial->println(F("After loop flags:"));
+  dbSerial->print(F("TRNb: "));
+  dbSerial->println(tranBrk);
+  dbSerial->print(F("TMO:  "));
+  dbSerial->println(r);
+#endif
+
+  // End of data - if verbose, report how many bytes read
+  if (isVerb) {
+    arSerial->print(F("Bytes read: "));
+    arSerial->println(x);
+  }
+
+  // If EOI had been detected then check whether EOT character needs to be output
+  if (tranBrk == 5) {
+    if (isVerb) arSerial->println(F("EOI detected!"));
+    // If eot_enabled then add EOT character
+    if (AR488.eot_en) arSerial->print(AR488.eot_ch);
+  }
+
+  // Return rEoi (++eoi value) to previous state
+  rEoi = eoi;
+
+  // Verbose timeout error
+  if (r > 0) {
+    if (isVerb && r == 1) arSerial->println(F("Timeout waiting for sender!"));
+    if (isVerb && r == 2) arSerial->println(F("Timeout waiting for transfer to complete!"));
+  }
+
+  // Untalk bus and unlisten controller
+  if (uaddrDev()) {
+    if (isVerb) arSerial->print(F("gpibSendData: Failed to untalk bus"));
+  }
+
+  // Set controller back to idle state
+  if (AR488.cmode == 2) setGpibControls(CIDS);
+
+#ifdef DEBUG7
+  dbSerial->println(F("<- End listen."));
+#endif
+
+  // Reset flags
+  isReading = false;              // No longer in read loop
+  if (tranBrk > 0) tranBrk = 0;   // Reset transmission break (read interrupt) flag
+
+  // return the appropriate status
+  if (r > 0) return ERR;
+  return OK;
+}
+
+
+/***** Check for terminator *****/
+bool isTerminatorDetected(uint8_t bytes[3], uint8_t eor_sequence){
+  if (rEoi) {
+  // EOI flagged so stop on EOI
+    if (tranBrk==5) return true;
+  }else if (rEbt) {
+    // Stop on specified <char> if appended to ++read command
+    if (bytes[0] == eByte) return true;
+  }else{
+    // Look for specified terminator (CR+LF by default)
+    switch (eor_sequence) {
+      case 0:
+          // CR+LF terminator
+          if (bytes[0]==LF && bytes[1]==CR) return true;
+          break;
+      case 1:
+          // CR only as terminator
+          if (bytes[0]==CR) return true;
+          break;
+      case 2:
+          // LF only as terminator
+          if (bytes[0]==LF) return true;
+          break;
+      case 3:
+          // No terminator (will rely on timeout)
+          break;
+      case 4:
+          // Keithley can use LF+CR instead of CR+LF
+          if (bytes[0]==CR && bytes[1]==LF) return true;
+          break;
+      case 5:
+          // Solarton (possibly others) can also use ETX (0x03)
+          if (bytes[0]==0x03) return true;
+          break;
+      case 6:
+          // Solarton (possibly others) can also use CR+LF+ETX (0x03)
+          if (bytes[0]==0x03 && bytes[1]==LF && bytes[2]==CR) return true;
+          break;
+      default:
+          // Use CR+LF terminator by default
+          if (bytes[0]==LF && bytes[1]==CR) return true;
+          break;
+      }
+  }
+  return false;
+}
 
 /***** Read a SINGLE BYTE of data from the GPIB bus using 3-way handshake *****/
 /*

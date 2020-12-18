@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.48.28, 01/07/2020"
+#define FWVER "AR488 GPIB controller, ver. 0.49.03, 18/12/2020"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -92,9 +92,9 @@
   // is unavailable. The default port is 'Serial'. Choose ONE port and
   // associated SERIALEVENT definition
   #define AR_HW_SERIAL
-  #define AR_SERIAL_PORT Serial
+  //#define AR_SERIAL_PORT Serial
   #define USE_SERIALEVENT
-  //#define AR_SERIAL_PORT Serial1
+  #define AR_SERIAL_PORT Serial1
   //#define USE_SERIALEVENT1
   //#define AR_SERIAL_PORT Serial3
   //#define USE_SERIALEVENT3
