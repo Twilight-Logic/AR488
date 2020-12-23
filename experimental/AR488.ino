@@ -27,7 +27,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.49.08, 22/12/2020" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.49.09, 22/12/2020" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -384,7 +384,6 @@ bool aRead = false;     // GPIB data read in progress
 bool rEoi = false;      // Read eoi requested
 bool rEbt = false;      // Read with specified terminator character
 bool isQuery = false;   // Direct instrument command is a query
-//uint8_t aMode = 0;      // Auto read mode: 0=off; 1=Prologix; 2=on query (CMD?); 3=continuous;
 uint8_t tranBrk = 0;    // Transmission break on 1=++, 2=EOI, 3=ATN 4=UNL
 uint8_t eByte = 0;      // Termination character
 
@@ -394,9 +393,6 @@ bool snd = false;
 // Escaped character flag
 bool isEsc = false;           // Charcter escaped
 bool isPlusEscaped = false;   // Plus escaped
-
-// Received serial poll request?
-//bool isSprq = false;
 
 // Read only mode flag
 bool isRO = false;
@@ -419,10 +415,13 @@ extern volatile bool isSRQ;  // has SRQ been asserted?
 // SRQ auto mode
 bool isSrqa = false;
 
-volatile bool isBAD = false;
+// Interrupt without handler fired
+//volatile bool isBAD = false;
 
+// Whether to run Macro 0 (macros must be enabled)
 uint8_t runMacro = 0;
 
+// Send response to *idn?
 bool sendIdn = false;
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
@@ -669,8 +668,7 @@ void loop() {
 /***** Initialise the interface *****/
 void initAR488() {
   // Set default values ({'\0'} sets version string array to null)
-//  AR488 = {0xCC, false, false, 2, 0, 1, 0, 0, 0, 0, 1200, 0, {'\0'}, 0, 0, {'\0'}, 0};
-  AR488 = {false, false, 2, 0, 1, 0, 0, 0, 0, 1200, 0, {'\0'}, 0, 0, {'\0'}, 0};
+  AR488 = {false, false, 2, 0, 1, 0, 0, 0, 0, 1200, 0, {'\0'}, 0, 0, {'\0'}, 0, 0};
 }
 
 
@@ -992,12 +990,6 @@ void sendToInstrument(char *buffr, uint8_t dsize) {
   dbSerial->print(F("sendToInstrument: Received for sending: ")); printHex(buffr, dsize);
 #endif
 
-/*
-#ifdef DEBUG1
-    arSerial->print(F("sendToInstrument: Sent to the instrument: ")); printHex(line, dsize);
-#endif
-*/
-
   // Is this an instrument query command (string ending with ?)
   if (buffr[dsize-1] == '?') isQuery = true;
 
@@ -1060,30 +1052,27 @@ void getCmd(char *buffr) {
   char *token;  // Pointer to command token
   char *params; // Pointer to parameters (remaining buffer characters)
   
-//  char params[64]; // array containing command parameters
   int casize = sizeof(cmdHidx) / sizeof(cmdHidx[0]);
-  int i = 0, j = 0;
-
-//  memset(params, '\0', 64);
+  int i = 0;
 
 #ifdef DEBUG1
   dbSerial->print("getCmd: ");
   dbSerial->print(buffr); dbSerial->print(F(" - length:")); dbSerial->println(strlen(buffr));
 #endif
 
-//  if (*buffr == (NULL || CR || LF) ) return; // empty line: nothing to parse.
-
-  if (buffr[0] == NULL) return;
+  // If terminator on blank line then return immediately without processing anything 
+  if (buffr[0] == 0x00) return;
   if (buffr[0] == CR) return;
   if (buffr[0] == LF) return;
-  
+
+  // Get the first token
   token = strtok(buffr, " \t");
 
 #ifdef DEBUG1
   dbSerial->print("getCmd: process token: "); dbSerial->println(token);
 #endif
 
-  // Look for a valid command token
+  // Check whether it is a valid command token
   i = 0;
   do {
     if (strcasecmp(cmdHidx[i].token, token) == 0) break;
@@ -1822,7 +1811,6 @@ void stat_h(char *params) {
 /***** Save controller configuration *****/
 void save_h() {
 #ifdef E2END
-//  epSaveCfg();
   epWriteData(AR488.db, AR_CFG_SIZE);
   if (isVerb) arSerial->println(F("Settings saved."));
 #else
@@ -1846,8 +1834,6 @@ void lon_h(char *params) {
     arSerial->println(isRO);
   }
 }
-
-
 
 
 /***** Set the SRQ signal *****/
@@ -2187,7 +2173,6 @@ void xdiag_h(char *params){
 void tmbus_h(char *params) {
   uint16_t val;
   if (params != NULL) {
-//    val = atoi(params);
     if (notInRange(params, 0, 30000, val)) return;
     AR488.tmbus = val;
     if (isVerb) {
@@ -2208,7 +2193,6 @@ void tmbus_h(char *params) {
  * ++id serial - serial number up to 9 digits long
  */
 void id_h(char *params) {
-  uint32_t serial = 0;
   uint8_t dlen = 0;
   char * keyword; // Pointer to keyword following ++id
   char * datastr; // Pointer to supplied data (remaining characters in buffer)
@@ -2667,8 +2651,6 @@ bool gpibReceiveData() {
   int x = 0;
   bool eoiStatus;
   bool eoiDetected = false;
-  bool trm = false;
-//  uint8_t se = 0;
 
   // Reset transmission break flag
   tranBrk = 0;
@@ -2707,7 +2689,6 @@ bool gpibReceiveData() {
     dbSerial->print(F("rEOI: "));
     dbSerial->println(rEoi);
     dbSerial->print(F("ATN:  "));
-//    dbSerial->println(digitalRead(ATN) ? "HIGH" : "LOW");
     dbSerial->println(isAtnAsserted() ? 1 : 0);
 #endif
 
@@ -2721,7 +2702,6 @@ bool gpibReceiveData() {
     if (tranBrk > 0) break;
 
     // ATN asserted
-//    if (digitalRead(ATN) == LOW) break;
     if (isAtnAsserted()) break;
 
     // Read the next character on the GPIB bus
@@ -2733,12 +2713,10 @@ bool gpibReceiveData() {
     if (lnRdy > 0) break;
 
 #ifdef DEBUG7
-//    if (tranBrk == 5) dbSerial->println(F("\r\nEOI detected."));
     if (eoiDetected) dbSerial->println(F("\r\nEOI detected."));
 #endif
 
     // If break condition ocurred or ATN asserted then break here
-//    if (tranBrk == 7 || digitalRead(ATN)==LOW) break;
     if (isAtnAsserted()) break;
 
 #ifdef DEBUG7
@@ -2770,8 +2748,6 @@ bool gpibReceiveData() {
 #ifdef DEBUG7
   dbSerial->println();
   dbSerial->println(F("After loop flags:"));
-//  dbSerial->print(F("TRNb: "));
-//  dbSerial->println(tranBrk);
   dbSerial->print(F("ATN: "));
   dbSerial->println(isAtnAsserted());
   dbSerial->print(F("TMO:  "));
@@ -2785,7 +2761,6 @@ bool gpibReceiveData() {
   }
 
   // Detected that EOI has been asserted
-//  if (tranBrk == 5) {
   if (eoiDetected) {
     if (isVerb) arSerial->println(F("EOI detected!"));
     // If eot_enabled then add EOT character
