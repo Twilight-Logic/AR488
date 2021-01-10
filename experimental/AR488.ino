@@ -27,7 +27,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.49.09, 22/12/2020" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.49.11, 10/01/2021" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -202,23 +202,7 @@ const char * const macros[] PROGMEM = {
 /**********************************/
 /***** SERIAL PORT MANAGEMENT *****/
 /***** vvvvvvvvvvvvvvvvvvvvvv *****/
-/*
-#if not defined (USE_SERIALEVENT) && not defined (USE_SERIALEVENT1) && not defined (USE_SERIALEVENT2) && not defined (USE_SERIALEVENT3)
-  #define NO_USE_SERIALEVENT  
-#endif
-#if defined (USE_SERIALEVENT) && not defined (SERIALEVENT)
-  #define NO_SERIALEVENT_AVAILABLE
-#endif
-#if defined (USE_SERIALEVENT1) && not defined (SERIALEVENT1)
-  #define NO_SERIALEVENT_AVAILABLE
-#endif
-#if defined (USE_SERIALEVENT2) && not defined (SERIALEVENT2)
-  #define NO_SERIALEVENT_AVAILABLE
-#endif
-#if defined (USE_SERIALEVENT3) && not defined (SERIALEVENT3)
-  #define NO_SERIALEVENT_AVAILABLE
-#endif
-*/
+
 
 /***** Serial/debug port *****/
 #ifdef AR_CDC_SERIAL
@@ -337,7 +321,6 @@ uint8_t pbPtr = 0;
 /*   
  * Default values set for controller mode
  */
-
 union AR488conf{
   struct{
 //    uint8_t ew;       // EEPROM write indicator byte
@@ -374,9 +357,8 @@ uint8_t cstate = 0;
 // Verbose mode
 bool isVerb = false;
 
-// We have a line
-//bool crFl = false;      // Carriage return flag
-uint8_t lnRdy = 0;      // Line ready to process
+// CR/LF terminated line ready to process
+uint8_t lnRdy = 0;      
 
 // GPIB data receive flags
 //bool isReading = false; // Is a GPIB read in progress?
@@ -547,6 +529,12 @@ void setup() {
   execMacro(0);
 #endif
 
+#ifdef SAY_HELLO
+  arSerial->println(F("AR488 ready."));
+#else
+  arSerial->println();
+#endif
+
 }
 /****** End of Arduino standard SETUP procedure *****/
 
@@ -576,19 +564,6 @@ void loop() {
   isATN = (digitalRead(ATN)==LOW ? true : false);
   isSRQ = (digitalRead(SRQ)==LOW ? true : false);
 #endif
-
-/*** In loop serial buffer checking ***/
-/* SerialEvent() handles the serial interrupt but some boards 
- * do not support SerialEvent. In this case use in-loop checking
- */
-/*
-#if defined (NO_USE_SERIALEVENT) || defined (NO_SERIALEVENT_AVAILABLE) 
-  // Serial input handler
-  while (arSerial->available()) {
-    lnRdy = parseInput(arSerial->read());
-  }
-#endif
-*/
 
 /*** Process the buffer ***/
 /* Each received char is passed through parser until an un-escaped 
@@ -656,9 +631,8 @@ void loop() {
     sendIdn = false;
   }
 
-  while (arSerial->available()) {
-    lnRdy = serialIn_h(); 
-  }
+  // Check serial buffer
+  lnRdy = serialIn_h();
   
   delayMicroseconds(5);
 }
@@ -693,31 +667,6 @@ void initController() {
 }
 
 
-/***** Serial event interrupt handler *****/
-/*
-#ifdef USE_SERIALEVENT
-void serialEvent() {
-  lnRdy = parseInput(arSerial->read());
-}
-#endif
-#ifdef USE_SERIALEVENT1
-void serialEvent1() {
-  lnRdy = parseInput(arSerial->read());
-}
-#endif
-#ifdef USE_SERIALEVENT2
-void serialEvent2() {
-  lnRdy = parseInput(arSerial->read());
-}
-#endif
-#ifdef USE_SERIALEVENT3
-void serialEvent3() {
-  lnRdy = parseInput(arSerial->read());
-}
-#endif
-*/
-
-
 /***** Serial event handler *****/
 /*
  * Note: the Arduino serial buffer is 64 characters long. Characters are stored in
@@ -731,11 +680,18 @@ void serialEvent3() {
 uint8_t serialIn_h() {
   uint8_t bufferStatus = 0;
   // Parse serial input until we have detected a line terminator
-  while (arSerial->available() && lnRdy==0) {   // Only need to parse if a character is available
+  while (arSerial->available() && bufferStatus==0) {   // Parse while characters available and line is not complete
     bufferStatus = parseInput(arSerial->read());
   }
+
+#ifdef DEBUG1
+  if (bufferStatus) {
+    dbSerial->print(F("BufferStatus: "));
+    dbSerial->println(bufferStatus);  
+  }
+#endif
+
   return bufferStatus;
-//  if (lnRdy>0) tranBrk = 7;
 }
 
 
@@ -756,7 +712,6 @@ bool isAtnAsserted() {
 }
 
 
-
 /*************************************/
 /***** Device operation routines *****/
 /*************************************/
@@ -775,6 +730,7 @@ uint8_t parseInput(char c) {
 
   // Read until buffer full (buffer-size - 2 characters)
   if (pbPtr < PBSIZE) {
+    if (isVerb) arSerial->print(c);  // Humans like to see what they are typing...
     // Actions on specific characters
     switch (c) {
       // Carriage return or newline? Then process the line
@@ -792,6 +748,7 @@ uint8_t parseInput(char c) {
             if (isVerb) showPrompt();
             return 0;
           } else {
+            if (isVerb) arSerial->println();  // Move to new line
 #ifdef DEBUG1
             dbSerial->print(F("parseInput: Received ")); dbSerial->println(pBuf);
 #endif
@@ -814,6 +771,9 @@ uint8_t parseInput(char c) {
               r = 2;
             }
             isPlusEscaped = false;
+#ifdef DEBUG1
+            dbSerial->print(F("R: "));dbSerial->println(r);
+#endif
 //            return r;
           }
         }
@@ -835,11 +795,11 @@ uint8_t parseInput(char c) {
           if (pbPtr < 2) isPlusEscaped = true;
         }
         addPbuf(c);
-        if (isVerb) arSerial->print(c);
+//        if (isVerb) arSerial->print(c);
         break;
       // Something else?
       default: // any char other than defined above
-        if (isVerb) arSerial->print(c);  // Humans like to see what they are typing...
+//        if (isVerb) arSerial->print(c);  // Humans like to see what they are typing...
         // Buffer contains '++' (start of command). Stop sending data to serial port by halting GPIB receive.
         addPbuf(c);
         isEsc = false;
@@ -1006,7 +966,7 @@ void sendToInstrument(char *buffr, uint8_t dsize) {
   lnRdy = 0;
 
 #ifdef DEBUG1
-  dbSerial->print(F("sendToInstrument: Sent."));
+  dbSerial->println(F("sendToInstrument: Sent."));
 #endif
 
 }

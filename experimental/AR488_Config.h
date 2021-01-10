@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.49.09, 22/12/2020"
+#define FWVER "AR488 GPIB controller, ver. 0.49.11, 10/01/2021"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -196,6 +196,9 @@
   #define AR_BT_CODE "488488"   // Bluetooth pairing code
 #endif
 
+
+/***** Acknowledge interface is ready *****/
+//#define SAY_HELLO
 
 /***** Debug options *****/
 // Uncomment to send debug messages to another port
