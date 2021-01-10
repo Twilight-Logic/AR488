@@ -5,7 +5,7 @@
 
 #include "AR488_Config.h"
 
-/***** AR488_Hardware.h, ver. 0.48.22, 08/04/2020 *****/
+/***** AR488_Hardware.h, ver. 0.49.08, 22/12/2020 *****/
 /*
  * Hardware pin layout definitions
  */
@@ -19,7 +19,7 @@
 // (We don't know which pin interrupts will be required)
 #ifdef USE_INTERRUPTS
   #undef USE_INTERRUPTS
-  #define USE_PINHOOKS
+//  #define USE_PINHOOKS
 #endif
 
 #endif

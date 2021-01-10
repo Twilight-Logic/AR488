@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.49.03, 18/12/2020"
+#define FWVER "AR488 GPIB controller, ver. 0.49.11, 10/01/2021"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -56,7 +56,9 @@
   #define AR_HW_SERIAL
   #ifdef AR_HW_SERIAL
     #define AR_SERIAL_PORT Serial
+/*
     #define USE_SERIALEVENT
+*/
   #else
     // Select software serial port
     #define AR_SW_SERIAL
@@ -89,15 +91,23 @@
   /*** Serial ports ***/
   // Mega 2560 supports Serial, Serial1, Serial2, Serial3. Since the pins 
   // associated with Serial2 are used in the default pin layout, Serial2
-  // is unavailable. The default port is 'Serial'. Choose ONE port and
-  // associated SERIALEVENT definition
+  // is unavailable. The default port is 'Serial'. Choose ONE port only.
+/*  
+  // and associated SERIALEVENT definition
+*/
   #define AR_HW_SERIAL
   //#define AR_SERIAL_PORT Serial
+/*
   #define USE_SERIALEVENT
+*/
   #define AR_SERIAL_PORT Serial1
+/*  
   //#define USE_SERIALEVENT1
+*/  
   //#define AR_SERIAL_PORT Serial3
+/*  
   //#define USE_SERIALEVENT3
+*/
 
 #endif  // Board/layout selection
 
@@ -134,12 +144,15 @@
   // For supported boards use interrupt handlers
   #if defined (AR488_UNO) || defined (AR488_NANO) || defined (AR488_MEGA2560) || defined (AR488_MEGA32U4)
     #define USE_INTERRUPTS
-  #else
+  #endif
+/*
+  lse
     // For other boards use in-loop checking
     #define USE_PINHOOKS
   #endif
 #else
   #define USE_PINHOOKS
+*/
 #endif
 
 
@@ -183,6 +196,9 @@
   #define AR_BT_CODE "488488"   // Bluetooth pairing code
 #endif
 
+
+/***** Acknowledge interface is ready *****/
+//#define SAY_HELLO
 
 /***** Debug options *****/
 // Uncomment to send debug messages to another port

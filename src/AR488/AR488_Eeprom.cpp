@@ -85,7 +85,7 @@ void epWriteData(uint8_t cfgdata[], uint16_t cfgsize) {
 bool epReadData(uint8_t cfgdata[], uint16_t cfgsize) {
   uint16_t crc1;
   uint16_t crc2;
-  uint16_t addr = EESTART;
+//  uint16_t addr = EESTART;
   uint16_t i=0;
 
   // Read CRC
