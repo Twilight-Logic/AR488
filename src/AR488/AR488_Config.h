@@ -56,9 +56,6 @@
   #define AR_HW_SERIAL
   #ifdef AR_HW_SERIAL
     #define AR_SERIAL_PORT Serial
-/*
-    #define USE_SERIALEVENT
-*/
   #else
     // Select software serial port
     #define AR_SW_SERIAL
@@ -96,18 +93,9 @@
   // and associated SERIALEVENT definition
 */
   #define AR_HW_SERIAL
-  //#define AR_SERIAL_PORT Serial
-/*
-  #define USE_SERIALEVENT
-*/
-  #define AR_SERIAL_PORT Serial1
-/*  
-  //#define USE_SERIALEVENT1
-*/  
+  #define AR_SERIAL_PORT Serial
+  //#define AR_SERIAL_PORT Serial1
   //#define AR_SERIAL_PORT Serial3
-/*  
-  //#define USE_SERIALEVENT3
-*/
 
 #endif  // Board/layout selection
 
