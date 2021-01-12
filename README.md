@@ -20,7 +20,7 @@ Uno and Nano boards are both based around the ATmega328p micro-controller and ha
 
 Including the SN7516x chipset into the interface design will naturally add to the cost, but has the advantage of providing the full 48mA drive current capacity regardless of the capability of the Arduino board being used, as well as providing proper tri-state output with Hi-Z when the board is powered down. The latter isolates the Arduino micro-controller from the GPIB bus when the interface is powered down, preventing GPIB bus communication problems due to 'parasitic power' from signals present on the GPIB bus, thereby allowing the interface to be safely powered down while not in use. Construction will involve adding a daughter-board between the Arduino GPIO pins and the GPIB bus. This could be constructed using prototyping board or shield, or custom designed using KiCad or other PCB layout design software.
 
-To use the sketch, create a new directory, and then unpack the .zip file into this location. Open the main sketch, AR488.ino, in the Arduino IDE. This should also load all of the linked .h and .cpp files. Review Config.h and make any configuration adjustment required (see the 'Configuration' section of the AR488 manual for details), including the selcetion of the board layout selection appropriate to the Ardiono board that you are using. Set the target board in Board Manager within the Arduino IDE (Tools => Board:), and then compile and upload the sketch. There should be no need to make any changes to any other files. Once uploaded, the firmware should respond to the ++ver command with its version information.
+To use the sketch, create a new directory, and then unpack the .zip file into this location. Open the main sketch, AR488.ino, in the Arduino IDE. This should also load all of the linked .h and .cpp files. Review Config.h and make any configuration adjustment required (see the 'Configuration' section of the AR488 manual for details), including the selcetion of the board layout selection appropriate to the Arduino board that you are using. Set the target board in Board Manager within the Arduino IDE (Tools => Board:), and then compile and upload the sketch. There should be no need to make any changes to any other files. Once uploaded, the firmware should respond to the ++ver command with its version information.
 
 Please note that Arduino Micro (and other 32u4 boards, e.g. Leonardo) do not automatically reset when a connection is made to the serial port. The Arduino IDE takes care of the programming process via USB which should work normally. Some Micro boards may not have a reset button, in which case the reset pin need to be briefly shorted to ground by some other means. When using the Arduino IDE on Linux (Linux Mint and possibly other Ubuntu derivatives), the modemmanager service must be disabled, otherwise it will interfere with the programming process and the boards will be rendered inaccessible via USB. If this curers, then the board can be returned to normal working by uploading a bootloader to it using an AVR programmer. This issue does not seem to affect Uno, Nano or Mega 2560 boards.
 
@@ -48,7 +48,7 @@ In the event that a problem is found, this can be logged via the Issues feature 
 - a description of the issue including;
 - what steps are required to reproduce the issue
 
-Comments and feedback can be provided here:
+Comments and feedback can be provided here:<BR>
 https://www.eevblog.com/forum/projects/ar488-arduino-based-gpib-adapter/
 
 <b><i>Acknowledgements:</i></b>
@@ -61,6 +61,6 @@ https://www.eevblog.com/forum/projects/ar488-arduino-based-gpib-adapter/
 
 Also, thank you to all the contributors to the AR488 EEVblog thread for their suggestions and support.
 
-The original work by Emanuele Girlando is found here:
+The original work by Emanuele Girlando is found here:<BR>
 http://egirland.blogspot.com/2014/03/arduino-uno-as-usb-to-gpib-controller.html
 
