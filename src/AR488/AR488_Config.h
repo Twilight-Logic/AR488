@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.49.11, 10/01/2021"
+#define FWVER "AR488 GPIB controller, ver. 0.49.12, 11/01/2021"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -143,16 +143,10 @@
 #ifdef __AVR__
   // For supported boards use interrupt handlers
   #if defined (AR488_UNO) || defined (AR488_NANO) || defined (AR488_MEGA2560) || defined (AR488_MEGA32U4)
-    #define USE_INTERRUPTS
+    #ifndef AR488_CUSTOM
+      #define USE_INTERRUPTS
+    #endif
   #endif
-/*
-  lse
-    // For other boards use in-loop checking
-    #define USE_PINHOOKS
-  #endif
-#else
-  #define USE_PINHOOKS
-*/
 #endif
 
 

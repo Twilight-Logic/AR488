@@ -27,7 +27,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.49.11, 10/01/2021" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.49.12, 11/01/2021" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -326,13 +326,13 @@ union AR488conf{
 //    uint8_t ew;       // EEPROM write indicator byte
     bool eot_en;      // Enable/disable append EOT char to string received from GPIB bus before sending to USB
     bool eoi;         // Assert EOI on last data char written to GPIB - 0-disable, 1-enable
-    uint8_t cmode;    // Controller mode - 0=unset, 1=device, 2=controller
+    uint8_t cmode;    // Controller/device mode (0=unset, 1=device, 2=controller)
     uint8_t caddr;    // Controller address
     uint8_t paddr;    // Primary device address
     uint8_t saddr;    // Secondary device address
     uint8_t eos;      // EOS (end of send to GPIB) characters [0=CRLF, 1=CR, 2=LF, 3=None]
     uint8_t stat;     // Status byte to return in response to a serial poll
-    uint8_t amode;    // Auto mode setting (0=off; 1=Prologix; 2=onquery; 3=continuous;
+    uint8_t amode;    // Auto mode setting (0=off; 1=Prologix; 2=onquery; 3=continuous);
     int rtmo;         // Read timout (read_tmo_ms) in milliseconds - 0-3000 - value depends on instrument
     char eot_ch;      // EOT character to append to USB output when EOI signal detected
     char vstr[48];    // Custom version string
@@ -531,8 +531,6 @@ void setup() {
 
 #ifdef SAY_HELLO
   arSerial->println(F("AR488 ready."));
-#else
-  arSerial->println();
 #endif
 
 }
@@ -2668,9 +2666,13 @@ bool gpibReceiveData() {
     r = gpibReadByte(&bytes[0], &eoiDetected);
 
     // When reading with amode=3 or EOI check serial input and break loop if neccessary
-    if ((AR488.amode == 3) || rEoi) lnRdy = serialIn_h();
+    if ((AR488.amode==3) || rEoi) lnRdy = serialIn_h();
+    
     // Line terminator detected (loop breaks on command being detected or data buffer full)
-    if (lnRdy > 0) break;
+    if (lnRdy > 0) {
+      aRead = false;  // Stop auto read
+      break;
+    }
 
 #ifdef DEBUG7
     if (eoiDetected) dbSerial->println(F("\r\nEOI detected."));
