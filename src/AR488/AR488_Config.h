@@ -82,9 +82,9 @@
 /*** MEGA 2560 board ***/
 #elif __AVR_ATmega2560__
   /*** Board/layout selection ***/
-  #define AR488_MEGA2560_D
+  //#define AR488_MEGA2560_D
   //#define AR488_MEGA2560_E1
-  //#define AR488_MEGA2560_E2
+  #define AR488_MEGA2560_E2
   /*** Serial ports ***/
   // Mega 2560 supports Serial, Serial1, Serial2, Serial3. Since the pins 
   // associated with Serial2 are used in the default pin layout, Serial2
@@ -159,9 +159,9 @@
  * This will require the use of an additional GPIO pin to control
  * the read and write modes of the ICs.
  */
-//#define SN7516X
+#define SN7516X
 #ifdef SN7516X
-  #define SN7516X_TE 6
+  #define SN7516X_TE 7
 //  #define SN7516X_DC 13
 //  #define SN7516X_SC 12
 #endif

@@ -2,7 +2,7 @@
 #include <EEPROM.h>
 #include "AR488_Eeprom.h"
 
-/***** AR488_Eeprom.h, ver. 0.00.05, 27/06/2020 *****/
+/***** AR488_Eeprom.cpp, ver. 0.00.05, 27/06/2020 *****/
 /*
  * EEPROM functions implementation
  */
