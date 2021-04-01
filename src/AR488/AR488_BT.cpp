@@ -1,7 +1,7 @@
 #include <Arduino.h>
 
 #include "AR488_BT.h"
-#include "AR488_Config.h"
+//#include "AR488_Config.h"
 
 #ifdef AR_BT_EN
 
@@ -12,6 +12,7 @@
 */
 
 /***** BT Serial Port *****/
+/*
 #ifdef AR_CDC_SERIAL
   Serial_ *btSerial = &(AR_SERIAL_PORT);
 #endif
@@ -23,30 +24,45 @@
   #include <SoftwareSerial.h>
   SoftwareSerial *btSerial = &swSerial(AR_SW_SERIAL_RX, AR_SW_SERIAL_TX);
 #endif
+*/
+
+#ifdef AR_CDC_SERIAL
+  extern Serial_ *btSerial;
+#endif
+#ifdef AR_HW_SERIAL
+  extern HardwareSerial *btSerial;
+#endif
+// Note: SoftwareSerial support conflicts with PCINT support
+#ifdef AR_SW_SERIAL
+  #include <SoftwareSerial.h>
+  extern SoftwareSerial *btSerial;
+#endif
+
+
 
 /*
 #ifdef DEBUG9
-  HardwareSerial *dbSerial = &Serial3;
+  extern HardwareSerial *dbSerial = &Serial3;
 #endif
 */
 
 /***** Debug Port *****/
-/*
-#ifdef DB_SERIAL_PORT
-  #ifdef DB_CDC_SERIAL
-    Serial_ *dbBtSerial = &(DB_SERIAL_PORT);
-  #endif
-  #ifdef DB_HW_SERIAL
-    HardwareSerial *dbBtSerial = &(DB_SERIAL_PORT);
-  #endif
-  // Note: SoftwareSerial support conflicts with PCINT support
-  #ifdef DB_SW_SERIAL
-    #include <SoftwareSerial.h>
-    SoftwareSerial swSerial(DB_SW_SERIAL_RX, DB_SW_SERIAL_TX);
-    SoftwareSerial *dbBtSerial = &swSerial;
+#ifdef DEBUG9
+  #ifdef DB_SERIAL_PORT
+    #ifdef DB_CDC_SERIAL
+      extern Serial_ *dbSerial;
+    #endif
+    #ifdef DB_HW_SERIAL
+      extern HardwareSerial *dbSerial;
+    #endif
+    // Note: SoftwareSerial support conflicts with PCINT support
+    #ifdef DB_SW_SERIAL
+      #include <SoftwareSerial.h>
+      extern SoftwareSerial *dbSerial;
+    #endif
   #endif
 #endif
-*/
+
 
 // Buffer
 #define RBSIZE 64

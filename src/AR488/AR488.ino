@@ -27,7 +27,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.49.12, 11/01/2021" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.49.14, 02/03/2021" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -204,7 +204,48 @@ const char * const macros[] PROGMEM = {
 /***** vvvvvvvvvvvvvvvvvvvvvv *****/
 
 
-/***** Serial/debug port *****/
+/***** Serial communications port *****/
+/*
+#ifdef AR_CDC_SERIAL
+  extern Serial_ *arSerial;
+  #ifndef DB_SERIAL_PORT
+    extern Serial_ *dbSerial;
+  #endif
+#endif
+#ifdef AR_HW_SERIAL
+  extern HardwareSerial *arSerial;
+  #ifndef DB_SERIAL_PORT
+    extern HardwareSerial *dbSerial;
+  #endif
+#endif
+// Note: SoftwareSerial support conflicts with PCINT support
+#ifdef AR_SW_SERIAL
+  #include <SoftwareSerial.h>
+  extern SoftwareSerial *arSerial;
+  #ifndef DB_SERIAL_PORT
+    extern SoftwareSerial *dbSerial;
+  #endif
+#endif
+*/
+
+/***** Serial debug Port *****/
+/*
+#ifdef DB_SERIAL_PORT
+  #ifdef DB_CDC_SERIAL
+    extern Serial_ *dbSerial;
+  #endif
+  #ifdef DB_HW_SERIAL
+    extern HardwareSerial *dbSerial;
+  #endif
+  // Note: SoftwareSerial support conflicts with PCINT support
+  #ifdef DB_SW_SERIAL
+    #include <SoftwareSerial.h>
+    extern SoftwareSerial *dbSerial;
+  #endif
+#endif
+*/
+
+
 #ifdef AR_CDC_SERIAL
   Serial_ *arSerial = &(AR_SERIAL_PORT);
   #ifndef DB_SERIAL_PORT
@@ -229,6 +270,7 @@ const char * const macros[] PROGMEM = {
 
 
 /***** Debug Port *****/
+
 #ifdef DB_SERIAL_PORT
   #ifdef DB_CDC_SERIAL
     Serial_ *dbSerial = &(DB_SERIAL_PORT);
@@ -323,7 +365,6 @@ uint8_t pbPtr = 0;
  */
 union AR488conf{
   struct{
-//    uint8_t ew;       // EEPROM write indicator byte
     bool eot_en;      // Enable/disable append EOT char to string received from GPIB bus before sending to USB
     bool eoi;         // Assert EOI on last data char written to GPIB - 0-disable, 1-enable
     uint8_t cmode;    // Controller/device mode (0=unset, 1=device, 2=controller)
@@ -451,7 +492,11 @@ void setup() {
   arSerial->begin(AR_BT_BAUD);
 #else
   // Start the serial port
-  arSerial->begin(AR_SERIAL_BAUD);
+  #ifdef AR_SW_SERIAL
+    arSerial->begin(AR_SW_SERIAL_BAUD);
+  #else
+    arSerial->begin(AR_SERIAL_BAUD);
+  #endif
 #endif
 
 
@@ -832,8 +877,8 @@ bool isCmd(char *buffr) {
 
 /***** Is this an *idn? query? *****/
 bool isIdnQuery(char *buffr) {
-//  if (buffr[0] == PLUS && buffr[1] == PLUS) {
-  if (strncmp(buffr, "*idn?", 5)==0) {
+  // Check for upper or lower case *idn?
+  if (strncasecmp(buffr, "*idn?", 5)==0) {
 #ifdef DEBUG1
     dbSerial->println(F("isIdnQuery: Detected IDN query."));
 #endif
@@ -1042,7 +1087,7 @@ void getCmd(char *buffr) {
 #ifdef DEBUG1
     dbSerial->print("getCmd: found handler for: "); dbSerial->println(cmdHidx[i].token);
 #endif
-    // If command is relevant to controller mode then execute it
+    // If command is relevant to mode then execute it
     if (cmdHidx[i].opmode & AR488.cmode) {
       // If its a command with parameters
       // Copy command parameters to params and call handler with parameters
@@ -1473,7 +1518,7 @@ void loc_h(char *params) {
  * state
  */
 void ifc_h() {
-  if (AR488.cmode) {
+  if (AR488.cmode==2) {
     // Assert IFC
     setGpibState(0b00000000, 0b00000001, 0);
     delayMicroseconds(150);
@@ -2585,7 +2630,7 @@ void gpibSendData(char *data, uint8_t dsize) {
 
   }else{    // Device mode
     // Set control lines to idle
-    if (AR488.cmode == 1) setGpibControls(DIDS);
+    setGpibControls(DIDS);
   }
 
 #ifdef DEBUG3
@@ -2747,7 +2792,7 @@ bool gpibReceiveData() {
     }
 
     // Set controller back to idle state
-    if (AR488.cmode == 2) setGpibControls(CIDS);
+    setGpibControls(CIDS);
 
   } else {
     // Set device back to idle state

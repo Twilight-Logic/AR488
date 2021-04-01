@@ -635,6 +635,7 @@ void readyGpibDbus() {
   // Read the byte of data on the bus
   // DIO8 -> PORTD bit 7, DIO7 -> PORTE bit 5, DIO6-DIO1 -> PORTB bit 451326
 
+/*
 #ifdef MICRODEBUG
   Serial.print("B ");
   Serial.print(PINB & 0x7e, HEX);
@@ -645,6 +646,7 @@ void readyGpibDbus() {
   Serial.print(" value ");
   Serial.println(x);
 #endif
+*/
 }
 
 uint8_t readGpibDbus() {
@@ -669,12 +671,14 @@ void setGpibDbus(uint8_t db) {
   PORTB = (PORTB & ~0b01111110) | (db & 0b01111110) ;
   PORTD = (PORTD & ~0b10000001) | (db & 0b10000001);
 
+/*
 #ifdef MICRODEBUG
   Serial.print("bits B ");
   Serial.print(db & 0b01111110, HEX);
   Serial.print(", bits D ");
   Serial.println(db & 0b10000001, HEX);
 #endif
+*/
 }
 
 /***** Set the direction and state of the GPIB control lines *****/
