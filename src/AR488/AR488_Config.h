@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.49.12, 11/01/2021"
+#define FWVER "AR488 GPIB controller, ver. 0.49.14, 02/03/2021"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -82,9 +82,9 @@
 /*** MEGA 2560 board ***/
 #elif __AVR_ATmega2560__
   /*** Board/layout selection ***/
-  //#define AR488_MEGA2560_D
+  #define AR488_MEGA2560_D
   //#define AR488_MEGA2560_E1
-  #define AR488_MEGA2560_E2
+  //#define AR488_MEGA2560_E2
   /*** Serial ports ***/
   // Mega 2560 supports Serial, Serial1, Serial2, Serial3. Since the pins 
   // associated with Serial2 are used in the default pin layout, Serial2
@@ -104,8 +104,7 @@
 /*
  * Configure the SoftwareSerial TX/RX pins and baud rate here
  * Note: SoftwareSerial support conflicts with PCINT support
- * When using SoftwareSerial, disable USE_PCINTS and enable 
- * USE_PINHOOKS
+ * When using SoftwareSerial, disable USE_INTERRUPTS.
  */
 #ifdef AR_SW_SERIAL
   #define AR_SW_SERIAL_RX 53
@@ -122,10 +121,10 @@
 /***** Pin State Detection *****/
 /*
  * With UNO. NANO and MEGA boards with pre-defined layouts,
- * USE_PCINTS can be used.
- * With the AR488_CUSTOM layout and unknown boards, USE_PINHOOKS must  
- * be used. Interrupts are used on pre-defined AVR board layouts and will 
- * respond faster, however "pinhooks" (in-loop checking for state of pin) 
+ * USE_INTERRUPTS can and should be used.
+ * With the AR488_CUSTOM layout and unknown boards, USE_INTERRUPTS must  
+ * be commented out. Interrupts are used on pre-defined AVR board layouts 
+ * and will respond faster, however in-loop checking for state of pin states
  * can be supported with any board layout.
  */
 #ifdef __AVR__
@@ -159,7 +158,7 @@
  * This will require the use of an additional GPIO pin to control
  * the read and write modes of the ICs.
  */
-#define SN7516X
+//#define SN7516X
 #ifdef SN7516X
   #define SN7516X_TE 7
 //  #define SN7516X_DC 13
@@ -316,42 +315,22 @@ M3\n\
 /***** SERIAL PORT EXTERNAL DECLARATIONS *****/
 /******vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv******/
 
-#ifdef AR_CDC_SERIAL
-  extern Serial_ *arSerial;
-  #ifndef DB_SERIAL_PORT
-    extern Serial_ *dbSerial;
-  #endif
-#endif
-#ifdef AR_HW_SERIAL
-  extern HardwareSerial *arSerial;
-  #ifndef DB_SERIAL_PORT
-    extern HardwareSerial *dbSerial;
-  #endif
-#endif
-// Note: SoftwareSerial support conflicts with PCINT support
-#ifdef AR_SW_SERIAL
-  #include <SoftwareSerial.h>
-  extern SoftwareSerial *arSerial;
-  #ifndef DB_SERIAL_PORT
-    extern SoftwareSerial *dbSerial;
-  #endif
-#endif
 
-
-/***** Debug Port *****/
-#ifdef DB_SERIAL_PORT
-  #ifdef DB_CDC_SERIAL
-    extern Serial_ *dbSerial;
+#ifdef AR_BT_EN
+  #ifdef AR_CDC_SERIAL
+    Serial_ *btSerial = &(AR_SERIAL_PORT);
   #endif
-  #ifdef DB_HW_SERIAL
-    extern HardwareSerial *dbSerial;
+  #ifdef AR_HW_SERIAL
+    HardwareSerial *btSerial = &(AR_SERIAL_PORT);
   #endif
   // Note: SoftwareSerial support conflicts with PCINT support
-  #ifdef DB_SW_SERIAL
+  #ifdef AR_SW_SERIAL
     #include <SoftwareSerial.h>
-    extern SoftwareSerial *dbSerial;
+    SoftwareSerial btSerial(AR_SW_SERIAL_RX, AR_SW_SERIAL_TX);
+    SoftwareSerial *btSerial = &btSerial;
   #endif
 #endif
+
 
 /******^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^******/
 /***** SERIAL PORT EXTERNAL DECLARATIONS *****/
