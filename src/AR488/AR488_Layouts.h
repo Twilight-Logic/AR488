@@ -5,7 +5,7 @@
 
 #include "AR488_Config.h"
 
-/***** AR488_Hardware.h, ver. 0.49.08, 22/12/2020 *****/
+/***** AR488_Hardware.h, ver. 0.50.01, 15/04/2021 *****/
 /*
  * Hardware pin layout definitions
  */
@@ -267,6 +267,90 @@ uint8_t reverseBits(uint8_t dbyte);
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** LEONARDO R3 LAYOUT DEFINITION *****/
 /*****************************************/
+
+
+
+
+/*****************************************/
+/***** MCP23S17 IC LAYOUT DEFINITION *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef AR488_MCP23S17
+
+#include <SPI.h>
+
+
+/***** NOTE: MCP23S17 pinout last updated 06/04/2021 *****/
+//#define DIO1  GPB0  /* GPIB 1  : GPORTB bit 0 */
+//#define DIO2  GPB1  /* GPIB 2  : GPORTB bit 1 */
+//#define DIO3  GPB2  /* GPIB 3  : GPORTB bit 2 */
+//#define DIO4  GPB3  /* GPIB 4  : GPORTB bit 3 */
+//#define DIO5  GPB4  /* GPIB 13 : GPORTB bit 4 */
+//#define DIO6  GBB5  /* GPIB 14 : GPORTB bit 5 */
+//#define DIO7  GPB6  /* GPIB 15 : GPORTB bit 6 */
+//#define DIO8  GPB7  /* GPIB 16 : GPORTB bit 7 */
+
+// 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
+
+#define IFC    0  /* GPIB 9  : PORTB bit 0 */
+#define NDAC   1  /* GPIB 8  : PORTB bit 1 */
+#define NRFD   2  /* GPIB 7  : PORTB bit 2 */
+#define DAV    3  /* GPIB 6  : PORTD bit 3 */
+#define EOI    4  /* GPIB 5  : PORTC bit 4 */
+
+#define SRQ    6  /* GPIB 10 : PORTD bit 6 */
+#define REN    5  /* GPIB 17 : PORTD bit 5 */
+#define ATN    7  /* GPIB 11 : PORTE bit 7 */
+
+
+/***** MCP23S17 defines *****/
+// Direction registers
+#define MCPDIRA  0x00
+#define MCPDIRB  0x01
+
+// Configuration register
+#define MCPCON (0x0A)
+
+// Pullup state register
+#define MCPPUA 0x0C
+#define MCPPUB 0x0D
+
+// Port Register
+#define MCPPORTA 0x12
+#define MCPPORTB 0x13
+
+// Interrupt registers
+#define MCPINTENA 0x04    // Enable pin for interrupt on change (GPINTEN)
+#define MCPINTCONA 0x08   // Configure interrupt: 0 = compare against previous; 1 = compare against DEFVAL
+#define MCPINTFA 0x0E     // Flag that interrupt ocurred on pin (read-only)
+#define MCPINTCAPA 0x10   // Read the status of the pin (read-only)
+#define MCPINTPINA 2      // Pin assigned to catch MCP23S17 INTA on the Arduino controller
+
+// MCP opcodes
+#define MCPWRITE 0b01000000
+#define MCPREAD  0b01000001
+
+
+/***** PIN interrupts ******/
+
+// We cannot use interrupt registers
+#ifdef USE_INTERRUPTS
+  #undef USE_INTERRUPTS
+#endif
+
+// uint8_t reverseBits(uint8_t dbyte);
+
+void mcpIntHandler();
+uint8_t mcpByteRead(uint8_t reg);
+void mcpByteWrite(uint8_t reg, uint8_t db);
+uint8_t mcpDigitalRead(uint8_t pin);
+
+
+#endif // AR488_MCP23S17
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** MCP23S17 IC LAYOUT DEFINITION *****/
+/*****************************************/
+
+
 
 
 

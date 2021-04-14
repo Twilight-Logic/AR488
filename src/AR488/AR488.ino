@@ -12,14 +12,20 @@
 #include "AR488_Layouts.h"
 #include "AR488_Eeprom.h"
 
+/*
+#ifdef AR488_MCP23S17
+  #include <SPI.h>
+#endif
+*/
+
 #ifdef USE_INTERRUPTS
   #ifdef __AVR__
     #include <avr/interrupt.h>
   #endif
 #endif
+
 #ifdef E2END
   #include <EEPROM.h>
-  
 #endif
 
 #ifdef AR_BT_EN
@@ -27,7 +33,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.49.14, 02/03/2021" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.50.01, 13/04/2021" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -431,6 +437,11 @@ bool aTl = false;
 bool deviceAddressing = true;   // Suppress sending commands to address the instrument
 bool dataBufferFull = false;    // Flag when parse buffer is full
 
+// Interrupt flag for MCP23S17
+#ifdef AR488_MCP23S17
+extern volatile bool mcpIntA;  // MCP23S17 interrupt handler
+#endif
+
 // State flags set by interrupt being triggered
 extern volatile bool isATN;  // has ATN been asserted?
 extern volatile bool isSRQ;  // has SRQ been asserted?
@@ -472,6 +483,15 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);
 #endif
 
+  // Using MCP23S17 expander chip
+#ifdef AR488_MCP23S17
+  // AVR board interrupt for MCP23S17 to signal interrupt
+  attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
+  // Enable hardware address on the MCP23S17
+  mcpByteWrite(MCPCON, 0b00001000);
+#endif
+
+  // Using AVR board with PCINT interrupts
 #ifdef USE_INTERRUPTS
   // Turn on interrupts on port
   interruptsEn();
@@ -746,12 +766,14 @@ uint8_t serialIn_h() {
  */
 bool isAtnAsserted() {
 #ifdef USE_INTERRUPTS
-  if (isATN) return true;
+//  if (isATN) return true;
+  return isATN;
 #else
   // ATN is LOW when asserted
-  if (digitalRead(ATN) == LOW) return true;
+//  if (digitalRead(ATN) == LOW) return true;
+  return (digitalRead(ATN) == LOW) ? true : false;
 #endif
-  return false;
+//  return false;
 }
 
 
@@ -2667,7 +2689,7 @@ bool gpibReceiveData() {
     // Address device to talk
     if (addrDev(AR488.paddr, 1)) {
       if (isVerb) {
-        arSerial->print(F("Failed to address the device"));
+        arSerial->print(F("Failed to address device "));
         arSerial->print(AR488.paddr);
         arSerial->println(F(" to talk"));
       }

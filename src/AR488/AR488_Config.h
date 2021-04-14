@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.49.14, 02/03/2021"
+#define FWVER "AR488 GPIB controller, ver. 0.50.01, 13/04/2021"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -17,6 +17,13 @@
  * Only ONE board/layout should be selected per platform
  * Only ONE Serial port can be used to receive output
  */
+
+
+/*** MCP23S17 SPI Extender layout ***/
+/*
+ * Uncomment to use the MCP23S17 extender IC
+ */
+//#define AR488_MCP23S17
 
 
 /*** Custom layout ***/
@@ -49,9 +56,9 @@
   /* Board/layout selection */
   #define AR488_UNO
   //#define AR488_NANO
-  /*** Serial ports ***/
-  //Select HardwareSerial or SoftwareSerial (default = HardwareSerial) ***/
-  // The UNO/NANO default hardware port is 'Serial'
+  /*** Serial port type ***/
+  // Select hardware (AR_HW_SERIAL) or software (AR_SW_SERIAL) port
+  // UNO/NANO default = AR_HW_SERIAL (hardware serial port)
   // (Comment out #define AR_HW_SERIAL if using SoftwareSerial)
   #define AR_HW_SERIAL
   #ifdef AR_HW_SERIAL
@@ -67,7 +74,8 @@
   #define AR488_MEGA32U4_MICRO  // Artag's design for Micro board
   //#define AR488_MEGA32U4_LR3  // Leonardo R3 (same pin layout as Uno)
   /*** Serial ports ***/
-  // By default the CDC serial port is used
+  // Select hardware (AR_CDC_SERIAL) or hardware (AR_HW_SERIAL) port
+  // 32U4/Micro/Leonardo default = AR_HW_SERIAL (hardware serial port)
   // Comment out #define AR_CDC_SERIAL if using RXI, TXO pins
   #define AR_CDC_SERIAL
   #ifdef AR_CDC_SERIAL
@@ -82,16 +90,14 @@
 /*** MEGA 2560 board ***/
 #elif __AVR_ATmega2560__
   /*** Board/layout selection ***/
-  #define AR488_MEGA2560_D
+  //#define AR488_MEGA2560_D
   //#define AR488_MEGA2560_E1
   //#define AR488_MEGA2560_E2
+  #define AR488_MCP23S17
   /*** Serial ports ***/
   // Mega 2560 supports Serial, Serial1, Serial2, Serial3. Since the pins 
   // associated with Serial2 are used in the default pin layout, Serial2
   // is unavailable. The default port is 'Serial'. Choose ONE port only.
-/*  
-  // and associated SERIALEVENT definition
-*/
   #define AR_HW_SERIAL
   #define AR_SERIAL_PORT Serial
   //#define AR_SERIAL_PORT Serial1
@@ -99,6 +105,21 @@
 
 #endif  // Board/layout selection
 
+
+/***** Hardware serial ports *****/
+/*
+ *  Select the hardware serial port 
+ */
+/*
+ #ifdef AR_HW_SERIAL
+  // All common to all boards except 32U4 (default)
+  #define AR_SERIAL_PORT Serial
+  // 32U4 board and Mega 2560 (optional)
+  //#define AR_SERIAL_PORT Serial1
+  // Mega 2560 (optional)
+  //#define AR_SERIAL_PORT Serial3
+#endif
+*/
 
 /***** Software Serial Support *****/
 /*
@@ -131,7 +152,9 @@
   // For supported boards use interrupt handlers
   #if defined (AR488_UNO) || defined (AR488_NANO) || defined (AR488_MEGA2560) || defined (AR488_MEGA32U4)
     #ifndef AR488_CUSTOM
-      #define USE_INTERRUPTS
+      #ifndef AR488_MCP23S17
+        #define USE_INTERRUPTS
+      #endif
     #endif
   #endif
 #endif
@@ -151,6 +174,16 @@
 //#define USE_MACROS    // Enable the macro feature
 //#define RUN_STARTUP   // Run MACRO_0 (the startup macro)
 
+
+/***** Enable MCP23S17 chip *****/
+/*
+ * 
+ */
+#ifdef AR488_MCP23S17
+  #define MCP_ADDRESS   0
+  #define MCP_SELECTPIN 8
+  #define MCP_INTERRUPT 2
+#endif
 
 /***** Enable SN7516x chips *****/
 /*

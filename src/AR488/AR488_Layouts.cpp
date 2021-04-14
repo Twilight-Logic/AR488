@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.49.08, 22/12/2020 *****/
+/***** AR488_Hardware.cpp, ver. 0.50.01, 13/04/2021 *****/
 /*
  * Hardware layout function definitions
  */
@@ -937,6 +937,168 @@ void interruptsEn(){
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** LEONARDO R3 BOARD LAYOUT *****/
 /************************************/
+
+
+
+
+/***************************************/
+/***** MCP23S17 EXPANDER IC LAYOUT *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef AR488_MCP23S17
+
+
+// MCP23S17 hardware config
+const uint8_t chipSelect = MCP_SELECTPIN;
+const uint8_t mcpArrd = MCP_ADDRESS;      // Must be between 0 and 7
+
+/***** Arduino interrput handler *****/
+/*
+ * Signals that IntA was asserted on the MCP chip
+ */
+bool mcpIntA = false;
+//attachInterrupt(digitalPinToInterrupt(2), mcpIntHandler, FALLING);
+
+
+/***** Read the status of the GPIB data bus wires and collect the byte of data *****/
+void readyGpibDbus() {
+  // Set data pins to input
+  mcpByteWrite(MCPDIRB, 0b11111111);  // Port direction: 0 = output; 1 = input;
+  mcpByteWrite(MCPPUB, 0b11111111);   // 1 = Pullup resistors enabled
+}
+
+uint8_t readGpibDbus() {
+  // Read the byte of data on the bus
+  return mcpByteRead(MCPPORTB);
+}
+
+
+/***** Set the status of the GPIB data bus wires with a byte of datacd ~/test *****/
+void setGpibDbus(uint8_t db) {
+  // Set data pins as outputs
+  mcpByteWrite(MCPDIRB, 0b00000000);  // Port direction: 0 = output; 1 = input;
+
+  // GPIB states are inverted
+  db = ~db;
+
+  // Set data bus
+  mcpByteWrite(MCPPORTB, db);
+}
+
+
+/***** Set the direction and state of the GPIB control lines ****/
+/*
+   Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
+    bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
+    mask (mask)     : 0=unaffected, 1=enabled
+    mode (mode)     : 0=set pin state, 1=set pin direction
+   Arduino Uno/Nano pin to Port/bit to direction/state byte map:
+   IFC   0   PORTB bit 0 byte bit 0
+   NDAC  1   PORTB bit 1 byte bit 1
+   NRFD  2   PORTB bit 2 byte bit 2
+   DAV   3   PORTB bit 3 byte bit 3
+   EOI   4   PORTB bit 4 byte bit 4
+   REN   5   PORTD bit 5 byte bit 5
+   SRQ   6   PORTD bit 6 byte bit 6
+   ATN   7   PORTD bit 7 byte bit 7
+*/
+
+void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
+
+/*
+  // PORTB - use only the first (right-most) 5 bits (pins 8-12)
+  uint8_t portBb = bits & 0x1F;
+  uint8_t portBm = mask & 0x1F;
+  // PORT D - keep bit 7, rotate bit 6 right 4 positions to set bit 2 on register
+  uint8_t portDb = (bits & 0x80) + ((bits & 0x40) >> 4) + ((bits & 0x20) >> 2);
+  uint8_t portDm = (mask & 0x80) + ((mask & 0x40) >> 4) + ((mask & 0x20) >> 2);
+*/
+
+  uint8_t portAb = bits;
+  uint8_t portAm = mask;
+
+  uint8_t regByte = 0;
+  uint8_t regMod = 0; 
+
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  switch (mode) {
+    case 0:
+
+      // Set pin states using mask
+//      PORTB = ( (PORTB & ~portBm) | (portBb & portBm) );
+//      PORTD = ( (PORTD & ~portDm) | (portDb & portDm) );
+      regByte = mcpByteRead(MCPPORTA);
+      regMod = (regByte & ~portAm) | (portAb & portAm);
+      mcpByteWrite(MCPPORTB, regMod);
+
+      
+      break;
+    case 1:
+      // Set pin direction registers using mask
+//      DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
+//      DDRD = ( (DDRD & ~portDm) | (portDb & portDm) );
+      regByte = ~mcpByteRead(MCPDIRA);   // Note: on MCP23S17 0 = output, 1 = input
+      regMod = (regByte & ~portAm) | (portAb & portAm);
+      mcpByteWrite(MCPDIRA, ~regMod);    // Note: on MCP23S17 0 = output, 1 = input
+      break;
+  }
+}
+
+
+/***** MCP23S17 interrupt handler *****/
+/*
+ * Interrput pin on Arduino configure with attachInterrupt
+ */
+void mcpIntHandler() {
+  mcpIntA = true;
+}
+
+
+
+//#endif //USE_INTERRUPTS
+
+
+/***** Read from the MCP23S17 *****/
+/*
+ * reg : register we want to read , e.g. MCPPORTA or MCPPORTB
+ */
+uint8_t mcpByteRead(uint8_t reg){
+  uint8_t db;
+  digitalWrite(chipSelect, LOW);                // Enable MCP communication
+  SPI.transfer(MCPREAD | (MCP_ADDRESS << 1));   // Write opcode + chip address + write bit
+  SPI.transfer(reg);                            // Write the port we want to read
+  db = SPI.transfer(0x00);                      // Send any byte. Function returns low byte (port A value) which is ignored
+  digitalWrite(chipSelect, HIGH);               // Enable MCP communication
+  return db;
+}
+
+
+/***** Write to the MCP23S17 *****/
+void mcpByteWrite(uint8_t reg, uint8_t db){
+  digitalWrite(chipSelect, LOW);                // Enable MCP communication
+  SPI.transfer(MCPWRITE | (MCP_ADDRESS << 1));  // Write opcode (with write bit set) + chip address
+  SPI.transfer(reg);                            // Write register
+  SPI.transfer(db);                             // Write data byte
+  digitalWrite(chipSelect, HIGH);               // Stop MCP communication
+}
+
+
+/***** Read status of control port pins *****/
+/*
+ * Pin value between 1 - 8 (port A = control port)
+ */
+uint8_t mcpDigitalRead(uint8_t pin) {
+    if ((pin < 1) | (pin > 8)) return 0;                          // If the pin value is not valid (1-8) return, do nothing and return
+    return mcpByteRead(MCPPORTA) & (1 << (pin - 1)) ? HIGH : LOW; // Call the word reading function, extract HIGH/LOW information from the requested pin
+}
+
+
+
+#endif //AR488_MCP23S17
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** MCP23S17 EXPANDER IC LAYOUT *****/
+/***************************************/
 
 
 
