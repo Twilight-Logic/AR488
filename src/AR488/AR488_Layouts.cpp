@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.50.01, 13/04/2021 *****/
+/***** AR488_Hardware.cpp, ver. 0.50.02, 14/04/2021 *****/
 /*
  * Hardware layout function definitions
  */
@@ -1076,11 +1076,20 @@ uint8_t mcpByteRead(uint8_t reg){
 
 /***** Write to the MCP23S17 *****/
 void mcpByteWrite(uint8_t reg, uint8_t db){
+Serial.begin(115200);
+Serial.print(F("Chip select pin: "));
+Serial.println(chipSelect);
+Serial.print(F("Register to write: "));
+Serial.println(reg);
+Serial.print(F("Value to write: "));
+Serial.println(db, BIN);
   digitalWrite(chipSelect, LOW);                // Enable MCP communication
   SPI.transfer(MCPWRITE | (MCP_ADDRESS << 1));  // Write opcode (with write bit set) + chip address
-  SPI.transfer(reg);                            // Write register
-  SPI.transfer(db);                             // Write data byte
+//  SPI.transfer(reg);                            // Write register
+//  SPI.transfer(db);                             // Write data byte
   digitalWrite(chipSelect, HIGH);               // Stop MCP communication
+Serial.println(F("Byte written."));
+Serial.flush();
 }
 
 
@@ -1093,6 +1102,11 @@ uint8_t mcpDigitalRead(uint8_t pin) {
     return mcpByteRead(MCPPORTA) & (1 << (pin - 1)) ? HIGH : LOW; // Call the word reading function, extract HIGH/LOW information from the requested pin
 }
 
+
+/***** Get the status of an MCP23S17 pin) *****/
+uint8_t getGpibPinState(uint8_t pin){
+  return mcpDigitalRead(pin);
+}
 
 
 #endif //AR488_MCP23S17
@@ -1171,3 +1185,19 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** CUSTOM PIN LAYOUT SECTION *****/
 /*************************************/
+
+
+
+/************************************/
+/***** COMMON FUNCTIONS SECTION *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvv *****/
+
+#ifndef AR488_MCP23S17
+uint8_t getGpibPinState(uint8_t pin){
+  return digitalRead(pin);
+}
+#endif
+
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** COMMON FUNCTIONS SECTION *****/
+/************************************/

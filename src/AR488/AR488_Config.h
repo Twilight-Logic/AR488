@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.50.01, 13/04/2021"
+#define FWVER "AR488 GPIB controller, ver. 0.50.02, 14/04/2021"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -212,7 +212,7 @@
 
 
 /***** Acknowledge interface is ready *****/
-//#define SAY_HELLO
+#define SAY_HELLO
 
 /***** Debug options *****/
 // Uncomment to send debug messages to another port

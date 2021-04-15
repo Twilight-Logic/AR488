@@ -5,7 +5,7 @@
 
 #include "AR488_Config.h"
 
-/***** AR488_Hardware.h, ver. 0.50.01, 15/04/2021 *****/
+/***** AR488_Hardware.h, ver. 0.50.02, 14/04/2021 *****/
 /*
  * Hardware pin layout definitions
  */
@@ -362,6 +362,7 @@ void readyGpibDbus();
 uint8_t readGpibDbus();
 void setGpibDbus(uint8_t db);
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode);
+uint8_t getGpibPinState(uint8_t pin);
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** GLOBAL DEFINITIONS SECTION *****/

@@ -12,11 +12,6 @@
 #include "AR488_Layouts.h"
 #include "AR488_Eeprom.h"
 
-/*
-#ifdef AR488_MCP23S17
-  #include <SPI.h>
-#endif
-*/
 
 #ifdef USE_INTERRUPTS
   #ifdef __AVR__
@@ -33,7 +28,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.50.01, 13/04/2021" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.50.02, 14/04/2021" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -491,6 +486,7 @@ void setup() {
   mcpByteWrite(MCPCON, 0b00001000);
 #endif
 
+
   // Using AVR board with PCINT interrupts
 #ifdef USE_INTERRUPTS
   // Turn on interrupts on port
@@ -518,7 +514,6 @@ void setup() {
     arSerial->begin(AR_SERIAL_BAUD);
   #endif
 #endif
-
 
 // Un-comment for diagnostic purposes
 /* 
@@ -580,11 +575,14 @@ void setup() {
   }
 #endif
 
+arSerial->println(F("S7516x support done..."));
+
+
   // Initialize the interface in device mode
-  if (AR488.cmode == 1) initDevice();
+//  if (AR488.cmode == 1) initDevice();
 
   // Initialize the interface in controller mode
-  if (AR488.cmode == 2) initController();
+//  if (AR488.cmode == 2) initController();
 
   isATN = false;
   isSRQ = false;
@@ -3038,14 +3036,16 @@ bool uaddrDev() {
 boolean Wait_on_pin_state(uint8_t state, uint8_t pin, int interval) {
 
   unsigned long timeout = millis() + interval;
-  bool atnStat = (digitalRead(ATN) ? false : true); // Set to reverse - asserted=true; unasserted=false;
+//  bool atnStat = (digitalRead(ATN) ? false : true); // Set to reverse - asserted=true; unasserted=false;
+  bool atnStat = ((getGpibPinState(ATN)==LOW) ? true : false);
 
-  while (digitalRead(pin) != state) {
+//  while (digitalRead(pin) != state) {
+  while (getGpibPinState(pin) != state) {
     // Check timer
     if (millis() >= timeout) return true;
     // ATN status was asserted but now unasserted so abort
-    if (atnStat && (digitalRead(ATN)==HIGH)) return true;
-    //    if (digitalRead(EOI)==LOW) tranBrk = 2;
+//    if (atnStat && (digitalRead(ATN)==HIGH)) return true;
+    if (atnStat && (getGpibPinState(ATN)==HIGH)) return true;
   }
   return false;        // = no timeout therefore succeeded!
 }
