@@ -5,7 +5,7 @@
 
 #include "AR488_Config.h"
 
-/***** AR488_Hardware.h, ver. 0.50.02, 14/04/2021 *****/
+/***** AR488_Hardware.h, ver. 0.50.03, 15/04/2021 *****/
 /*
  * Hardware pin layout definitions
  */
@@ -270,14 +270,12 @@ uint8_t reverseBits(uint8_t dbyte);
 
 
 
-
 /*****************************************/
 /***** MCP23S17 IC LAYOUT DEFINITION *****/
 /***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
 #ifdef AR488_MCP23S17
 
 #include <SPI.h>
-
 
 /***** NOTE: MCP23S17 pinout last updated 06/04/2021 *****/
 //#define DIO1  GPB0  /* GPIB 1  : GPORTB bit 0 */
@@ -349,8 +347,6 @@ uint8_t mcpDigitalRead(uint8_t pin);
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MCP23S17 IC LAYOUT DEFINITION *****/
 /*****************************************/
-
-
 
 
 

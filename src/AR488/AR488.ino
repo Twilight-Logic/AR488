@@ -1,3 +1,5 @@
+#include <EEPROM.h>
+
 //#pragma GCC diagnostic push
 //#pragma GCC diagnostic ignored "-Wtype-limits"
 //#pragma GCC diagnostic ignored "-Wunused-variable"
@@ -28,7 +30,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.50.02, 14/04/2021" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.50.03, 15/04/2021" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -482,8 +484,16 @@ void setup() {
 #ifdef AR488_MCP23S17
   // AVR board interrupt for MCP23S17 to signal interrupt
   attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
-  // Enable hardware address on the MCP23S17
+  // Ensure the MCP select pin is set as an OUPTPUT and is HIGH
+  pinMode(MCP_SELECTPIN, OUTPUT);
+  digitalWrite(MCP_SELECTPIN, HIGH);
+  // Enable SPI
+  SPI.begin();
+  // Clock divider (slow down the bus speed [optional])
+  SPI.setClockDivider(SPI_CLOCK_DIV8);
+  // Enable the hardware address on the MCP23S17
   mcpByteWrite(MCPCON, 0b00001000);
+
 #endif
 
 
@@ -515,6 +525,9 @@ void setup() {
   #endif
 #endif
 
+Serial.println(F("Serial initialised."));
+
+
 // Un-comment for diagnostic purposes
 /* 
   #if defined(__AVR_ATmega32U4__)
@@ -534,6 +547,9 @@ void setup() {
   // Initialise
   initAR488();
 
+Serial.println(F("AR488 initialised."));
+
+
 #ifdef E2END
   // Read data from non-volatile memory
   //(will only read if previous config has already been saved)
@@ -547,6 +563,9 @@ void setup() {
     }
   }
 #endif
+
+Serial.println(F("EEPROM initialised."));
+
 
   // SN7516x IC support
 #ifdef SN7516X
@@ -575,9 +594,6 @@ void setup() {
   }
 #endif
 
-arSerial->println(F("S7516x support done..."));
-
-
   // Initialize the interface in device mode
 //  if (AR488.cmode == 1) initDevice();
 
@@ -593,8 +609,15 @@ arSerial->println(F("S7516x support done..."));
 #endif
 
 #ifdef SAY_HELLO
-  arSerial->println(F("AR488 ready."));
+  arSerial->print(F("AR488 ready "));
+  if (AR488.cmode==2){
+    arSerial->println(F("(controller)."));
+  }else{
+    arSerial->println(F("(device)."));
+  }
 #endif
+
+Serial.flush();
 
 }
 /****** End of Arduino standard SETUP procedure *****/
@@ -615,11 +638,16 @@ void loop() {
   }
 #endif
 
+/***** MCP23S17 *****/
+#ifdef AR488_MCP23S17 
+  chkMcpInterrupt();
+#endif
+
 /*** Pin Hooks ***/
 /*
  * Not all boards support interrupts or have PCINTs. In this
- * case, use in-loop checking to detect when SRQ and ATN have 
- * been signalled
+ * case, in-loop checking is used to detect when SRQ and ATN 
+ * have been signalled
  */
 #ifndef USE_INTERRUPTS
   isATN = (digitalRead(ATN)==LOW ? true : false);
@@ -677,7 +705,7 @@ void loop() {
     }else if (isRO) {
       lonMode();
     }else{
-      if (isATN) attnRequired();
+//      if (isATN) attnRequired();
       if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
     }
   }
@@ -774,6 +802,16 @@ bool isAtnAsserted() {
 //  return false;
 }
 
+
+#ifdef AR488_MCP23S17
+void chkMcpInterrupt(){
+  if (mcpIntA) {
+    /*
+     * Read the interrupt register and confirm whether ATN or SRQ flagged
+     */
+  }
+}
+#endif
 
 /*************************************/
 /***** Device operation routines *****/
@@ -2168,24 +2206,41 @@ void xdiag_h(char *params){
       val = atoi(param);
     }
 
-    if (mode) {   // Control bus
-      // Set to required state
-      setGpibState(0xFF, 0xFF, 1);  // Set direction
-      setGpibState(~val, 0xFF, 0);  // Set state (low=asserted so must be inverse of value)
-      // Reset after 10 seconds
-      delay(10000);
-      if (AR488.cmode==2) {
-        setGpibControls(CINI);
-      }else{
-        setGpibControls(DINI);
-      }
-    }else{        // Data bus
-      // Set to required value
-      setGpibDbus(val);
-      // Reset after 10 seconds
-      delay(10000);
-      setGpibDbus(0);
+    switch (mode) {
+      case 0:
+          // Set to required value
+          setGpibDbus(val);
+          // Reset after 10 seconds
+          delay(10000);
+          setGpibDbus(0);
+          break;
+      case 1:
+          // Set to required state
+          setGpibState(0xFF, 0xFF, 1);  // Set direction
+          setGpibState(~val, 0xFF, 0);  // Set state (low=asserted so must be inverse of value)
+          // Reset after 10 seconds
+          delay(10000);
+          if (AR488.cmode==2) {
+            setGpibControls(CINI);
+          }else{
+            setGpibControls(DINI);
+          }
+          break;
+#ifdef AR488_MCP23S17
+      case 2:
+        // MCP23S17 direction
+        mcpByteWrite(MCPDIRA, 0b00000000);  // Port direction: 0 = output; 1 = input;
+        mcpByteWrite(MCPPORTA, val);
+        break;
+#endif
     }
+/*
+    if (mode) {   // Control bus
+
+    }else{        // Data bus
+
+    }
+*/
   }
 
 }
@@ -3046,6 +3101,7 @@ boolean Wait_on_pin_state(uint8_t state, uint8_t pin, int interval) {
     // ATN status was asserted but now unasserted so abort
 //    if (atnStat && (digitalRead(ATN)==HIGH)) return true;
     if (atnStat && (getGpibPinState(ATN)==HIGH)) return true;
+    delayMicroseconds(100);
   }
   return false;        // = no timeout therefore succeeded!
 }

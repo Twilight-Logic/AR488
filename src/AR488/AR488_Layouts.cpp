@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.50.02, 14/04/2021 *****/
+/***** AR488_Hardware.cpp, ver. 0.50.03, 15/04/2021 *****/
 /*
  * Hardware layout function definitions
  */
@@ -949,7 +949,7 @@ void interruptsEn(){
 
 // MCP23S17 hardware config
 const uint8_t chipSelect = MCP_SELECTPIN;
-const uint8_t mcpArrd = MCP_ADDRESS;      // Must be between 0 and 7
+const uint8_t mcpAddr = MCP_ADDRESS;      // Must be between 0 and 7
 
 /***** Arduino interrput handler *****/
 /*
@@ -991,15 +991,15 @@ void setGpibDbus(uint8_t db) {
     bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
     mask (mask)     : 0=unaffected, 1=enabled
     mode (mode)     : 0=set pin state, 1=set pin direction
-   Arduino Uno/Nano pin to Port/bit to direction/state byte map:
-   IFC   0   PORTB bit 0 byte bit 0
-   NDAC  1   PORTB bit 1 byte bit 1
-   NRFD  2   PORTB bit 2 byte bit 2
-   DAV   3   PORTB bit 3 byte bit 3
-   EOI   4   PORTB bit 4 byte bit 4
-   REN   5   PORTD bit 5 byte bit 5
-   SRQ   6   PORTD bit 6 byte bit 6
-   ATN   7   PORTD bit 7 byte bit 7
+   MCP23S17 pin to Port/bit to direction/state byte map:
+   IFC   0   PORTA bit 0 byte bit 0
+   NDAC  1   PORTA bit 1 byte bit 1
+   NRFD  2   PORTA bit 2 byte bit 2
+   DAV   3   PORTA bit 3 byte bit 3
+   EOI   4   PORTA bit 4 byte bit 4
+   REN   5   PORTA bit 5 byte bit 5
+   SRQ   6   PORTA bit 6 byte bit 6
+   ATN   7   PORTA bit 7 byte bit 7
 */
 
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
@@ -1011,6 +1011,33 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
   // PORT D - keep bit 7, rotate bit 6 right 4 positions to set bit 2 on register
   uint8_t portDb = (bits & 0x80) + ((bits & 0x40) >> 4) + ((bits & 0x20) >> 2);
   uint8_t portDm = (mask & 0x80) + ((mask & 0x40) >> 4) + ((mask & 0x20) >> 2);
+
+  switch (mode) {
+
+    case 0:
+
+      PORTB = ( (PORTB & ~portBm) | (portBb & portBm) );
+      PORTD = ( (PORTD & ~portDm) | (portDb & portDm) );
+      break;
+
+    case 1:
+
+      DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
+      DDRD = ( (DDRD & ~portDm) | (portDb & portDm) );
+      break;
+
+  }
+
+*/
+
+
+/*
+Serial.print(F("Set state - bits: "));
+Serial.println(bits, BIN);
+Serial.print(F("Set state - mask: "));
+Serial.println(mask, BIN);
+Serial.print(F("Set state - mode: "));
+Serial.println(mode, BIN);
 */
 
   uint8_t portAb = bits;
@@ -1019,6 +1046,7 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
   uint8_t regByte = 0;
   uint8_t regMod = 0; 
 
+
   // Set registers: register = (register & ~bitmask) | (value & bitmask)
   // Mask: 0=unaffected; 1=to be changed
 
@@ -1026,23 +1054,20 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
     case 0:
 
       // Set pin states using mask
-//      PORTB = ( (PORTB & ~portBm) | (portBb & portBm) );
-//      PORTD = ( (PORTD & ~portDm) | (portDb & portDm) );
       regByte = mcpByteRead(MCPPORTA);
       regMod = (regByte & ~portAm) | (portAb & portAm);
-      mcpByteWrite(MCPPORTB, regMod);
-
-      
+      mcpByteWrite(MCPPORTA, regMod);
       break;
+
     case 1:
       // Set pin direction registers using mask
-//      DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
-//      DDRD = ( (DDRD & ~portDm) | (portDb & portDm) );
       regByte = ~mcpByteRead(MCPDIRA);   // Note: on MCP23S17 0 = output, 1 = input
       regMod = (regByte & ~portAm) | (portAb & portAm);
       mcpByteWrite(MCPDIRA, ~regMod);    // Note: on MCP23S17 0 = output, 1 = input
       break;
+
   }
+  
 }
 
 
@@ -1055,10 +1080,6 @@ void mcpIntHandler() {
 }
 
 
-
-//#endif //USE_INTERRUPTS
-
-
 /***** Read from the MCP23S17 *****/
 /*
  * reg : register we want to read , e.g. MCPPORTA or MCPPORTB
@@ -1066,7 +1087,7 @@ void mcpIntHandler() {
 uint8_t mcpByteRead(uint8_t reg){
   uint8_t db;
   digitalWrite(chipSelect, LOW);                // Enable MCP communication
-  SPI.transfer(MCPREAD | (MCP_ADDRESS << 1));   // Write opcode + chip address + write bit
+  SPI.transfer(MCPREAD | (mcpAddr << 1));   // Write opcode + chip address + write bit
   SPI.transfer(reg);                            // Write the port we want to read
   db = SPI.transfer(0x00);                      // Send any byte. Function returns low byte (port A value) which is ignored
   digitalWrite(chipSelect, HIGH);               // Enable MCP communication
@@ -1076,20 +1097,11 @@ uint8_t mcpByteRead(uint8_t reg){
 
 /***** Write to the MCP23S17 *****/
 void mcpByteWrite(uint8_t reg, uint8_t db){
-Serial.begin(115200);
-Serial.print(F("Chip select pin: "));
-Serial.println(chipSelect);
-Serial.print(F("Register to write: "));
-Serial.println(reg);
-Serial.print(F("Value to write: "));
-Serial.println(db, BIN);
   digitalWrite(chipSelect, LOW);                // Enable MCP communication
-  SPI.transfer(MCPWRITE | (MCP_ADDRESS << 1));  // Write opcode (with write bit set) + chip address
-//  SPI.transfer(reg);                            // Write register
-//  SPI.transfer(db);                             // Write data byte
+  SPI.transfer(MCPWRITE | (mcpAddr << 1));  // Write opcode (with write bit set) + chip address
+  SPI.transfer(reg);                            // Write register
+  SPI.transfer(db);                             // Write data byte
   digitalWrite(chipSelect, HIGH);               // Stop MCP communication
-Serial.println(F("Byte written."));
-Serial.flush();
 }
 
 
