@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.50.03, 15/04/2021 *****/
+/***** AR488_Hardware.cpp, ver. 0.50.05, 23/04/2021 *****/
 /*
  * Hardware layout function definitions
  */
@@ -951,6 +951,7 @@ void interruptsEn(){
 const uint8_t chipSelect = MCP_SELECTPIN;
 const uint8_t mcpAddr = MCP_ADDRESS;      // Must be between 0 and 7
 
+
 /***** Arduino interrput handler *****/
 /*
  * Signals that IntA was asserted on the MCP chip
@@ -959,16 +960,18 @@ bool mcpIntA = false;
 //attachInterrupt(digitalPinToInterrupt(2), mcpIntHandler, FALLING);
 
 
-/***** Read the status of the GPIB data bus wires and collect the byte of data *****/
+/***** Ready the GPIB data bus wires to receive data *****/
 void readyGpibDbus() {
   // Set data pins to input
   mcpByteWrite(MCPDIRB, 0b11111111);  // Port direction: 0 = output; 1 = input;
   mcpByteWrite(MCPPUB, 0b11111111);   // 1 = Pullup resistors enabled
 }
 
+
+/***** Read the status of the GPIB data bus wires and collect the byte of data *****/
 uint8_t readGpibDbus() {
   // Read the byte of data on the bus
-  return mcpByteRead(MCPPORTB);
+  return ~mcpByteRead(MCPPORTB);
 }
 
 
@@ -1004,42 +1007,6 @@ void setGpibDbus(uint8_t db) {
 
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
-/*
-  // PORTB - use only the first (right-most) 5 bits (pins 8-12)
-  uint8_t portBb = bits & 0x1F;
-  uint8_t portBm = mask & 0x1F;
-  // PORT D - keep bit 7, rotate bit 6 right 4 positions to set bit 2 on register
-  uint8_t portDb = (bits & 0x80) + ((bits & 0x40) >> 4) + ((bits & 0x20) >> 2);
-  uint8_t portDm = (mask & 0x80) + ((mask & 0x40) >> 4) + ((mask & 0x20) >> 2);
-
-  switch (mode) {
-
-    case 0:
-
-      PORTB = ( (PORTB & ~portBm) | (portBb & portBm) );
-      PORTD = ( (PORTD & ~portDm) | (portDb & portDm) );
-      break;
-
-    case 1:
-
-      DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
-      DDRD = ( (DDRD & ~portDm) | (portDb & portDm) );
-      break;
-
-  }
-
-*/
-
-
-/*
-Serial.print(F("Set state - bits: "));
-Serial.println(bits, BIN);
-Serial.print(F("Set state - mask: "));
-Serial.println(mask, BIN);
-Serial.print(F("Set state - mode: "));
-Serial.println(mode, BIN);
-*/
-
   uint8_t portAb = bits;
   uint8_t portAm = mask;
 
@@ -1067,7 +1034,6 @@ Serial.println(mode, BIN);
       break;
 
   }
-  
 }
 
 
@@ -1086,32 +1052,36 @@ void mcpIntHandler() {
  */
 uint8_t mcpByteRead(uint8_t reg){
   uint8_t db;
-  digitalWrite(chipSelect, LOW);                // Enable MCP communication
+  digitalWrite(chipSelect, LOW);            // Enable MCP communication
   SPI.transfer(MCPREAD | (mcpAddr << 1));   // Write opcode + chip address + write bit
-  SPI.transfer(reg);                            // Write the port we want to read
-  db = SPI.transfer(0x00);                      // Send any byte. Function returns low byte (port A value) which is ignored
-  digitalWrite(chipSelect, HIGH);               // Enable MCP communication
+  SPI.transfer(reg);                        // Write the register we want to read
+  db = SPI.transfer(0x00);                  // Send any byte. Function returns low byte (port A value) which is ignored
+  digitalWrite(chipSelect, HIGH);           // Enable MCP communication
   return db;
 }
 
 
 /***** Write to the MCP23S17 *****/
 void mcpByteWrite(uint8_t reg, uint8_t db){
-  digitalWrite(chipSelect, LOW);                // Enable MCP communication
+  digitalWrite(chipSelect, LOW);            // Enable MCP communication
   SPI.transfer(MCPWRITE | (mcpAddr << 1));  // Write opcode (with write bit set) + chip address
-  SPI.transfer(reg);                            // Write register
-  SPI.transfer(db);                             // Write data byte
-  digitalWrite(chipSelect, HIGH);               // Stop MCP communication
+  SPI.transfer(reg);                        // Write register we want to change
+  SPI.transfer(db);                         // Write data byte
+  digitalWrite(chipSelect, HIGH);           // Stop MCP communication
 }
 
 
 /***** Read status of control port pins *****/
 /*
- * Pin value between 1 - 8 (port A = control port)
+ * Pin value between 0 and 7
+ * Control bus = port A)
  */
 uint8_t mcpDigitalRead(uint8_t pin) {
-    if ((pin < 1) | (pin > 8)) return 0;                          // If the pin value is not valid (1-8) return, do nothing and return
-    return mcpByteRead(MCPPORTA) & (1 << (pin - 1)) ? HIGH : LOW; // Call the word reading function, extract HIGH/LOW information from the requested pin
+  // If the pin value is larger than 7 then do nothing and return
+  // Zero or larger value is implied by the variable type
+  if (pin > 7) return 0x0;
+  // Read the port A pint state, extract and return HIGH/LOW state for the requested pin
+  return mcpByteRead(MCPPORTA) & (1 << pin) ? HIGH : LOW;
 }
 
 
@@ -1120,6 +1090,17 @@ uint8_t getGpibPinState(uint8_t pin){
   return mcpDigitalRead(pin);
 }
 
+
+uint8_t getMcpIntAPinState(){
+  return mcpByteRead(MCPINTCAPA);
+}
+
+void mcpInterruptsEn(){
+  // Set to interrupt mode for compare to previous
+  mcpByteWrite(MCPINTCONA, 0b00000000);
+  // Enable interrupt to detect pin state change on pins 4, 6 and 7 (EOI, SRQ and ATN)
+  mcpByteWrite(MCPINTENA, 0b11010000);
+}
 
 #endif //AR488_MCP23S17
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/

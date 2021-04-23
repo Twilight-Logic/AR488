@@ -30,8 +30,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.50.03, 15/04/2021" *****/
-
+/***** FWVER "AR488 GPIB controller, ver. 0.50.05, 23/04/2021" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -482,20 +481,20 @@ void setup() {
 
   // Using MCP23S17 expander chip
 #ifdef AR488_MCP23S17
-  // AVR board interrupt for MCP23S17 to signal interrupt
-  attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
-  // Ensure the MCP select pin is set as an OUPTPUT and is HIGH
-  pinMode(MCP_SELECTPIN, OUTPUT);
-  digitalWrite(MCP_SELECTPIN, HIGH);
   // Enable SPI
   SPI.begin();
   // Clock divider (slow down the bus speed [optional])
   SPI.setClockDivider(SPI_CLOCK_DIV8);
-  // Enable the hardware address on the MCP23S17
+  // Ensure the MCP select pin is set as an OUPTPUT and is HIGH
+  pinMode(MCP_SELECTPIN, OUTPUT);
+  digitalWrite(MCP_SELECTPIN, HIGH);
+  // Enable MCP23S17 interrupts
+  mcpInterruptsEn();
+  // Attach interrupt handler to Arduino board pin for MCP23S17 to signal interrupt has occurred
+  attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
+  // Enable the hardware address (0) on the MCP23S17
   mcpByteWrite(MCPCON, 0b00001000);
-
 #endif
-
 
   // Using AVR board with PCINT interrupts
 #ifdef USE_INTERRUPTS
@@ -525,9 +524,6 @@ void setup() {
   #endif
 #endif
 
-Serial.println(F("Serial initialised."));
-
-
 // Un-comment for diagnostic purposes
 /* 
   #if defined(__AVR_ATmega32U4__)
@@ -543,12 +539,8 @@ Serial.println(F("Serial initialised."));
 */
 // Un-comment for diagnostic purposes
 
-
   // Initialise
   initAR488();
-
-Serial.println(F("AR488 initialised."));
-
 
 #ifdef E2END
   // Read data from non-volatile memory
@@ -563,9 +555,6 @@ Serial.println(F("AR488 initialised."));
     }
   }
 #endif
-
-Serial.println(F("EEPROM initialised."));
-
 
   // SN7516x IC support
 #ifdef SN7516X
@@ -617,7 +606,7 @@ Serial.println(F("EEPROM initialised."));
   }
 #endif
 
-Serial.flush();
+  Serial.flush();
 
 }
 /****** End of Arduino standard SETUP procedure *****/
@@ -639,8 +628,13 @@ void loop() {
 #endif
 
 /***** MCP23S17 *****/
-#ifdef AR488_MCP23S17 
-  chkMcpInterrupt();
+#ifdef AR488_MCP23S17
+  if (mcpIntA) {
+    // Check the interrupt pin state (isATN? isSRQ?)
+    chkMcpInterrupts();
+    // Reset the interrupt flag
+    mcpIntA = false;
+  }
 #endif
 
 /*** Pin Hooks ***/
@@ -792,8 +786,9 @@ uint8_t serialIn_h() {
  */
 bool isAtnAsserted() {
 #ifdef USE_INTERRUPTS
-//  if (isATN) return true;
   return isATN;
+#elif defined (AR488_MCP23S17)
+  return (getGpibPinState(ATN)==LOW) ? true : false;
 #else
   // ATN is LOW when asserted
 //  if (digitalRead(ATN) == LOW) return true;
@@ -803,13 +798,36 @@ bool isAtnAsserted() {
 }
 
 
+/***** Detect pin state *****/
+/*
+ * When interrupts are being used the pin state is automatically flagged 
+ * when an interrupt is triggered. Where interrupts cannot be used, the
+ * state of the pin is read.
+ * 
+ * Read pin state using digitalRead for Arduino pins or getGpibPinState
+ * for MCP23S17 pins.
+ */
+bool isAsserted(uint8_t gpibsig) {
 #ifdef AR488_MCP23S17
-void chkMcpInterrupt(){
-  if (mcpIntA) {
-    /*
-     * Read the interrupt register and confirm whether ATN or SRQ flagged
-     */
+  // Use MCP function to get pin state. Read only when state change has been flagged.
+  if (mcpIntA){
+    mcpIntA = false;
+    return (getGpibPinState(gpibsig)==LOW) ? true : false;
   }
+  // Otherwise return false (ignore)
+  return false;
+#else
+  // Use digitalRead function to get current pin state
+  return (digitalRead(gpibsig) == LOW) ? true : false;
+#endif
+}
+
+
+#ifdef AR488_MCP23S17
+void chkMcpInterrupts(){
+  uint8_t mcpIntAState = getMcpIntAPinState();
+  isATN = (((mcpIntAState >> 7) & 1) ? false : true);
+  isSRQ = (((mcpIntAState >> 6) & 1) ? false : true);
 }
 #endif
 
@@ -2748,7 +2766,7 @@ bool gpibReceiveData() {
       }
     }
     // Wait for instrument ready
-    Wait_on_pin_state(HIGH, NRFD, AR488.rtmo);
+    waitOnPinState(HIGH, NRFD, AR488.rtmo);
     // Set GPIB control lines to controller read mode
     setGpibControls(CLAS);
     
@@ -2779,8 +2797,12 @@ bool gpibReceiveData() {
     // Tranbreak > 0 indicates break condition
     if (tranBrk > 0) break;
 
+//Serial.println(F("Passed tranbrk."));
+
     // ATN asserted
     if (isAtnAsserted()) break;
+
+//Serial.println(F("Passed ATN asserted."));
 
     // Read the next character on the GPIB bus
     r = gpibReadByte(&bytes[0], &eoiDetected);
@@ -2939,20 +2961,22 @@ bool isTerminatorDetected(uint8_t bytes[3], uint8_t eor_sequence){
  * (- the GPIB bus must already be configured to listen )
  */
 uint8_t gpibReadByte(uint8_t *db, bool *eoi) {
-  bool atnStat = (digitalRead(ATN) ? false : true); // Set to reverse, i.e. asserted=true; unasserted=false;
+//  bool atnStat = (digitalRead(ATN) ? false : true); // Set to reverse, i.e. asserted=true; unasserted=false;
+  bool atnStat = isAtnAsserted();
   *eoi = false;
 
   // Unassert NRFD (we are ready for more data)
   setGpibState(0b00000100, 0b00000100, 0);
 
   // ATN asserted and just got unasserted - abort - we are not ready yet
-  if (atnStat && (digitalRead(ATN)==HIGH)) {
+//  if (atnStat && (digitalRead(ATN)==HIGH)) {
+  if (atnStat && (!isAtnAsserted())) {
     setGpibState(0b00000000, 0b00000100, 0);
     return 3;
   }
 
   // Wait for DAV to go LOW indicating talker has finished setting data lines..
-  if (Wait_on_pin_state(LOW, DAV, AR488.rtmo))  {
+  if (waitOnPinState(LOW, DAV, AR488.rtmo))  {
     if (isVerb) arSerial->println(F("gpibReadByte: timeout waiting for DAV to go LOW"));
     setGpibState(0b00000000, 0b00000100, 0);
     // No more data for you?
@@ -2963,7 +2987,8 @@ uint8_t gpibReadByte(uint8_t *db, bool *eoi) {
   setGpibState(0b00000000, 0b00000100, 0);
 
   // Check for EOI signal
-  if (rEoi && digitalRead(EOI) == LOW) *eoi = true;
+//  if (rEoi && digitalRead(EOI) == LOW) *eoi = true;
+  if (rEoi && isAsserted(EOI)) *eoi = true;
 
   // read from DIO
   *db = readGpibDbus();
@@ -2972,7 +2997,7 @@ uint8_t gpibReadByte(uint8_t *db, bool *eoi) {
   setGpibState(0b00000010, 0b00000010, 0);
 
   // Wait for DAV to go HIGH indicating data no longer valid (i.e. transfer complete)
-  if (Wait_on_pin_state(HIGH, DAV, AR488.rtmo))  {
+  if (waitOnPinState(HIGH, DAV, AR488.rtmo))  {
     if (isVerb) arSerial->println(F("gpibReadByte: timeout waiting DAV to go HIGH"));
     return 2;
   }
@@ -3016,12 +3041,12 @@ bool gpibWriteByte(uint8_t db) {
 bool gpibWriteByteHandshake(uint8_t db) {
   
     // Wait for NDAC to go LOW (indicating that devices are at attention)
-  if (Wait_on_pin_state(LOW, NDAC, AR488.rtmo)) {
+  if (waitOnPinState(LOW, NDAC, AR488.rtmo)) {
     if (isVerb) arSerial->println(F("gpibWriteByte: timeout waiting for receiver attention [NDAC asserted]"));
     return true;
   }
   // Wait for NRFD to go HIGH (indicating that receiver is ready)
-  if (Wait_on_pin_state(HIGH, NRFD, AR488.rtmo))  {
+  if (waitOnPinState(HIGH, NRFD, AR488.rtmo))  {
     if (isVerb) arSerial->println(F("gpibWriteByte: timeout waiting for receiver ready - [NRFD unasserted]"));
     return true;
   }
@@ -3033,13 +3058,13 @@ bool gpibWriteByteHandshake(uint8_t db) {
   setGpibState(0b00000000, 0b00001000, 0);
 
   // Wait for NRFD to go LOW (receiver accepting data)
-  if (Wait_on_pin_state(LOW, NRFD, AR488.rtmo))  {
+  if (waitOnPinState(LOW, NRFD, AR488.rtmo))  {
     if (isVerb) arSerial->println(F("gpibWriteByte: timeout waiting for data to be accepted - [NRFD asserted]"));
     return true;
   }
 
   // Wait for NDAC to go HIGH (data accepted)
-  if (Wait_on_pin_state(HIGH, NDAC, AR488.rtmo))  {
+  if (waitOnPinState(HIGH, NDAC, AR488.rtmo))  {
     if (isVerb) arSerial->println(F("gpibWriteByte: timeout waiting for data accepted signal - [NDAC unasserted]"));
     return true;
   }
@@ -3088,7 +3113,7 @@ bool uaddrDev() {
  * Returns false on success, true on timeout.
  * Pin MUST be set as INPUT_PULLUP otherwise it will not change and simply time out!
  */
-boolean Wait_on_pin_state(uint8_t state, uint8_t pin, int interval) {
+boolean waitOnPinState(uint8_t state, uint8_t pin, int interval) {
 
   unsigned long timeout = millis() + interval;
 //  bool atnStat = (digitalRead(ATN) ? false : true); // Set to reverse - asserted=true; unasserted=false;

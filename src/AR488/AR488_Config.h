@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.50.03, 15/04/2021"
+#define FWVER "AR488 GPIB controller, ver. 0.50.05, 23/04/2021"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -348,7 +348,7 @@ M3\n\
 /***** SERIAL PORT EXTERNAL DECLARATIONS *****/
 /******vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv******/
 
-
+/*
 #ifdef AR_BT_EN
   #ifdef AR_CDC_SERIAL
     Serial_ *btSerial = &(AR_SERIAL_PORT);
@@ -363,7 +363,7 @@ M3\n\
     SoftwareSerial *btSerial = &btSerial;
   #endif
 #endif
-
+*/
 
 /******^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^******/
 /***** SERIAL PORT EXTERNAL DECLARATIONS *****/

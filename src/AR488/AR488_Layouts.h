@@ -5,7 +5,7 @@
 
 #include "AR488_Config.h"
 
-/***** AR488_Hardware.h, ver. 0.50.03, 15/04/2021 *****/
+/***** AR488_Hardware.h, ver. 0.50.05, 23/04/2021 *****/
 /*
  * Hardware pin layout definitions
  */
@@ -337,10 +337,12 @@ uint8_t reverseBits(uint8_t dbyte);
 
 // uint8_t reverseBits(uint8_t dbyte);
 
-void mcpIntHandler();
 uint8_t mcpByteRead(uint8_t reg);
 void mcpByteWrite(uint8_t reg, uint8_t db);
 uint8_t mcpDigitalRead(uint8_t pin);
+void mcpInterruptsEn();
+void mcpIntHandler();
+uint8_t getMcpIntAPinState();
 
 
 #endif // AR488_MCP23S17
