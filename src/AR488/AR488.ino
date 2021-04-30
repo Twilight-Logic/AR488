@@ -30,7 +30,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.50.05, 23/04/2021" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.50.06, 24/04/2021" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -2550,7 +2550,10 @@ void unl_h() {
   dbSerial->println(F("Unlisten received."));
 #endif
   rEoi = false;
+
+  // Immediate break - shouldn't ATN do this anyway?
   tranBrk = 3;  // Stop receving transmission
+  // Immediate break - shouldn't ATN do this anyway?
 }
 
 
@@ -2800,7 +2803,7 @@ bool gpibReceiveData() {
 //Serial.println(F("Passed tranbrk."));
 
     // ATN asserted
-    if (isAtnAsserted()) break;
+    if (isAsserted(ATN)) break;
 
 //Serial.println(F("Passed ATN asserted."));
 
@@ -2821,7 +2824,7 @@ bool gpibReceiveData() {
 #endif
 
     // If break condition ocurred or ATN asserted then break here
-    if (isAtnAsserted()) break;
+    if (isAsserted(ATN)) break;
 
 #ifdef DEBUG7
     dbSerial->print(bytes[0], HEX), dbSerial->print(' ');
