@@ -30,7 +30,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.50.06, 24/04/2021" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.50.07, 30/04/2021" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -589,8 +589,10 @@ void setup() {
   // Initialize the interface in controller mode
 //  if (AR488.cmode == 2) initController();
 
+/*  NO LONGER IN USE - NOW CHECKING STATUS OF LINE
   isATN = false;
   isSRQ = false;
+*/
 
 #if defined(USE_MACROS) && defined(RUN_STARTUP)
   // Run startup macro
@@ -630,7 +632,7 @@ void loop() {
 /***** MCP23S17 *****/
 #ifdef AR488_MCP23S17
   if (mcpIntA) {
-    // Check the interrupt pin state (isATN? isSRQ?)
+    // Check the interrupt pin state (ATN, SRQ, EOI)
     chkMcpInterrupts();
     // Reset the interrupt flag
     mcpIntA = false;
@@ -643,10 +645,12 @@ void loop() {
  * case, in-loop checking is used to detect when SRQ and ATN 
  * have been signalled
  */
+/* FLAGS NO LONGER USED - NOW CHECKING STATUS OF LINE
 #ifndef USE_INTERRUPTS
   isATN = (digitalRead(ATN)==LOW ? true : false);
   isSRQ = (digitalRead(SRQ)==LOW ? true : false);
 #endif
+*/
 
 /*** Process the buffer ***/
 /* Each received char is passed through parser until an un-escaped 
@@ -683,9 +687,10 @@ void loop() {
     }
 
     // Check status of SRQ and SPOLL if asserted
-    if (isSRQ && isSrqa) {
+//    if (isSRQ && isSrqa) {
+    if (isAsserted(SRQ) && isSrqa) {
       spoll_h(NULL);
-      isSRQ = false;
+//      isSRQ = false;
     }
 
     // Continuous auto-receive data from GPIB bus
@@ -784,6 +789,7 @@ uint8_t serialIn_h() {
  * the ATN interrupt is triggered. Where the interrupt cannot be used the
  * state of the ATN line needs to be checked.
  */
+/*
 bool isAtnAsserted() {
 #ifdef USE_INTERRUPTS
   return isATN;
@@ -796,7 +802,7 @@ bool isAtnAsserted() {
 #endif
 //  return false;
 }
-
+*/
 
 /***** Detect pin state *****/
 /*
@@ -822,7 +828,7 @@ bool isAsserted(uint8_t gpibsig) {
 #endif
 }
 
-
+/*
 #ifdef AR488_MCP23S17
 void chkMcpInterrupts(){
   uint8_t mcpIntAState = getMcpIntAPinState();
@@ -830,6 +836,7 @@ void chkMcpInterrupts(){
   isSRQ = (((mcpIntAState >> 6) & 1) ? false : true);
 }
 #endif
+*/
 
 /*************************************/
 /***** Device operation routines *****/
@@ -1848,11 +1855,13 @@ void spoll_h(char *params) {
   // Set SRQ to status of SRQ line. Should now be unasserted but, if it is
   // still asserted, then another device may be requesting service so another
   // serial poll will be called from the main loop
+/*  FLAG NO LONGER USED = NOW CHECKING STATUS OF LINE
   if (digitalRead(SRQ) == LOW) {
     isSRQ = true;
   } else {
     isSRQ = false;
   }
+*/
   if (isVerb) arSerial->println(F("Serial poll completed."));
 
 }
@@ -2788,7 +2797,8 @@ bool gpibReceiveData() {
     dbSerial->print(F("rEOI: "));
     dbSerial->println(rEoi);
     dbSerial->print(F("ATN:  "));
-    dbSerial->println(isAtnAsserted() ? 1 : 0);
+//    dbSerial->println(isAtnAsserted() ? 1 : 0);
+    dbSerial->println(isAsserted(ATN) ? 1 : 0);
 #endif
 
   // Ready the data bus
@@ -2856,7 +2866,8 @@ bool gpibReceiveData() {
   dbSerial->println();
   dbSerial->println(F("After loop flags:"));
   dbSerial->print(F("ATN: "));
-  dbSerial->println(isAtnAsserted());
+//  dbSerial->println(isAtnAsserted());
+  dbSerial->println(isAsserted(ATN));
   dbSerial->print(F("TMO:  "));
   dbSerial->println(r);
 #endif
@@ -2965,7 +2976,8 @@ bool isTerminatorDetected(uint8_t bytes[3], uint8_t eor_sequence){
  */
 uint8_t gpibReadByte(uint8_t *db, bool *eoi) {
 //  bool atnStat = (digitalRead(ATN) ? false : true); // Set to reverse, i.e. asserted=true; unasserted=false;
-  bool atnStat = isAtnAsserted();
+//  bool atnStat = isAtnAsserted();
+  bool atnStat = isAsserted(ATN);
   *eoi = false;
 
   // Unassert NRFD (we are ready for more data)
@@ -2973,7 +2985,9 @@ uint8_t gpibReadByte(uint8_t *db, bool *eoi) {
 
   // ATN asserted and just got unasserted - abort - we are not ready yet
 //  if (atnStat && (digitalRead(ATN)==HIGH)) {
-  if (atnStat && (!isAtnAsserted())) {
+//  if (atnStat && (!isAtnAsserted())) {
+  if (atnStat && (!isAsserted(ATN))) {
+    
     setGpibState(0b00000000, 0b00000100, 0);
     return 3;
   }
