@@ -14,12 +14,13 @@
 #include "AR488_Layouts.h"
 #include "AR488_Eeprom.h"
 
-
+/*
 #ifdef USE_INTERRUPTS
   #ifdef __AVR__
     #include <avr/interrupt.h>
   #endif
 #endif
+*/
 
 #ifdef E2END
   #include <EEPROM.h>
@@ -30,7 +31,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.50.07, 30/04/2021" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.50.08, 01/05/2021" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -207,47 +208,6 @@ const char * const macros[] PROGMEM = {
 
 
 /***** Serial communications port *****/
-/*
-#ifdef AR_CDC_SERIAL
-  extern Serial_ *arSerial;
-  #ifndef DB_SERIAL_PORT
-    extern Serial_ *dbSerial;
-  #endif
-#endif
-#ifdef AR_HW_SERIAL
-  extern HardwareSerial *arSerial;
-  #ifndef DB_SERIAL_PORT
-    extern HardwareSerial *dbSerial;
-  #endif
-#endif
-// Note: SoftwareSerial support conflicts with PCINT support
-#ifdef AR_SW_SERIAL
-  #include <SoftwareSerial.h>
-  extern SoftwareSerial *arSerial;
-  #ifndef DB_SERIAL_PORT
-    extern SoftwareSerial *dbSerial;
-  #endif
-#endif
-*/
-
-/***** Serial debug Port *****/
-/*
-#ifdef DB_SERIAL_PORT
-  #ifdef DB_CDC_SERIAL
-    extern Serial_ *dbSerial;
-  #endif
-  #ifdef DB_HW_SERIAL
-    extern HardwareSerial *dbSerial;
-  #endif
-  // Note: SoftwareSerial support conflicts with PCINT support
-  #ifdef DB_SW_SERIAL
-    #include <SoftwareSerial.h>
-    extern SoftwareSerial *dbSerial;
-  #endif
-#endif
-*/
-
-
 #ifdef AR_CDC_SERIAL
   Serial_ *arSerial = &(AR_SERIAL_PORT);
   #ifndef DB_SERIAL_PORT
@@ -272,7 +232,6 @@ const char * const macros[] PROGMEM = {
 
 
 /***** Debug Port *****/
-
 #ifdef DB_SERIAL_PORT
   #ifdef DB_CDC_SERIAL
     Serial_ *dbSerial = &(DB_SERIAL_PORT);
@@ -488,12 +447,12 @@ void setup() {
   // Ensure the MCP select pin is set as an OUPTPUT and is HIGH
   pinMode(MCP_SELECTPIN, OUTPUT);
   digitalWrite(MCP_SELECTPIN, HIGH);
+  // Enable the hardware address (0) on the MCP23S17
+  mcpByteWrite(MCPCON, 0b00001000);
   // Enable MCP23S17 interrupts
   mcpInterruptsEn();
   // Attach interrupt handler to Arduino board pin for MCP23S17 to signal interrupt has occurred
   attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
-  // Enable the hardware address (0) on the MCP23S17
-  mcpByteWrite(MCPCON, 0b00001000);
 #endif
 
   // Using AVR board with PCINT interrupts
@@ -584,15 +543,10 @@ void setup() {
 #endif
 
   // Initialize the interface in device mode
-//  if (AR488.cmode == 1) initDevice();
+  if (AR488.cmode == 1) initDevice();
 
   // Initialize the interface in controller mode
-//  if (AR488.cmode == 2) initController();
-
-/*  NO LONGER IN USE - NOW CHECKING STATUS OF LINE
-  isATN = false;
-  isSRQ = false;
-*/
+  if (AR488.cmode == 2) initController();
 
 #if defined(USE_MACROS) && defined(RUN_STARTUP)
   // Run startup macro
@@ -629,28 +583,6 @@ void loop() {
   }
 #endif
 
-/***** MCP23S17 *****/
-#ifdef AR488_MCP23S17
-  if (mcpIntA) {
-    // Check the interrupt pin state (ATN, SRQ, EOI)
-    chkMcpInterrupts();
-    // Reset the interrupt flag
-    mcpIntA = false;
-  }
-#endif
-
-/*** Pin Hooks ***/
-/*
- * Not all boards support interrupts or have PCINTs. In this
- * case, in-loop checking is used to detect when SRQ and ATN 
- * have been signalled
- */
-/* FLAGS NO LONGER USED - NOW CHECKING STATUS OF LINE
-#ifndef USE_INTERRUPTS
-  isATN = (digitalRead(ATN)==LOW ? true : false);
-  isSRQ = (digitalRead(SRQ)==LOW ? true : false);
-#endif
-*/
 
 /*** Process the buffer ***/
 /* Each received char is passed through parser until an un-escaped 
@@ -783,27 +715,6 @@ uint8_t serialIn_h() {
 }
 
 
-/***** Detect ATN state *****/
-/*
- * When interrupts are being used the state is automatically flagged when
- * the ATN interrupt is triggered. Where the interrupt cannot be used the
- * state of the ATN line needs to be checked.
- */
-/*
-bool isAtnAsserted() {
-#ifdef USE_INTERRUPTS
-  return isATN;
-#elif defined (AR488_MCP23S17)
-  return (getGpibPinState(ATN)==LOW) ? true : false;
-#else
-  // ATN is LOW when asserted
-//  if (digitalRead(ATN) == LOW) return true;
-  return (digitalRead(ATN) == LOW) ? true : false;
-#endif
-//  return false;
-}
-*/
-
 /***** Detect pin state *****/
 /*
  * When interrupts are being used the pin state is automatically flagged 
@@ -815,28 +726,21 @@ bool isAtnAsserted() {
  */
 bool isAsserted(uint8_t gpibsig) {
 #ifdef AR488_MCP23S17
-  // Use MCP function to get pin state. Read only when state change has been flagged.
+  // Use MCP function to get MCP23S17 pin state. Read only when state change has been flagged.
   if (mcpIntA){
+    // Clear flag
     mcpIntA = false;
+    // Return pin state
     return (getGpibPinState(gpibsig)==LOW) ? true : false;
   }
   // Otherwise return false (ignore)
   return false;
 #else
-  // Use digitalRead function to get current pin state
+  // Use digitalRead function to get current Arduino pin state
   return (digitalRead(gpibsig) == LOW) ? true : false;
 #endif
 }
 
-/*
-#ifdef AR488_MCP23S17
-void chkMcpInterrupts(){
-  uint8_t mcpIntAState = getMcpIntAPinState();
-  isATN = (((mcpIntAState >> 7) & 1) ? false : true);
-  isSRQ = (((mcpIntAState >> 6) & 1) ? false : true);
-}
-#endif
-*/
 
 /*************************************/
 /***** Device operation routines *****/
@@ -2061,23 +1965,15 @@ void setvstr_h(char *params) {
   plen = strlen(params);
   memset(idparams, '\0', 64);
   strncpy(idparams, "verstr ", 7);
+  if (plen>47) plen = 47; // Ignore anything over 47 characters
   strncat(idparams, params, plen);
-
-/*
-arSerial->print(F("Plen: "));
-arSerial->println(plen);
-arSerial->print(F("Params: "));
-arSerial->println(params);
-arSerial->print(F("IdParams: "));
-arSerial->println(idparams);
-*/
 
   id_h(idparams);
   
 /*  
   if (params != NULL) {
     len = strlen(params);
-    if (len>47) len=47; // Ignore anything over 47 characters
+    if (len>47) len=47; 
     memset(AR488.vstr, '\0', 48);
     strncpy(AR488.vstr, params, len);
     if (isVerb) {
@@ -2357,7 +2253,11 @@ void id_h(char *params) {
       if (strncmp(keyword, "verstr", 6)==0) {
         arSerial->println(AR488.vstr);
         return;
-      }     
+      }
+      if (strncmp(keyword, "fwver", 6)==0) {
+        arSerial->println(F(FWVER));
+        return;
+      }
       if (strncmp(keyword, "name", 4)==0) {
         arSerial->println(AR488.sname);
         return;      

@@ -8,9 +8,10 @@
  * Hardware layout function definitions
  */
 
+/*
 volatile bool isATN = false;  // has ATN been asserted?
 volatile bool isSRQ = false;  // has SRQ been asserted?
-
+*/
 
 /*********************************/
 /***** UNO/NANO BOARD LAYOUT *****/
@@ -93,6 +94,7 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
 
 /***** Enable interrupts *****/
+/*
 #ifdef USE_INTERRUPTS
 
 volatile uint8_t atnPinMem = ATNPREG;
@@ -109,9 +111,10 @@ void interruptsEn(){
 }
 
 #pragma GCC diagnostic error "-Wmisspelled-isr"
-
+*/
 
 /***** Interrupt handler *****/
+/*
 ISR(PCINT2_vect) {
 
   // Has PCINT23 fired (ATN asserted)?
@@ -128,7 +131,7 @@ ISR(PCINT2_vect) {
   atnPinMem = ATNPREG;
   srqPinMem = SRQPREG;
 }
-
+*/
 
 /***** Catchall interrupt vector *****/
 /*
@@ -137,7 +140,7 @@ ISR(PCINT2_vect) {
   isBAD = true;
   }
 */
-#endif //USE_INTERRUPTS
+//#endif //USE_INTERRUPTS
 
 
 #endif //AR488UNO/AR488_NANO
@@ -1080,7 +1083,7 @@ uint8_t mcpDigitalRead(uint8_t pin) {
   // If the pin value is larger than 7 then do nothing and return
   // Zero or larger value is implied by the variable type
   if (pin > 7) return 0x0;
-  // Read the port A pint state, extract and return HIGH/LOW state for the requested pin
+  // Read the port A pin state, extract and return HIGH/LOW state for the requested pin
   return mcpByteRead(MCPPORTA) & (1 << pin) ? HIGH : LOW;
 }
 
@@ -1091,10 +1094,13 @@ uint8_t getGpibPinState(uint8_t pin){
 }
 
 
+/***** Get the status of the MCP interrupt A pin *****/
 uint8_t getMcpIntAPinState(){
   return mcpByteRead(MCPINTCAPA);
 }
 
+
+/***** Configure pins that will generate an interrupt *****/
 void mcpInterruptsEn(){
   // Set to interrupt mode for compare to previous
   mcpByteWrite(MCPINTCONA, 0b00000000);

@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.50.07, 30/04/2021"
+#define FWVER "AR488 GPIB controller, ver. 0.50.08, 01/05/2021"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -148,6 +148,7 @@
  * and will respond faster, however in-loop checking for state of pin states
  * can be supported with any board layout.
  */
+/* 
 #ifdef __AVR__
   // For supported boards use interrupt handlers
   #if defined (AR488_UNO) || defined (AR488_NANO) || defined (AR488_MEGA2560) || defined (AR488_MEGA32U4)
@@ -158,6 +159,7 @@
     #endif
   #endif
 #endif
+*/
 
 
 /***** Enable Macros *****/
