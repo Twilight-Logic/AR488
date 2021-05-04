@@ -277,28 +277,15 @@ uint8_t reverseBits(uint8_t dbyte);
 
 #include <SPI.h>
 
-/***** NOTE: MCP23S17 pinout last updated 06/04/2021 *****/
-//#define DIO1  GPB0  /* GPIB 1  : GPORTB bit 0 */
-//#define DIO2  GPB1  /* GPIB 2  : GPORTB bit 1 */
-//#define DIO3  GPB2  /* GPIB 3  : GPORTB bit 2 */
-//#define DIO4  GPB3  /* GPIB 4  : GPORTB bit 3 */
-//#define DIO5  GPB4  /* GPIB 13 : GPORTB bit 4 */
-//#define DIO6  GBB5  /* GPIB 14 : GPORTB bit 5 */
-//#define DIO7  GPB6  /* GPIB 15 : GPORTB bit 6 */
-//#define DIO8  GPB7  /* GPIB 16 : GPORTB bit 7 */
-
-// 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
-
+/***** NOTE: MCP23S17 pinout last updated 03/05/2021 *****/
 #define IFC    0  /* GPIB 9  : PORTB bit 0 */
 #define NDAC   1  /* GPIB 8  : PORTB bit 1 */
 #define NRFD   2  /* GPIB 7  : PORTB bit 2 */
 #define DAV    3  /* GPIB 6  : PORTD bit 3 */
 #define EOI    4  /* GPIB 5  : PORTC bit 4 */
-
-#define SRQ    6  /* GPIB 10 : PORTD bit 6 */
 #define REN    5  /* GPIB 17 : PORTD bit 5 */
+#define SRQ    6  /* GPIB 10 : PORTD bit 6 */
 #define ATN    7  /* GPIB 11 : PORTE bit 7 */
-
 
 /***** MCP23S17 defines *****/
 // Direction registers

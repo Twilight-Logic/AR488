@@ -31,7 +31,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.50.08, 01/05/2021" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.50.09, 03/05/2021" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -620,10 +620,17 @@ void loop() {
 
     // Check status of SRQ and SPOLL if asserted
 //    if (isSRQ && isSrqa) {
+/*
     if (isAsserted(SRQ) && isSrqa) {
       spoll_h(NULL);
 //      isSRQ = false;
     }
+*/
+    // Automatic serial poll?
+    if (isSrqa) {
+      if (isAsserted(SRQ)) spoll_h(NULL);
+    }
+
 
     // Continuous auto-receive data from GPIB bus
     if (AR488.amode == 3 && aRead) gpibReceiveData();
@@ -637,6 +644,7 @@ void loop() {
       lonMode();
     }else{
 //      if (isATN) attnRequired();
+//      if (isAsserted(ATN)) attnRequired();
       if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
     }
   }
@@ -727,6 +735,10 @@ uint8_t serialIn_h() {
 bool isAsserted(uint8_t gpibsig) {
 #ifdef AR488_MCP23S17
   // Use MCP function to get MCP23S17 pin state. Read only when state change has been flagged.
+/*
+  arSerial->print("mcpinta: ");
+  mcpIntA ? arSerial->println(F("TRUE")) : arSerial->println(F("FALSE"));
+*/
   if (mcpIntA){
     // Clear flag
     mcpIntA = false;
@@ -1773,8 +1785,9 @@ void spoll_h(char *params) {
 
 /***** Return status of SRQ line *****/
 void srq_h() {
-  //NOTE: LOW=asserted, HIGH=unasserted
-  arSerial->println(!digitalRead(SRQ));
+  //NOTE: LOW=0=asserted, HIGH=1=unasserted
+//  arSerial->println(!digitalRead(SRQ));
+  arSerial->println(isAsserted(SRQ));
 }
 
 

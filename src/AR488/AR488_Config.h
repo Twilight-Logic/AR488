@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.50.08, 01/05/2021"
+#define FWVER "AR488 GPIB controller, ver. 0.50.09, 03/05/2021"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -231,7 +231,7 @@
 //#define DEBUG2  // setGpibControls
 //#define DEBUG3  // gpibSendData
 //#define DEBUG4  // spoll_h
-//#define DEBUG5  // attnRequired
+#define DEBUG5  // attnRequired
 //#define DEBUG6  // EEPROM
 //#define DEBUG7  // gpibReceiveData
 //#define DEBUG8  // ppoll_h
