@@ -31,7 +31,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.50.09, 03/05/2021" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.50.11, 22/05/2021" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -395,6 +395,7 @@ bool dataBufferFull = false;    // Flag when parse buffer is full
 // Interrupt flag for MCP23S17
 #ifdef AR488_MCP23S17
 extern volatile bool mcpIntA;  // MCP23S17 interrupt handler
+uint8_t mcpPinAssertedReg = 0;
 #endif
 
 // State flags set by interrupt being triggered
@@ -595,6 +596,13 @@ void loop() {
  * lnRdy=2: send data to Gpib
  */
 
+/*
+if (lnRdy>0){
+  arSerial->print(F("lnRdy: "));
+  arSerial->println(lnRdy);
+}
+*/
+
   // lnRdy=1: received a command so execute it...
   if (lnRdy == 1) {
     execCmd(pBuf, pbPtr);
@@ -642,9 +650,10 @@ void loop() {
       if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
     }else if (isRO) {
       lonMode();
-    }else{
-//      if (isATN) attnRequired();
-//      if (isAsserted(ATN)) attnRequired();
+    }else if (isAsserted(ATN)) {
+//      arSerial->println(F("Attention signal detected"));
+      attnRequired();
+//      arSerial->println(F("ATN loop finished"));
       if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
     }
   }
@@ -734,19 +743,17 @@ uint8_t serialIn_h() {
  */
 bool isAsserted(uint8_t gpibsig) {
 #ifdef AR488_MCP23S17
-  // Use MCP function to get MCP23S17 pin state. Read only when state change has been flagged.
-/*
-  arSerial->print("mcpinta: ");
-  mcpIntA ? arSerial->println(F("TRUE")) : arSerial->println(F("FALSE"));
-*/
+  // Use MCP function to get MCP23S17 pin state.
+  // If interrupt flagged then update mcpPinAssertedReg register
   if (mcpIntA){
-    // Clear flag
+//arSerial->println(F("Interrupt flagged - pin state checked"));
+    // Clear mcpIntA flag
     mcpIntA = false;
-    // Return pin state
-    return (getGpibPinState(gpibsig)==LOW) ? true : false;
+    // Get inverse of pin status at interrupt (0 = true [asserted]; 1 = false [unasserted])
+    mcpPinAssertedReg = ~getMcpIntAPinState();
   }
-  // Otherwise return false (ignore)
-  return false;
+  return (mcpPinAssertedReg & (1<<gpibsig));
+
 #else
   // Use digitalRead function to get current Arduino pin state
   return (digitalRead(gpibsig) == LOW) ? true : false;
@@ -2331,7 +2338,8 @@ void attnRequired() {
 
   // Read bytes
 //  while (isATN) {
-  while (digitalRead(ATN)==LOW) {
+//  while (digitalRead(ATN)==LOW) {
+  while (isAsserted(ATN)) {
     stat = gpibReadByte(&db, &eoiDetected);
     if (!stat) {
 
