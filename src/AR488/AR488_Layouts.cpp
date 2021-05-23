@@ -960,7 +960,6 @@ const uint8_t mcpAddr = MCP_ADDRESS;      // Must be between 0 and 7
  * Signals that IntA was asserted on the MCP chip
  */
 bool mcpIntA = false;
-//attachInterrupt(digitalPinToInterrupt(2), mcpIntHandler, FALLING);
 
 
 /***** Ready the GPIB data bus wires to receive data *****/
@@ -1046,6 +1045,7 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
  */
 void mcpIntHandler() {
   mcpIntA = true;
+//  Serial.println(F("MCP Interrupt triggered"));
 }
 
 

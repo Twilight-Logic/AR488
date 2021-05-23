@@ -31,7 +31,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.50.11, 22/05/2021" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.50.12, 23/05/2021" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -654,8 +654,12 @@ if (lnRdy>0){
 //      arSerial->println(F("Attention signal detected"));
       attnRequired();
 //      arSerial->println(F("ATN loop finished"));
+    }
+/*    
+    else{
       if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
     }
+*/
   }
 
   // Reset line ready flag
@@ -668,8 +672,8 @@ if (lnRdy>0){
     sendIdn = false;
   }
 
-  // Check serial buffer
-  lnRdy = serialIn_h();
+  // If charaters waiting in the serial input buffer then call handler
+  if (arSerial->available()) lnRdy = serialIn_h();
   
   delayMicroseconds(5);
 }
@@ -2328,6 +2332,10 @@ void attnRequired() {
   bool spe = false;
   bool spd = false;
   bool eoiDetected = false;
+
+//arSerial->print(F("attnRequired: LnRdy: "));
+//arSerial->println(lnRdy);
+
   
   // Set device listner active state (assert NDAC+NRFD (low), DAV=INPUT_PULLUP)
   setGpibControls(DLAS);
@@ -2438,6 +2446,8 @@ void mla_h(){
 
 /***** Device is addressed to talk - so send data *****/
 void mta_h(){
+//  arSerial->print(F("mta_h: LnRdy: "));
+//  arSerial->println(lnRdy);
   if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
 }
 
