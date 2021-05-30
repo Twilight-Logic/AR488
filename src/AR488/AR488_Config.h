@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.50.12, 23/05/2021"
+#define FWVER "AR488 GPIB controller, ver. 0.50.15, 30/05/2021"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -17,13 +17,6 @@
  * Only ONE board/layout should be selected per platform
  * Only ONE Serial port can be used to receive output
  */
-
-
-/*** MCP23S17 SPI Extender layout ***/
-/*
- * Uncomment to use the MCP23S17 extender IC
- */
-//#define AR488_MCP23S17
 
 
 /*** Custom layout ***/
@@ -94,6 +87,7 @@
   //#define AR488_MEGA2560_E1
   //#define AR488_MEGA2560_E2
   #define AR488_MCP23S17
+//  #define AR488_MCP23017
   /*** Serial ports ***/
   // Mega 2560 supports Serial, Serial1, Serial2, Serial3. Since the pins 
   // associated with Serial2 are used in the default pin layout, Serial2
@@ -187,6 +181,17 @@
   #define MCP_INTERRUPT 2
 #endif
 
+
+/***** Enable MCP23S17 chip *****/
+/*
+ * 
+ */
+#ifdef AR488_MCP23017
+  #define MCP_ADDRESS   1
+  #define MCP_INTERRUPT 2
+#endif
+
+
 /***** Enable SN7516x chips *****/
 /*
  * Uncomment to enable the use of SN7516x GPIB tranceiver ICs.
@@ -210,6 +215,25 @@
   #define AR_BT_BAUD 115200     // Bluetooth module preferred baud rate
   #define AR_BT_NAME "AR488-BT" // Bluetooth device name
   #define AR_BT_CODE "488488"   // Bluetooth pairing code
+#endif
+
+
+/***** Local/remote signal (LED) *****/
+//#define PIN_REMOTE 7
+
+
+/***** 8-way address DIP switch *****/
+#define DIP_SWITCH
+#ifdef DIP_SWITCH
+#define DIP_SW_1  A0
+#define DIP_SW_2  A1
+#define DIP_SW_3  A2
+#define DIP_SW_4  A3
+#define DIP_SW_5  A4
+#define DIP_SW_6  A5
+#define DIP_SW_7  A6
+#define DIP_SW_8  A7
+
 #endif
 
 

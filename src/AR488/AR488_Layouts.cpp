@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.50.05, 23/04/2021 *****/
+/***** AR488_Hardware.cpp, ver. 0.50.15, 30/04/2021 *****/
 /*
  * Hardware layout function definitions
  */
@@ -241,6 +241,7 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
 
 /***** Enable interrupts *****/
+/*
 #ifdef USE_INTERRUPTS
 
 volatile uint8_t atnPinMem = ATNPREG;
@@ -258,8 +259,9 @@ void interruptsEn(){
 
 
 #pragma GCC diagnostic error "-Wmisspelled-isr"
-
+*/
 /***** Interrupt handler *****/
+/*
 ISR(PCINT0_vect) {
 
   // Has PCINT5 fired (ATN asserted)?
@@ -278,7 +280,7 @@ ISR(PCINT0_vect) {
 }
 
 #endif //USE_INTERRUPTS
-
+*/
 #endif //MEGA2560
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MEGA2560 BOARD LAYOUT (Default) *****/
@@ -412,6 +414,7 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
 
 /***** Enable interrupts *****/
+/*
 #ifdef USE_INTERRUPTS
 
 volatile uint8_t atnPinMem = ATNPREG;
@@ -427,10 +430,10 @@ void interruptsEn(){
   sei();
 }
 
-
 #pragma GCC diagnostic error "-Wmisspelled-isr"
-
+*/
 /***** Interrupt handler *****/
+/*
 ISR(PCINT0_vect) {
 
   // Has PCINT1 fired (ATN asserted)?
@@ -449,7 +452,7 @@ ISR(PCINT0_vect) {
 }
 
 #endif //USE_INTERRUPTS
-
+*/
 #endif //MEGA2560
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MEGA2560 BOARD LAYOUT E1 *****/
@@ -577,6 +580,7 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
 
 /***** Enable interrupts *****/
+/*
 #ifdef USE_INTERRUPTS
 
 volatile uint8_t atnPinMem = ATNPREG;
@@ -594,8 +598,9 @@ void interruptsEn(){
 
 
 #pragma GCC diagnostic error "-Wmisspelled-isr"
-
+*/
 /***** Interrupt handler *****/
+/*
 ISR(PCINT0_vect) {
 
   // Has PCINT0 fired (ATN asserted)?
@@ -614,7 +619,7 @@ ISR(PCINT0_vect) {
 }
 
 #endif //USE_INTERRUPTS
-
+*/
 #endif //MEGA2560
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
@@ -765,6 +770,7 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
 
 /***** Enable interrupts *****/
+/*
 #ifdef USE_INTERRUPTS
 
 volatile uint8_t atnPinMem = ATNPREG;
@@ -799,7 +805,7 @@ void interruptsEn(){
 }
 
 #endif  // USE_INTERRUPTS
-
+*/
 #endif  // AR488_MEGA32U4_MICRO
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MICRO PRO (32u4) BOARD LAYOUT for MICRO (Artag) *****/
@@ -913,6 +919,7 @@ uint8_t reverseBits(uint8_t dbyte) {
 
 
 /***** Enable interrupts *****/
+/*
 #ifdef USE_INTERRUPTS
 
 //volatile uint8_t atnPinMem = ATNPREG;
@@ -934,7 +941,7 @@ void interruptsEn(){
 }
 
 #endif //USE_INTERRUPTS
-
+*/
 
 #endif //AR488_MEGA32U4_LR3
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
@@ -943,10 +950,9 @@ void interruptsEn(){
 
 
 
-
-/***************************************/
-/***** MCP23S17 EXPANDER IC LAYOUT *****/
-/***** vvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
+/******************************************/
+/***** MCP23S17 EXPANDER (SPI) LAYOUT *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
 #ifdef AR488_MCP23S17
 
 
@@ -1109,10 +1115,196 @@ void mcpInterruptsEn(){
 }
 
 #endif //AR488_MCP23S17
-/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
-/***** MCP23S17 EXPANDER IC LAYOUT *****/
-/***************************************/
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** MCP23S17 EXPANDER (SPI) LAYOUT *****/
+/******************************************/
 
+
+
+/******************************************/
+/***** MCP23017 EXPANDER (I2C) LAYOUT *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef AR488_MCP23017
+
+
+// MCP23S17 hardware config
+const uint8_t chipSelect = MCP_SELECTPIN;
+const uint8_t mcpAddr = MCP_ADDRESS;      // Must be between 0 and 7
+
+
+/***** Arduino interrput handler *****/
+/*
+ * Signals that IntA was asserted on the MCP chip
+ */
+bool mcpIntA = false;
+
+
+/***** Ready the GPIB data bus wires to receive data *****/
+void readyGpibDbus() {
+  // Set data pins to input
+  mcpByteWrite(MCPDIRB, 0b11111111);  // Port direction: 0 = output; 1 = input;
+  mcpByteWrite(MCPPUB, 0b11111111);   // 1 = Pullup resistors enabled
+}
+
+
+/***** Read the status of the GPIB data bus wires and collect the byte of data *****/
+uint8_t readGpibDbus() {
+  // Read the byte of data on the bus
+  return ~mcpByteRead(MCPPORTB);
+}
+
+
+/***** Set the status of the GPIB data bus wires with a byte of datacd ~/test *****/
+void setGpibDbus(uint8_t db) {
+  // Set data pins as outputs
+  mcpByteWrite(MCPDIRB, 0b00000000);  // Port direction: 0 = output; 1 = input;
+
+  // GPIB states are inverted
+  db = ~db;
+
+  // Set data bus
+  mcpByteWrite(MCPPORTB, db);
+}
+
+
+/***** Set the direction and state of the GPIB control lines ****/
+/*
+   Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
+    bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
+    mask (mask)     : 0=unaffected, 1=enabled
+    mode (mode)     : 0=set pin state, 1=set pin direction
+   MCP23S17 pin to Port/bit to direction/state byte map:
+   IFC   0   PORTA bit 0 byte bit 0
+   NDAC  1   PORTA bit 1 byte bit 1
+   NRFD  2   PORTA bit 2 byte bit 2
+   DAV   3   PORTA bit 3 byte bit 3
+   EOI   4   PORTA bit 4 byte bit 4
+   REN   5   PORTA bit 5 byte bit 5
+   SRQ   6   PORTA bit 6 byte bit 6
+   ATN   7   PORTA bit 7 byte bit 7
+*/
+
+void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
+
+  uint8_t portAb = bits;
+  uint8_t portAm = mask;
+
+  uint8_t regByte = 0;
+  uint8_t regMod = 0; 
+
+
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  switch (mode) {
+    case 0:
+
+      // Set pin states using mask
+      regByte = mcpByteRead(MCPPORTA);
+      regMod = (regByte & ~portAm) | (portAb & portAm);
+      mcpByteWrite(MCPPORTA, regMod);
+      break;
+
+    case 1:
+      // Set pin direction registers using mask
+      regByte = ~mcpByteRead(MCPDIRA);   // Note: on MCP23S17 0 = output, 1 = input
+      regMod = (regByte & ~portAm) | (portAb & portAm);
+      mcpByteWrite(MCPDIRA, ~regMod);    // Note: on MCP23S17 0 = output, 1 = input
+      break;
+
+  }
+}
+
+
+/***** MCP23017 interrupt handler *****/
+/*
+ * Interrput pin on Arduino configure with attachInterrupt
+ */
+void mcpIntHandler() {
+  mcpIntA = true;
+//  Serial.println(F("MCP Interrupt triggered"));
+}
+
+
+/***** Read from the MCP23017 *****/
+/*
+ * reg : register we want to read , e.g. MCPPORTA or MCPPORTB
+ */
+uint8_t mcpByteRead(uint8_t reg){
+  Wire.beginTransmission(mcpI2Caddr);
+  wiresend(reg, &Wire);
+  Wire.endTransmission();
+  Wire.requestFrom(mcpI2Caddr , 1);
+  return wirerecv(&Wire);
+}
+
+
+/***** Write to the MCP23017 *****/
+void mcpByteWrite(uint8_t reg, uint8_t db){
+  Wire.beginTransmission(mcpI2Caddr);
+  wiresend(reg, &Wire);
+  wiresend(db, &Wire);
+  Wire.endTransmission();
+}
+
+
+/***** Arduino backward compatibility *****/
+static inline void wiresend(uint8_t x, TwoWire *theWire) {
+#if ARDUINO >= 100
+  theWire->write((uint8_t)x);
+#else
+  theWire->send(x);
+#endif
+}
+
+static inline uint8_t wirerecv(TwoWire *theWire) {
+#if ARDUINO >= 100
+  return theWire->read();
+#else
+  return theWire->receive();
+#endif
+}
+/***** Arduino backward compatibility *****/
+
+
+/***** Read status of control port pins *****/
+/*
+ * Pin value between 0 and 7
+ * Control bus = port A)
+ */
+uint8_t mcpDigitalRead(uint8_t pin) {
+  // If the pin value is larger than 7 then do nothing and return
+  // Zero or larger value is implied by the variable type
+  if (pin > 7) return 0x0;
+  // Read the port A pin state, extract and return HIGH/LOW state for the requested pin
+  return mcpByteRead(MCPPORTA) & (1 << pin) ? HIGH : LOW;
+}
+
+
+/***** Get the status of an MCP23017 pin) *****/
+uint8_t getGpibPinState(uint8_t pin){
+  return mcpDigitalRead(pin);
+}
+
+
+/***** Get the status of the MCP interrupt A pin *****/
+uint8_t getMcpIntAPinState(){
+  return mcpByteRead(MCPINTCAPA);
+}
+
+
+/***** Configure pins that will generate an interrupt *****/
+void mcpInterruptsEn(){
+  // Set to interrupt mode for compare to previous
+  mcpByteWrite(MCPINTCONA, 0b00000000);
+  // Enable interrupt to detect pin state change on pins 4, 6 and 7 (EOI, SRQ and ATN)
+  mcpByteWrite(MCPINTENA, 0b11010000);
+}
+
+#endif //AR488_MCP23017
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** MCP23017 EXPANDER (I2C) LAYOUT *****/
+/******************************************/
 
 
 

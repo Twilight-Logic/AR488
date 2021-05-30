@@ -31,7 +31,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.50.12, 23/05/2021" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.50.15, 30/05/2021" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -393,7 +393,7 @@ bool deviceAddressing = true;   // Suppress sending commands to address the inst
 bool dataBufferFull = false;    // Flag when parse buffer is full
 
 // Interrupt flag for MCP23S17
-#ifdef AR488_MCP23S17
+#if defined(AR488_MCP23S17) || defined(AR488_MCP23017)
 extern volatile bool mcpIntA;  // MCP23S17 interrupt handler
 uint8_t mcpPinAssertedReg = 0;
 #endif
@@ -439,16 +439,23 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);
 #endif
 
-  // Using MCP23S17 expander chip
+
+#ifdef PIN_REMOTE
+  pinMode(PIN_REMOTE, OUTPUT);
+  digitalWrite(PIN_REMOTE, LOW);
+#endif
+
+
+  // Using MCP23S17 (SPI) expander chip
 #ifdef AR488_MCP23S17
   // Enable SPI
   SPI.begin();
-  // Clock divider (slow down the bus speed [optional])
+  // Optional: Clock divider (slow down the bus speed [optional])
   SPI.setClockDivider(SPI_CLOCK_DIV8);
   // Ensure the MCP select pin is set as an OUPTPUT and is HIGH
   pinMode(MCP_SELECTPIN, OUTPUT);
   digitalWrite(MCP_SELECTPIN, HIGH);
-  // Enable the hardware address (0) on the MCP23S17
+  // Enable the hardware address pins (A0-A2) on the MCP23S17
   mcpByteWrite(MCPCON, 0b00001000);
   // Enable MCP23S17 interrupts
   mcpInterruptsEn();
@@ -456,11 +463,32 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
 #endif
 
+
+  // Using MCP23017 (I2C) expander chip
+#ifdef AR488_MCP23017
+  // Start I2C
+  Wire.begin();
+  // OPtional: Set the I2C bus clock frequency in Hertz (optional - 10000 [slow], 100000 [standard], 400000 [fast], 3400000 [fast plus])
+  // Check processor documentation for which modes are supported
+//  Wire.setClock(100000);
+  pinMode(MCP_SELECTPIN, OUTPUT);
+  digitalWrite(MCP_SELECTPIN, HIGH);
+  // Enable the hardware address pins (A0-A2) on the MCP23017
+  mcpByteWrite(MCPCON, 0b00001000);
+  // Enable MCP23017 interrupts
+  mcpInterruptsEn();
+  // Attach interrupt handler to Arduino board pin for MCP23S17 to signal interrupt has occurred
+  attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
+#endif
+  
+  
   // Using AVR board with PCINT interrupts
+/*
 #ifdef USE_INTERRUPTS
   // Turn on interrupts on port
   interruptsEn();
 #endif
+*/
 
   // Initialise parse buffer
   flushPbuf();
@@ -746,8 +774,8 @@ uint8_t serialIn_h() {
  * for MCP23S17 pins.
  */
 bool isAsserted(uint8_t gpibsig) {
-#ifdef AR488_MCP23S17
-  // Use MCP function to get MCP23S17 pin state.
+#if defined(AR488_MCP23S17) || defined(AR488_MCP23017)
+  // Use MCP function to get MCP23S17 or MCP23017 pin state.
   // If interrupt flagged then update mcpPinAssertedReg register
   if (mcpIntA){
 //arSerial->println(F("Interrupt flagged - pin state checked"));
@@ -2372,6 +2400,7 @@ void attnRequired() {
 #endif
       }
 
+
       // Serial poll enable request
       if (db==GC_SPE) spe = true;
 
@@ -2383,6 +2412,13 @@ void attnRequired() {
 
       // Untalk
       if (db==GC_UNT) unt_h();
+
+    #ifdef PIN_REMOTE
+      // Remote mode
+      if (db==GC_LLO) llo_h();
+      // Local mode
+      if (db==GC_GTL) gtl_h();
+    #endif
 
     }
   
@@ -2506,13 +2542,25 @@ void unt_h() {
 }
 
 
+#ifdef PIN_REMOTE
+/***** Enabled remote mode *****/
+void llo_h(){
+  digitalWrite(PIN_REMOTE, HIGH);
+}
+
+
+/***** Disable remote mode *****/
+void gtl_h(){
+  digitalWrite(PIN_REMOTE, LOW);
+}
+#endif
+
 void lonMode(){
 
   gpibReceiveData();
 
   // Clear the buffer to prevent it getting blocked
   if (lnRdy==2) flushPbuf();
-  
 }
 
 
