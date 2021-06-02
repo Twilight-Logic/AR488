@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.50.15, 30/04/2021 *****/
+/***** AR488_Hardware.cpp, ver. 0.50.16, 02/06/2021 *****/
 /*
  * Hardware layout function definitions
  */
@@ -1127,9 +1127,10 @@ void mcpInterruptsEn(){
 #ifdef AR488_MCP23017
 
 
-// MCP23S17 hardware config
-const uint8_t chipSelect = MCP_SELECTPIN;
-const uint8_t mcpAddr = MCP_ADDRESS;      // Must be between 0 and 7
+// MCP23017 hardware config
+//const uint8_t chipSelect = MCP_SELECTPIN;
+const uint8_t mcpHwAddr = MCP_ADDRESS;        // MCP hardware address (must be between 0 and 7)
+const uint8_t mcpI2Caddr = 0x20 | mcpHwAddr;  // MCP I2C address
 
 
 /***** Arduino interrput handler *****/
@@ -1198,7 +1199,6 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
   switch (mode) {
     case 0:
-
       // Set pin states using mask
       regByte = mcpByteRead(MCPPORTA);
       regMod = (regByte & ~portAm) | (portAb & portAm);
@@ -1226,34 +1226,12 @@ void mcpIntHandler() {
 }
 
 
-/***** Read from the MCP23017 *****/
-/*
- * reg : register we want to read , e.g. MCPPORTA or MCPPORTB
- */
-uint8_t mcpByteRead(uint8_t reg){
-  Wire.beginTransmission(mcpI2Caddr);
-  wiresend(reg, &Wire);
-  Wire.endTransmission();
-  Wire.requestFrom(mcpI2Caddr , 1);
-  return wirerecv(&Wire);
-}
-
-
-/***** Write to the MCP23017 *****/
-void mcpByteWrite(uint8_t reg, uint8_t db){
-  Wire.beginTransmission(mcpI2Caddr);
-  wiresend(reg, &Wire);
-  wiresend(db, &Wire);
-  Wire.endTransmission();
-}
-
-
 /***** Arduino backward compatibility *****/
-static inline void wiresend(uint8_t x, TwoWire *theWire) {
+static inline void wiresend(uint8_t db, TwoWire *theWire) {
 #if ARDUINO >= 100
-  theWire->write((uint8_t)x);
+  theWire->write((uint8_t)db);
 #else
-  theWire->send(x);
+  theWire->send(db);
 #endif
 }
 
@@ -1265,6 +1243,32 @@ static inline uint8_t wirerecv(TwoWire *theWire) {
 #endif
 }
 /***** Arduino backward compatibility *****/
+
+
+/***** Read from the MCP23017 *****/
+/*
+ * reg : register we want to read , e.g. MCPPORTA or MCPPORTB
+ */
+uint8_t mcpByteRead(uint8_t reg){
+  Wire.beginTransmission(mcpI2Caddr);
+//Serial.print(F("Tx to addr: "));
+//Serial.println(mcpI2Caddr);
+  wiresend(reg, &Wire);
+  Wire.endTransmission();
+  Wire.requestFrom(mcpI2Caddr, (uint8_t)1);
+  return wirerecv(&Wire);
+}
+
+
+/***** Write to the MCP23017 *****/
+void mcpByteWrite(uint8_t reg, uint8_t db){
+  Wire.beginTransmission(mcpI2Caddr);
+//Serial.print(F("Tx to addr: "));
+//Serial.println(mcpI2Caddr);
+  wiresend(reg, &Wire);
+  wiresend(db, &Wire);
+  Wire.endTransmission();
+}
 
 
 /***** Read status of control port pins *****/
@@ -1383,7 +1387,7 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 /***** COMMON FUNCTIONS SECTION *****/
 /***** vvvvvvvvvvvvvvvvvvvvvvvv *****/
 
-#ifndef AR488_MCP23S17
+#if not defined(AR488_MCP23S17) && not defined(AR488_MCP23017)
 uint8_t getGpibPinState(uint8_t pin){
   return digitalRead(pin);
 }

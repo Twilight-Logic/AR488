@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.50.15, 30/05/2021"
+#define FWVER "AR488 GPIB controller, ver. 0.50.16, 02/06/2021"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -86,8 +86,8 @@
   //#define AR488_MEGA2560_D
   //#define AR488_MEGA2560_E1
   //#define AR488_MEGA2560_E2
-  #define AR488_MCP23S17
-//  #define AR488_MCP23017
+//  #define AR488_MCP23S17
+  #define AR488_MCP23017
   /*** Serial ports ***/
   // Mega 2560 supports Serial, Serial1, Serial2, Serial3. Since the pins 
   // associated with Serial2 are used in the default pin layout, Serial2

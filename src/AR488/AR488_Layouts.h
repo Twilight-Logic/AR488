@@ -5,7 +5,7 @@
 
 #include "AR488_Config.h"
 
-/***** AR488_Hardware.h, ver. 0.50.15, 30/04/2021 *****/
+/***** AR488_Hardware.h, ver. 0.50.16, 02/06/2021 *****/
 /*
  * Hardware pin layout definitions
  */

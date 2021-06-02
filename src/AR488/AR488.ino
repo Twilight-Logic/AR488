@@ -31,7 +31,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.50.15, 30/05/2021" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.50.16, 02/06/2021" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -471,8 +471,7 @@ void setup() {
   // OPtional: Set the I2C bus clock frequency in Hertz (optional - 10000 [slow], 100000 [standard], 400000 [fast], 3400000 [fast plus])
   // Check processor documentation for which modes are supported
 //  Wire.setClock(100000);
-  pinMode(MCP_SELECTPIN, OUTPUT);
-  digitalWrite(MCP_SELECTPIN, HIGH);
+//  digitalWrite(MCP_SELECTPIN, HIGH);
   // Enable the hardware address pins (A0-A2) on the MCP23017
   mcpByteWrite(MCPCON, 0b00001000);
   // Enable MCP23017 interrupts
@@ -783,9 +782,10 @@ bool isAsserted(uint8_t gpibsig) {
     mcpIntA = false;
     // Get inverse of pin status at interrupt (0 = true [asserted]; 1 = false [unasserted])
     mcpPinAssertedReg = ~getMcpIntAPinState();
+//arSerial->print(F("mcpPinAssertedReg: "));
+//arSerial->println(mcpPinAssertedReg, BIN);
   }
   return (mcpPinAssertedReg & (1<<gpibsig));
-
 #else
   // Use digitalRead function to get current Arduino pin state
   return (digitalRead(gpibsig) == LOW) ? true : false;
@@ -2786,18 +2786,22 @@ bool gpibReceiveData() {
   // Perform read of data (r=0: data read OK; r>0: GPIB read error);
   while (r == 0) {
 
+//arSerial->println(F("Loop entered."));
+
     // Tranbreak > 0 indicates break condition
     if (tranBrk > 0) break;
 
-//Serial.println(F("Passed tranbrk."));
+//arSerial->println(F("Passed tranbrk."));
 
-    // ATN asserted
-    if (isAsserted(ATN)) break;
+    // ATN asserted (check needed only in device mode)
+    if ((AR488.cmode==1) && isAsserted(ATN)) break;
 
-//Serial.println(F("Passed ATN asserted."));
+//arSerial->println(F("Passed ATN asserted."));
 
     // Read the next character on the GPIB bus
     r = gpibReadByte(&bytes[0], &eoiDetected);
+
+//arSerial->println(F("Read first character."));
 
     // When reading with amode=3 or EOI check serial input and break loop if neccessary
     if ((AR488.amode==3) || rEoi) lnRdy = serialIn_h();
@@ -2813,7 +2817,7 @@ bool gpibReceiveData() {
 #endif
 
     // If break condition ocurred or ATN asserted then break here
-    if (isAsserted(ATN)) break;
+//    if (isAsserted(ATN)) break;
 
 #ifdef DEBUG7
     dbSerial->print(bytes[0], HEX), dbSerial->print(' ');
