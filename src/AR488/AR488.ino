@@ -945,6 +945,7 @@ static cmdRec cmdHidx [] = {
   { "eos",         3, eos_h       },
   { "eot_char",    3, eot_char_h  },
   { "eot_enable",  3, eot_en_h    },
+  { "help",        3, help_h      },
   { "ifc",         2, (void(*)(char*)) ifc_h     },
   { "id",          3, id_h        },
   { "idn",         3, idn_h       },
@@ -975,6 +976,51 @@ static cmdRec cmdHidx [] = {
 };
 
 
+
+static const char cmdHelp[] PROGMEM = {
+  "addr: Display/set device address\n"
+  "auto: Automatically request talk and read response\n"
+  "clr: Send Selected Device Clear to current GPIB address\n"
+  "eoi: Enable/disable assertion of EOI signal\n"
+  "eor: Show or set end of receive character(s)\n"
+  "eos: Specify GPIB termination character\n"
+  "eot_char: Set character to append to USB output when EOT enabled\n"
+  "eot_enable: Enable/Disable appending user specified character to USB output on EOI detection\n"
+  "help: This message\n"
+  "ifc: Assert IFC signal for 150 miscoseconds - make AR488 controller in charge\n"
+  "llo: Local lockout - disable front panel operation on instrument\n"
+  "loc: Enable front panel operation on instrument\n"
+  "lon: Put controller in listen-only mode (listen to all traffic)\n"
+  "mode: Set the interface mode (0=controller/1=device)\n"
+  "read: Read data from instrument\n"
+  "read_tmo_ms: Read timeout specified between 1 - 3000 milliseconds\n"
+  "rst: Reset the controller\n"
+  "savecfg: Save configration\n"
+  "spoll: Serial poll the addressed host or all instruments\n"
+  "srq: Return status of srq signal (1-srq asserted/0-srq not asserted)\n"
+  "status: Set the status byte to be returned on being polled (bit 6 = RQS, i.e SRQ asserted)\n"
+  "trg: Send trigger to selected devices (up to 15 addresses)\n"
+  "ver: Display firmware version\n"
+  // proprietary commands
+  "aspoll: Serial poll all instruments (alias: ++spoll all)\n"
+  "dcl: Send unaddressed (all) device clear  [power on reset] (is the rst?)\n"
+  "default: Set configuration to controller default settings\n"
+  "id name: Show/Set the name of the interface\n"
+  "id serial: Show/Set the serial number of the interface\n"
+  "id verstr: Show/Set the version string (replaces setvstr)\n"
+  "idn: Enable/Disable reply to *idn? (disabled by default)\n"
+  "macro: Run a macro (if macro support is compiled)\n"
+  "ppoll: Conduct a parallel poll\n"
+  "ren: Assert or Unassert the REN signal\n"
+  "repeat: Repeat a given command and return result\n"
+  "setvstr: Set custom version string (to identify controller, e.g. \"GPIB-USB\"). Max 47 chars, excess truncated.\n"
+  "srqauto: Automatically condiuct serial poll when SRQ is asserted\n"
+  "ton: Put controller in talk-only mode (send data only)\n"
+  "verbose: Verbose (human readable) mode\n"
+  "tmbus: Timing parameters (see the doc)\n"
+  "xdiag: Bus diagnostics (see the doc)\n"
+};
+
 /***** Show a prompt *****/
 void showPrompt() {
   // Print prompt
@@ -982,6 +1028,37 @@ void showPrompt() {
   arSerial->print("> ");
 }
 
+/***** Show help message *****/
+void help_h(char *params) {
+  char c;
+  char token[20];
+  int i;
+
+  i = 0;
+  for (int k = 0; k < strlen_P(cmdHelp); k++) {
+    c = pgm_read_byte_near(cmdHelp + k);
+    if (i < 20) {
+      if(c == ':') {
+        token[i] = 0;
+        if((params == NULL) || (strcmp(token, params) == 0)) {
+          arSerial->print(F("++"));
+          arSerial->print(token);
+          arSerial->print(c);
+          i = 255; // means we need to print until \n
+        }
+      } else {
+        token[i] = c;
+        i++;
+      }
+    }
+    else if (i == 255) {
+      arSerial->print(c);
+    }
+    if (c == '\n') {
+      i = 0;
+    }
+  }
+}
 
 /****** Send data to instrument *****/
 /* Processes the parse buffer whenever a full CR or LF
