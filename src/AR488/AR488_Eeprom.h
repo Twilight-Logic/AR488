@@ -2,9 +2,9 @@
 #define AR488_EEPROM_H
 
 #include "AR488_Config.h"
-#include <EEPROM.h>
+//#include <EEPROM.h>
 
-/***** AR488_Eeprom.h, ver. 0.00.05, 27/06/2020 *****/
+/***** AR488_Eeprom.h, ver. 0.00.06, 16/06/2021 *****/
 /*
  * EEPROM function definitions
  */
@@ -13,10 +13,12 @@
 #define EESTART 2    // EEPROM start of data - min 4 for CRC32, min 2 for CRC16
 #define UPCASE true
 
+  extern Stream& dataStream;
+  extern Stream& debugStream;
 
 //void epViewData();
 
-
+/*
 template<typename T> void epViewData(T* output) {
   uint16_t addr = 0;
   uint8_t dbuf[16];
@@ -38,11 +40,13 @@ template<typename T> void epViewData(T* output) {
     output->println();
   }
 }
+*/
 
 
 void epErase();
 void epWriteData(uint8_t cfgdata[], uint16_t cfgsize);
 bool epReadData(uint8_t cfgdata[], uint16_t cfgsize);
+void epViewData(Stream& outputStream);
 bool isEepromClear();
 
 

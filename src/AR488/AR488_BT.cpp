@@ -6,7 +6,7 @@
 #ifdef AR_BT_EN
 
 
-/***** AR488_BT.cpp, ver. 0.48.24, 25/04/2020 *****/
+/***** AR488_BT.cpp, ver. 0.50.25, 21/06/2020 *****/
 /*
 * AR488 HC05 BlueTooth module
 */
@@ -42,24 +42,9 @@
   SoftwareSerial *btSerial = &btSerial;
 #endif
 
-/*
-#ifdef AR_CDC_SERIAL
-  extern Serial_ *btSerial;
-#endif
-#ifdef AR_HW_SERIAL
-  HardwareSerial *btSerial = &(AR_SERIAL_PORT);
-#endif
-// Note: SoftwareSerial support conflicts with PCINT support
-#ifdef AR_SW_SERIAL
-  #include <SoftwareSerial.h>
-  SoftwareSerial btSerial(AR_SW_SERIAL_RX, AR_SW_SERIAL_TX);
-  SoftwareSerial *btSerial = &btSerial;
-#endif
-*/
-
 
 /***** Debug Port *****/
-#ifdef DEBUG9
+#ifdef DEBUG_BLUETOOTH
   #ifdef DB_SERIAL_PORT
     #ifdef DB_CDC_SERIAL
       extern Serial_ *dbSerial;
@@ -87,7 +72,7 @@ char rBuf[RBSIZE];
 
 /***** Initialise *****/
 void btInit() {
-#ifdef DEBUG9
+#ifdef DEBUG_BLUETOOTH
   dbSerial->begin(115200);
   dbSerial->println(F("BlueTooth Debug =>"));
 #endif
@@ -119,7 +104,7 @@ void btInit() {
   btSerial->print(F("AT+RESET\r\n"));
   delay(500);
   btSerial->end();
-#ifdef DEBUG9
+#ifdef DEBUG_BLUETOOTH
   dbSerial->println(F("<= END."));
 #endif
 }
@@ -155,35 +140,35 @@ bool btChkCfg(){
   strcat(baudstr, baudrate);
   strcat(baudstr, ",1,0");
 
-#ifdef DEBUG9
+#ifdef DEBUG_BLUETOOTH
   dbSerial->println(F("Send: AT+NAME?"));
 #endif
   btSerial->println(F("AT+NAME?"));
   delay(200);
   if (!atReply("+NAME:" AR_BT_NAME)) return false;
-#ifdef DEBUG9
+#ifdef DEBUG_BLUETOOTH
   dbSerial->println(F("BT Name OK."));
 #endif
   delay(200);
 
-#ifdef DEBUG9
+#ifdef DEBUG_BLUETOOTH
   dbSerial->println(F("Send: AT+UART?"));
 #endif
   btSerial->println(F("AT+UART?"));
   delay(200);
   if(!atReply(baudstr)) return false;
-#ifdef DEBUG9
+#ifdef DEBUG_BLUETOOTH
   dbSerial->println(F("Baud rate OK."));
 #endif
   delay(200);
   
-#ifdef DEBUG9
+#ifdef DEBUG_BLUETOOTH
   dbSerial->println(F("Send: AT+PSWD?"));
 #endif
   btSerial->println(F("AT+PSWD?"));
   delay(200);
   if (!atReply("+PIN:\"" AR_BT_CODE "\"")) return false;
-#ifdef DEBUG9
+#ifdef DEBUG_BLUETOOTH
   dbSerial->println(F("BT code OK."));
 #endif
   return true;
@@ -192,27 +177,27 @@ bool btChkCfg(){
 
 /***** Configure the HC05 *****/
 bool btCfg(){
-#ifdef DEBUG9
+#ifdef DEBUG_BLUETOOTH
   dbSerial->println(F("Configuring..."));
 #endif
   btSerial->println(F("AT+ROLE=0"));
   delay(200);
   if (!atReply("OK")) return false;
-#ifdef DEBUG9
+#ifdef DEBUG_BLUETOOTH
   dbSerial->println(F("Set BT role 0"));
 #endif
 
   btSerial->println(F("AT+NAME=\"" AR_BT_NAME "\""));
   delay(200);
   if (!atReply("OK")) return false;
-#ifdef DEBUG9
+#ifdef DEBUG_BLUETOOTH
   dbSerial->println(F("Set BT name: " AR_BT_NAME));
 #endif
 
   btSerial->println(F("AT+PSWD=\"" AR_BT_CODE "\""));
   delay(200);
   if (!atReply("OK")) return false;
-#ifdef DEBUG9
+#ifdef DEBUG_BLUETOOTH
   dbSerial->println(F("Set BT passcode: " AR_BT_CODE));
 #endif
 
@@ -221,7 +206,7 @@ bool btCfg(){
   btSerial->println(F(",1,0"));
   delay(200);
   if (!atReply("OK")) return false;
-#ifdef DEBUG9
+#ifdef DEBUG_BLUETOOTH
   dbSerial->println(F("Set baud rate: "));
 #endif
 
@@ -236,7 +221,7 @@ bool atReply(const char* reply) {
   memset(rBuf, '\0', RBSIZE);
   // Read the first line
   btSerial->readBytesUntil(0x0A, rBuf, RBSIZE-1);
-#ifdef DEBUG9
+#ifdef DEBUG_BLUETOOTH
   dbSerial->print(F("Reply: "));
   dbSerial->println(rBuf);
 #endif

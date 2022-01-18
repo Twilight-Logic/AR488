@@ -2,7 +2,7 @@
 #include <EEPROM.h>
 #include "AR488_Eeprom.h"
 
-/***** AR488_Eeprom.cpp, ver. 0.00.05, 27/06/2020 *****/
+/***** AR488_Eeprom.cpp, ver. 0.00.06, 16/06/2021 *****/
 /*
  * EEPROM functions implementation
  */
@@ -20,8 +20,8 @@ unsigned long int getCRC32(uint8_t bytes[], uint16_t bsize);
 #ifdef __AVR__
 
 /***** Show all 512 bytes of EEPROM data *****/
-/*
-void epViewData() {
+
+void epViewData(Stream& outputStream) {
   uint16_t addr = 0;
   uint8_t dbuf[16];
   char cnt[4]= {'\0'};
@@ -31,18 +31,18 @@ void epViewData() {
   memset(dbuf, 0x00, 16);
   for (addr=0; addr<512; addr=addr+16){
     sprintf(cnt, "%03d", addr);
-    dataOut->print(cnt);
-    dataOut->print(":");
+    outputStream.print(cnt);
+    outputStream.print(":");
     EEPROM.get(addr, dbuf);
     for (int i=0; i<16; i++){
-      dataOut->print(" ");
+      outputStream.print(" ");
       sprintf(oct, "%02X", dbuf[i]);
-      dataOut->print(oct);
+      outputStream.print(oct);
     }
-    dataOut->println();
+    outputStream.println();
   }
 }
-*/
+
 
 /***** Clear the EEPROM *****/
 void epErase() {
@@ -126,8 +126,7 @@ bool isEepromClear(){
 #if defined(ESP8266) || defined(ESP32)
 
 /***** Show all 512 bytes of EEPROM data *****/
-/*
-void epViewData() {
+void epViewData(Stream& outputStream) {
   uint16_t addr = 0;
   uint8_t dbuf[16];
   char cnt[4]= {'\0'};
@@ -138,18 +137,18 @@ void epViewData() {
   memset(dbuf, 0x00, 16);
   for (addr=0; addr<512; addr=addr+16){
     sprintf(cnt, "%03d", addr);
-    arSerial->print(cnt);
-    arSerial->print(":");
+    outputStream.print(cnt);
+    outputStream.print(":");
     EEPROM.get(addr, dbuf);
     for (int i=0; i<16; i++){
-      dataOut->print(" ");
+      outputStream.print(" ");
       sprintf(oct, "%02X", dbuf[i]);
-      dataOut->print(oct);
+      outputStream.print(oct);
     }
   }
   EEPROM.end();
 }
-*/
+
 
 /***** Clear the EEPROM *****/
 void epErase() {

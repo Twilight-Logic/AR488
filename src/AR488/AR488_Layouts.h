@@ -5,7 +5,11 @@
 
 #include "AR488_Config.h"
 
-/***** AR488_Hardware.h, ver. 0.50.16, 02/06/2021 *****/
+#ifdef DEBUG_LAYOUTS
+  extern debugStream;
+#endif
+
+/***** AR488_Hardware.h, ver. 0.51.00, 18/01/2022 *****/
 /*
  * Hardware pin layout definitions
  */
@@ -402,13 +406,44 @@ void mcpByteWrite(uint8_t reg, uint8_t db);
 uint8_t mcpDigitalRead(uint8_t pin);
 void mcpInterruptsEn();
 void mcpIntHandler();
-uint8_t getMcpIntAPinState();
+//uint8_t getMcpIntAPinState();
 
 
 #endif // AR488_MCP23017
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MCP23017 IC (I2C) LAYOUT DEFINITION *****/
 /***********************************************/
+
+
+
+/********************************************************/
+/***** PANDUINO/MIGHTYCORE MCGRAW LAYOUT DEFINITION *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef AR488_MEGA644P_MCGRAW
+
+#define DIO1  10   /* GPIB 1  */
+#define DIO2  11   /* GPIB 2  */
+#define DIO3  12   /* GPIB 3  */
+#define DIO4  13   /* GPIB 4  */
+#define DIO5  14   /* GPIB 13 */
+#define DIO6  15   /* GPIB 14 */
+#define DIO7  16   /* GPIB 15 */
+#define DIO8  17   /* GPIB 16 */
+
+#define IFC   22   /* GPIB 9  */
+#define NDAC  21   /* GPIB 8  */
+#define NRFD  20   /* GPIB 7  */
+#define DAV   19   /* GPIB 6  */
+#define EOI   18   /* GPIB 5  */
+
+#define SRQ   23   /* GPIB 10 */
+#define REN   24   /* GPIB 17 */
+#define ATN   31   /* GPIB 11 */
+
+#endif // AR488_MEGA644P_MCGRAW
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** PANDUINO/MIGHTYCORE MCGRAW LAYOUT DEFINITION *****/
+/********************************************************/
 
 
 

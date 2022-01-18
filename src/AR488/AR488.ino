@@ -1,5 +1,3 @@
-#include <EEPROM.h>
-
 //#pragma GCC diagnostic push
 //#pragma GCC diagnostic ignored "-Wtype-limits"
 //#pragma GCC diagnostic ignored "-Wunused-variable"
@@ -11,8 +9,9 @@
 //#pragma GCC diagnostic pop
 
 #include "AR488_Config.h"
-#include "AR488_Layouts.h"
+#include "AR488_GPIBbus.h"
 #include "AR488_Eeprom.h"
+
 
 /*
 #ifdef USE_INTERRUPTS
@@ -22,16 +21,21 @@
 #endif
 */
 
-#ifdef E2END
+
+/***** Enable EEPROM functions? *****/
+/*
+#ifdef E2END  // Defined on boards with EEPROM
   #include <EEPROM.h>
 #endif
+*/
 
+/***** Bluetooth enabled? *****/
 #ifdef AR_BT_EN
   #include "AR488_BT.h"
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.50.17, 02/06/2021" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.51.00, 18/01/2022" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -68,16 +72,19 @@
 */
 
 /*
-   Standard commands
+static const char helpText[] PROGMEM = R"EOF(
+Standard commands
 
    ++addr         - display/set device address
    ++auto         - automatically request talk and read response
    ++clr          - send Selected Device Clear to current GPIB address
    ++eoi          - enable/disable assertion of EOI signal
    ++eos          - specify GPIB termination character
-   ++eot_enable   - enable/disable appending user specified character to USB output on EOI detection
+   ++eot_enable   - enable/disable appending user specified character to USB
+                    output on EOI detection
    ++eot_char     - set character to append to USB output when EOT enabled
-   ++ifc          - assert IFC signal for 150 miscoseconds - make AR488 controller in charge
+   ++ifc          - assert IFC signal for 150 miscoseconds - make AR488
+                    controller in charge
    ++llo          - local lockout - disable front panel operation on instrument
    ++loc          - enable front panel operation on instrument
    ++lon          - put controller in listen-only mode (listen to all traffic)
@@ -87,14 +94,12 @@
    ++rst          - reset the controller
    ++savecfg      - save configration
    ++spoll        - serial poll the addressed host or all instruments
-   ++srq          - return status of srq signal (1-srq asserted/0-srq not asserted)
+   ++srq          - return status of srq signal (1-asserted/0-not asserted)
    ++status       - set the status byte to be returned on being polled (bit 6 = RQS, i.e SRQ asserted)
    ++trg          - send trigger to selected devices (up to 15 addresses)
    ++ver          - display firmware version
-*/
 
-/*
-   Proprietry commands:
+Proprietry commands:
 
    ++aspoll       - serial poll all instruments (alias: ++spoll all)
    ++default      - set configuration to controller default settings
@@ -110,6 +115,7 @@
    ++ton          - put controller in talk-only mode (send data only)
    ++verbose      - verbose (human readable) mode
    ++xonxoff
+)EOF";
 */
 
 /*
@@ -207,57 +213,32 @@ const char * const macros[] PROGMEM = {
 /***** SERIAL PORT MANAGEMENT *****/
 /***** vvvvvvvvvvvvvvvvvvvvvv *****/
 
-
-/***** Serial communications port *****/
-#ifdef AR_CDC_SERIAL
-  Serial_ *arSerial = &(AR_SERIAL_PORT);
-  #ifndef DB_SERIAL_PORT
-    Serial_ *dbSerial = arSerial;
-  #endif
-#endif
-#ifdef AR_HW_SERIAL
-  HardwareSerial *arSerial = &(AR_SERIAL_PORT);
-  #ifndef DB_SERIAL_PORT
-    HardwareSerial *dbSerial = arSerial;
-  #endif
-#endif
-// Note: SoftwareSerial support conflicts with PCINT support
-#ifdef AR_SW_SERIAL
-  #include <SoftwareSerial.h>
-  SoftwareSerial swArSerial(AR_SW_SERIAL_RX, AR_SW_SERIAL_TX);
-  SoftwareSerial *arSerial = &swArSerial;
-  #ifndef DB_SERIAL_PORT
-    SoftwareSerial *dbSerial = arSerial;
-  #endif
-#endif
-
-
-/***** Debug Port *****/
-#ifdef DB_SERIAL_PORT
-  #ifdef DB_CDC_SERIAL
-    Serial_ *dbSerial = &(DB_SERIAL_PORT);
-  #endif
-  #ifdef DB_HW_SERIAL
-    HardwareSerial *dbSerial = &(DB_SERIAL_PORT);
-  #endif
-  // Note: SoftwareSerial support conflicts with PCINT support
-  #ifdef DB_SW_SERIAL
+#ifdef AR_SERIAL_ENABLE
+  #ifdef AR_SERIAL_TYPE_SW
     #include <SoftwareSerial.h>
-    SoftwareSerial swDbSerial(DB_SW_SERIAL_RX, DB_SW_SERIAL_TX);
-    SoftwareSerial *dbSerial = &swDbSerial;
+    SoftwareSerial AR_SERIAL_PORT(SW_SERIAL_RX_PIN, SW_SERIAL_TX_PIN);
+  #else
+    Stream& dataStream = AR_SERIAL_PORT;
   #endif
 #endif
 
+#ifdef DB_SERIAL_ENABLE
+  #ifdef DB_SERIAL_TYPE_SW
+    #include <SoftwareSerial.h>
+    SoftwareSerial DB_SERIAL_PORT(SW_SERIAL_RX_PIN, SW_SERIAL_TX_PIN);
+  #else
+    Stream& debugStream = DB_SERIAL_PORT;
+  #endif
+#endif
 
 /***** PARSE BUFFERS *****/
 /*
- * Note: Ardiono serial input buffer is 64
+ * Note: Ardiono serial input buffer is 64 
  */
 // Serial input parsing buffer
 static const uint8_t PBSIZE = 128;
 char pBuf[PBSIZE];
 uint8_t pbPtr = 0;
-
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** SERIAL PORT MANAGEMENT *****/
@@ -322,9 +303,10 @@ uint8_t pbPtr = 0;
 #define PLUS 0x2B   // '+' character
 
 /***** Controller configuration *****/
-/*
+/*   
  * Default values set for controller mode
  */
+/*
 union AR488conf{
   struct{
     bool eot_en;      // Enable/disable append EOT char to string received from GPIB bus before sending to USB
@@ -350,30 +332,34 @@ union AR488conf{
 
 //struct AR488conf AR488;
 union AR488conf AR488;
-
+*/
 
 /****** Global variables with volatile values related to controller state *****/
 
+// GPIB bus object
+GPIBbus gpibBus;
+
 // GPIB control state
-uint8_t cstate = 0;
+//uint8_t cstate = 0;
 
 // Verbose mode
 bool isVerb = false;
 
 // CR/LF terminated line ready to process
-uint8_t lnRdy = 0;
+uint8_t lnRdy = 0;      
 
 // GPIB data receive flags
-//bool isReading = false; // Is a GPIB read in progress?
-bool aRead = false;     // GPIB data read in progress
-bool rEoi = false;      // Read eoi requested
-bool rEbt = false;      // Read with specified terminator character
-bool isQuery = false;   // Direct instrument command is a query
-uint8_t tranBrk = 0;    // Transmission break on 1=++, 2=EOI, 3=ATN 4=UNL
-uint8_t eByte = 0;      // Termination character
+//bool isReading = false;           // Is a GPIB read in progress?
+bool addressingSuppressed = false;  // Read with addressing suppressed
+bool autoReading = false;           // Auto reading (auto mode 3) GPIB data in progress
+bool readWithEoi = false;           // Read eoi requested
+bool readWithEndByte = false;       // Read with specified terminator character
+bool isQuery = false;               // Direct instrument command is a query
+uint8_t tranBrk = 0;                // Transmission break on 1=++, 2=EOI, 3=ATN 4=UNL
+uint8_t endByte = 0;                // Termination character
 
 // Device mode - send data
-bool snd = false;
+//bool snd = false;
 
 // Escaped character flag
 bool isEsc = false;           // Charcter escaped
@@ -390,18 +376,17 @@ bool aTt = false;
 bool aTl = false;
 
 // Data send mode flags
-bool deviceAddressing = true;   // Suppress sending commands to address the instrument
 bool dataBufferFull = false;    // Flag when parse buffer is full
 
 // Interrupt flag for MCP23S17
 #if defined(AR488_MCP23S17) || defined(AR488_MCP23017)
-extern volatile bool mcpIntA;  // MCP23S17 interrupt handler
-uint8_t mcpPinAssertedReg = 0;
+//extern volatile bool mcpIntA;  // MCP23S17 interrupt handler
+//uint8_t mcpPinAssertedReg = 0;
 #endif
 
 // State flags set by interrupt being triggered
-extern volatile bool isATN;  // has ATN been asserted?
-extern volatile bool isSRQ;  // has SRQ been asserted?
+//extern volatile bool isATN;  // has ATN been asserted?
+//extern volatile bool isSRQ;  // has SRQ been asserted?
 
 // SRQ auto mode
 bool isSrqa = false;
@@ -464,7 +449,7 @@ void setup() {
   // Enable MCP23S17 interrupts
   mcpInterruptsEn();
   // Attach interrupt handler to Arduino board pin for MCP23S17 to signal interrupt has occurred
-  attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
+//  attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
 #endif
 
 
@@ -481,7 +466,7 @@ void setup() {
   // Enable MCP23017 interrupts
   mcpInterruptsEn();
   // Attach interrupt handler to Arduino board pin for MCP23S17 to signal interrupt has occurred
-  attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
+//  attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
 #endif
   
   
@@ -496,27 +481,23 @@ void setup() {
   // Initialise parse buffer
   flushPbuf();
 
-// Initialise debug port
-#ifdef DB_SERIAL_PORT
-  if (dbSerial != arSerial) dbSerial->begin(DB_SERIAL_BAUD);
-#endif
-
  // Initialise serial comms over USB or Bluetooth
 #ifdef AR_BT_EN
-  // Initialise Bluetooth
+  // Initialise serial at Bluetooth speed rate
   btInit();
-  arSerial->begin(AR_BT_BAUD);
+  AR_SERIAL_PORT.begin(AR_BT_SPEED);
 #else
-  // Start the serial port
-  #ifdef AR_SW_SERIAL
-    arSerial->begin(AR_SW_SERIAL_BAUD);
-  #else
-    arSerial->begin(AR_SERIAL_BAUD);
-  #endif
+  // Initialise serial at normal speed rate
+  AR_SERIAL_PORT.begin(AR_SERIAL_SPEED);
+#endif
+
+// Initialise debug port
+#ifdef DB_SERIAL_EN
+  DB_SERIAL_PORT.begin(DB_SERIAL_SPEED);
 #endif
 
 // Un-comment for diagnostic purposes
-/*
+/* 
   #if defined(__AVR_ATmega32U4__)
     while(!*arSerial)
     ;
@@ -531,18 +512,23 @@ void setup() {
 // Un-comment for diagnostic purposes
 
   // Initialise
-  initAR488();
+//  initAR488();
 
 #ifdef E2END
+  debugStream.println(F("EEPROM detected!"));
   // Read data from non-volatile memory
   //(will only read if previous config has already been saved)
 //  epGetCfg();
   if (!isEepromClear()) {
-    if (!epReadData(AR488.db, AR_CFG_SIZE)) {
+debugStream.println(F("EEPROM has data."));
+    if (!epReadData(gpibBus.cfg.db, GPIB_CFG_SIZE)) {
       // CRC check failed - config data does not match EEPROM
+debugStream.println(F("CRC check failed. Erasing EEPROM...."));
       epErase();
-      initAR488();
-      epWriteData(AR488.db, AR_CFG_SIZE);
+      gpibBus.setDefaultCfg();
+//      initAR488();
+      epWriteData(gpibBus.cfg.db, GPIB_CFG_SIZE);
+debugStream.println(F("EEPROM data set to default."));
     }
   }
 #endif
@@ -556,7 +542,7 @@ void setup() {
   if (AR488.cmode==2) {
     // Set controller mode on SN75161/2
     digitalWrite(SN7516X_TE, LOW);
-    #ifdef SN7516X_DC
+    #ifdef SN7516X_DC 
       digitalWrite(SN7516X_DC, LOW);
     #endif
     #ifdef SN7516X_SC
@@ -574,11 +560,8 @@ void setup() {
   }
 #endif
 
-  // Initialize the interface in device mode
-  if (AR488.cmode == 1) initDevice();
-
-  // Initialize the interface in controller mode
-  if (AR488.cmode == 2) initController();
+  // Start the interface in the configured mode
+  gpibBus.begin();
 
 #if defined(USE_MACROS) && defined(RUN_STARTUP)
   // Run startup macro
@@ -586,11 +569,11 @@ void setup() {
 #endif
 
 #ifdef SAY_HELLO
-  arSerial->print(F("AR488 ready "));
-  if (AR488.cmode==2){
-    arSerial->println(F("(controller)."));
+  dataStream.print(F("AR488 ready "));
+  if (gpibBus.isController()){
+    dataStream.println(F("(controller)."));
   }else{
-    arSerial->println(F("(device)."));
+    dataStream.println(F("(device)."));
   }
 #endif
 
@@ -602,6 +585,8 @@ void setup() {
 
 /***** ARDUINO MAIN LOOP *****/
 void loop() {
+
+  bool errFlg = false; 
 
 /*** Macros ***/
 /*
@@ -615,21 +600,9 @@ void loop() {
   }
 #endif
 
-/*** Pin Hooks ***/
-/*
- * Not all boards support interrupts or have PCINTs. In this
- * case, use in-loop checking to detect when SRQ and ATN have
- * been signalled
- */
-/*
-#ifndef USE_INTERRUPTS
-  isATN = (digitalRead(ATN)==LOW ? true : false);
-  isSRQ = (digitalRead(SRQ)==LOW ? true : false);
-#endif
-*/
 
 /*** Process the buffer ***/
-/* Each received char is passed through parser until an un-escaped
+/* Each received char is passed through parser until an un-escaped 
  * CR is encountered. If we have a command then parse and execute.
  * If the line is data (inclding direct instrument commands) then
  * send it to the instrument.
@@ -641,30 +614,35 @@ void loop() {
 
 /*
 if (lnRdy>0){
-  arSerial->print(F("lnRdy: "));
-  arSerial->println(lnRdy);
+  dataStream.print(F("lnRdy: "));
+  dataStream.println(lnRdy);
 }
 */
 
   // lnRdy=1: received a command so execute it...
   if (lnRdy == 1) {
+    if (autoReading) {
+      // Issuing any command stops autoreading
+      autoReading = false;
+      gpibBus.unAddressDevice();
+    }
     execCmd(pBuf, pbPtr);
   }
 
   // Controller mode:
-  if (AR488.cmode == 2) {
+  if (gpibBus.isController()) {
     // lnRdy=2: received data - send it to the instrument...
     if (lnRdy == 2) {
       sendToInstrument(pBuf, pbPtr);
       // Auto-read data from GPIB bus following any command
-      if (AR488.amode == 1) {
+      if (gpibBus.cfg.amode == 1) {
         //        delay(10);
-        gpibReceiveData();
+        errFlg = gpibBus.receiveData(dataStream, gpibBus.cfg.eoi, false, 0);
       }
       // Auto-receive data from GPIB bus following a query command
-      if (AR488.amode == 2 && isQuery) {
+      if (gpibBus.cfg.amode == 2 && isQuery) {
         //        delay(10);
-        gpibReceiveData();
+        errFlg = gpibBus.receiveData(dataStream, gpibBus.cfg.eoi, false, 0);
         isQuery = false;
       }
     }
@@ -672,31 +650,48 @@ if (lnRdy>0){
     // Check status of SRQ and SPOLL if asserted
 //    if (isSRQ && isSrqa) {
 /*
-    if (isAsserted(SRQ) && isSrqa) {
+    if (gpibBus.isAsserted(SRQ) && isSrqa) {
       spoll_h(NULL);
 //      isSRQ = false;
     }
 */
     // Automatic serial poll?
     if (isSrqa) {
-      if (isAsserted(SRQ)) spoll_h(NULL);
+      if (gpibBus.isAsserted(SRQ)) spoll_h(NULL);
     }
 
-
     // Continuous auto-receive data from GPIB bus
-    if (AR488.amode == 3 && aRead) gpibReceiveData();
+    if ((gpibBus.cfg.amode==3) && autoReading) {
+      // Nothing is waiting on the serial input so read data from GPIB
+      if (lnRdy==0) {
+        errFlg = gpibBus.receiveData(dataStream, readWithEoi, readWithEndByte, endByte);
+      }
+/*      
+      else{
+        // Otherwise clear auto-read flag and unaddress device
+        autoReading = false;
+        gpibBus.unAddressDevice();
+      }
+*/
+    }
+
+    // Did we get an error during read?
+    if (errFlg && isVerb) {
+      dataStream.println(F("Error while receiving data."));
+      errFlg = false;
+    }
   }
 
   // Device mode:
-  if (AR488.cmode == 1) {
+  if (gpibBus.isController()==false) {
     if (isTO) {
       if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
     }else if (isRO) {
       lonMode();
-    }else if (isAsserted(ATN)) {
-//      arSerial->println(F("Attention signal detected"));
+    }else if (gpibBus.isAsserted(ATN)) {
+//      dataStream.println(F("Attention signal detected"));
       attnRequired();
-//      arSerial->println(F("ATN loop finished"));
+//      dataStream.println(F("ATN loop finished"));
     }
 /*    
     else{
@@ -710,68 +705,62 @@ if (lnRdy>0){
 
   // IDN query ?
   if (sendIdn) {
-    if (AR488.idn==1) arSerial->println(AR488.sname);
-    if (AR488.idn==2) {arSerial->print(AR488.sname);arSerial->print("-");arSerial->println(AR488.serial);}
+    if (gpibBus.cfg.idn==1) dataStream.println(gpibBus.cfg.sname);
+    if (gpibBus.cfg.idn==2) {dataStream.print(gpibBus.cfg.sname);dataStream.print("-");dataStream.println(gpibBus.cfg.serial);}
     sendIdn = false;
   }
 
   // If charaters waiting in the serial input buffer then call handler
-  if (arSerial->available()) lnRdy = serialIn_h();
-  
+  if (dataStream.available()) lnRdy = serialIn_h();
+
   delayMicroseconds(5);
 }
 /***** END MAIN LOOP *****/
 
 
 /***** Initialise the interface *****/
+/*
 void initAR488() {
   // Set default values ({'\0'} sets version string array to null)
-  AR488 = {false, false, 2, 0, 1, 0, 0, 0, 0, 1200, 0, {'\0'}, 0, 0, {'\0'}, 0, 0};
+  gpibBus.cfg = {false, false, 2, 0, 1, 0, 0, 0, 0, 1200, 0, {'\0'}, 0, {'\0'}, 0, 0};
 }
-
+*/
 
 /***** Initialise device mode *****/
 void initDevice() {
-  // Set GPIB control bus to device idle mode
-  setGpibControls(DINI);
-
-  // Initialise GPIB data lines (sets to INPUT_PULLUP)
-  readGpibDbus();
+  gpibBus.stop();
+  gpibBus.startDeviceMode();
 }
 
 
 /***** Initialise controller mode *****/
 void initController() {
-  // Set GPIB control bus to controller idle mode
-  setGpibControls(CINI);  // Controller initialise state
-  // Initialise GPIB data lines (sets to INPUT_PULLUP)
-  readGpibDbus();
-  // Assert IFC to signal controller in charge (CIC)
-  ifc_h();
+  gpibBus.stop();
+  gpibBus.startControllerMode();
 }
 
 
 /***** Serial event handler *****/
 /*
  * Note: the Arduino serial buffer is 64 characters long. Characters are stored in
- * this buffer until serialEvent_h() is called. parsedInput() takes a character at
+ * this buffer until serialEvent_h() is called. parsedInput() takes a character at 
  * a time and places it into the 256 character parse buffer whereupon it is parsed
  * to determine whether a command or data are present.
  * lnRdy=0: terminator not detected yet
  * lnRdy=1: terminator detected, sequence in parse buffer is a ++ command
  * lnRdy=2: terminator detected, sequence in parse buffer is data or direct instrument command
- */
+ */ 
 uint8_t serialIn_h() {
   uint8_t bufferStatus = 0;
   // Parse serial input until we have detected a line terminator
-  while (arSerial->available() && bufferStatus==0) {   // Parse while characters available and line is not complete
-    bufferStatus = parseInput(arSerial->read());
+  while (dataStream.available() && bufferStatus==0) {   // Parse while characters available and line is not complete
+    bufferStatus = parseInput(dataStream.read());
   }
 
-#ifdef DEBUG1
+#ifdef DEBUG_SERIAL_INPUT
   if (bufferStatus) {
-    dbSerial->print(F("BufferStatus: "));
-    dbSerial->println(bufferStatus);
+    debugStream.print(F("serialIn_h: bufferStatus: "));
+    debugStream.println(bufferStatus);  
   }
 #endif
 
@@ -788,18 +777,19 @@ uint8_t serialIn_h() {
  * Read pin state using digitalRead for Arduino pins or getGpibPinState
  * for MCP23S17 pins.
  */
+/* 
 bool isAsserted(uint8_t gpibsig) {
 #if defined(AR488_MCP23S17) || defined(AR488_MCP23017)
   // Use MCP function to get MCP23S17 or MCP23017 pin state.
   // If interrupt flagged then update mcpPinAssertedReg register
   if (mcpIntA){
-//arSerial->println(F("Interrupt flagged - pin state checked"));
+//dataStream.println(F("Interrupt flagged - pin state checked"));
     // Clear mcpIntA flag
     mcpIntA = false;
     // Get inverse of pin status at interrupt (0 = true [asserted]; 1 = false [unasserted])
     mcpPinAssertedReg = ~getMcpIntAPinState();
-//arSerial->print(F("mcpPinAssertedReg: "));
-//arSerial->println(mcpPinAssertedReg, BIN);
+//dataStream.print(F("mcpPinAssertedReg: "));
+//dataStream.println(mcpPinAssertedReg, BIN);
   }
   return (mcpPinAssertedReg & (1<<gpibsig));
 #else
@@ -807,7 +797,7 @@ bool isAsserted(uint8_t gpibsig) {
   return (digitalRead(gpibsig) == LOW) ? true : false;
 #endif
 }
-
+*/
 
 /*************************************/
 /***** Device operation routines *****/
@@ -816,7 +806,7 @@ bool isAsserted(uint8_t gpibsig) {
 
 /***** Unrecognized command *****/
 void errBadCmd() {
-  arSerial->println(F("Unrecognized command"));
+  dataStream.println(F("Unrecognized command"));
 }
 
 
@@ -827,12 +817,12 @@ uint8_t parseInput(char c) {
 /*
   if (xonxoff){
     // Send XOFF when buffer around 80% full
-    if (pbPtr < (PBSIZE*0.8)) arSerial->print(0x13);
+    if (pbPtr < (PBSIZE*0.8)) dataStream.print(0x13);
   }
 */
   // Read until buffer full
   if (pbPtr < PBSIZE) {
-    if (isVerb) arSerial->print(c);  // Humans like to see what they are typing...
+    if (isVerb && c!=LF) dataStream.print(c);  // Humans like to see what they are typing...
     // Actions on specific characters
     switch (c) {
       // Carriage return or newline? Then process the line
@@ -847,12 +837,15 @@ uint8_t parseInput(char c) {
           // Note: for data CR and LF will always be escaped
           if (pbPtr == 0) {
             flushPbuf();
-            if (isVerb) showPrompt();
+            if (isVerb) {
+              dataStream.println();
+              showPrompt();
+            }
             return 0;
           } else {
-            if (isVerb) arSerial->println();  // Move to new line
-#ifdef DEBUG1
-            dbSerial->print(F("parseInput: Received ")); dbSerial->println(pBuf);
+//            if (isVerb) dataStream.println();  // Move to new line
+#ifdef DEBUG_SERIAL_INPUT
+            debugStream.print(F("parseInput: Received ")); debugStream.println(pBuf);
 #endif
             // Buffer starts with ++ and contains at least 3 characters - command?
             if (pbPtr>2 && isCmd(pBuf) && !isPlusEscaped) {
@@ -860,12 +853,12 @@ uint8_t parseInput(char c) {
               if (pBuf[2]==0x21) {
                 r = 3;
                 flushPbuf();
-              // Otherwise flag command received and ready to process
+              // Otherwise flag command received and ready to process 
               }else{
                 r = 1;
               }
             // Buffer contains *idn? query and interface to respond
-            }else if (pbPtr>3 && AR488.idn>0 && isIdnQuery(pBuf)){
+            }else if (pbPtr>3 && gpibBus.cfg.idn>0 && isIdnQuery(pBuf)){
               sendIdn = true;
               flushPbuf();
             // Buffer has at least 1 character = instrument data to send to gpib bus
@@ -873,8 +866,8 @@ uint8_t parseInput(char c) {
               r = 2;
             }
             isPlusEscaped = false;
-#ifdef DEBUG1
-            dbSerial->print(F("R: "));dbSerial->println(r);
+#ifdef DEBUG_SERIAL_INPUT
+            debugStream.print(F("R: "));debugStream.println(r);
 #endif
 //            return r;
           }
@@ -897,11 +890,11 @@ uint8_t parseInput(char c) {
           if (pbPtr < 2) isPlusEscaped = true;
         }
         addPbuf(c);
-//        if (isVerb) arSerial->print(c);
+//        if (isVerb) dataStream.print(c);
         break;
       // Something else?
       default: // any char other than defined above
-//        if (isVerb) arSerial->print(c);  // Humans like to see what they are typing...
+//        if (isVerb) dataStream.print(c);  // Humans like to see what they are typing...
         // Buffer contains '++' (start of command). Stop sending data to serial port by halting GPIB receive.
         addPbuf(c);
         isEsc = false;
@@ -910,11 +903,13 @@ uint8_t parseInput(char c) {
   if (pbPtr >= PBSIZE) {
     if (isCmd(pBuf) && !r) {  // Command without terminator and buffer full
       if (isVerb) {
-        arSerial->println(F("ERROR - Command buffer overflow!"));
+        dataStream.println(F("ERROR - Command buffer overflow!"));
       }
       flushPbuf();
     }else{  // Buffer contains data and is full, so process the buffer (send data via GPIB)
       dataBufferFull = true;
+      // Signal to GPIB object that more data will follow (suppress GPIB addressing)
+//      gpibBus.setDataContinuity(true);
       r = 2;
     }
   }
@@ -925,8 +920,8 @@ uint8_t parseInput(char c) {
 /***** Is this a command? *****/
 bool isCmd(char *buffr) {
   if (buffr[0] == PLUS && buffr[1] == PLUS) {
-#ifdef DEBUG1
-    dbSerial->println(F("isCmd: Command detected."));
+#ifdef DEBUG_SERIAL_INPUT
+    debugStream.println(F("isCmd: Command detected."));
 #endif
     return true;
   }
@@ -938,8 +933,8 @@ bool isCmd(char *buffr) {
 bool isIdnQuery(char *buffr) {
   // Check for upper or lower case *idn?
   if (strncasecmp(buffr, "*idn?", 5)==0) {
-#ifdef DEBUG1
-    dbSerial->println(F("isIdnQuery: Detected IDN query."));
+#ifdef DEBUG_SERIAL_INPUT
+    debugStream.println(F("isIdnQuery: Detected IDN query."));
 #endif
     return true;
   }
@@ -975,25 +970,26 @@ void flushPbuf() {
 
 
 /***** Comand function record *****/
-struct cmdRec {
-  const char* token;
+struct cmdRec { 
+  const char* token; 
   int opmode;
   void (*handler)(char *);
 };
+
 
 /***** Array containing index of accepted ++ commands *****/
 /*
  * Commands without parameters require casting to a pointer
  * requiring a char* parameter. The functon is called with
  * NULL by the command processor.
- *
+ * 
  * Format: token, mode, function_ptr
- * Mode: 1=device; 2=controller; 3=both;
+ * Mode: 1=device; 2=controller; 3=both; 
  */
-static cmdRec cmdHidx [] = {
-
-  { "addr",        3, addr_h      },
-  { "aspoll",      2, (void(*)(char*)) aspoll_h  },
+static cmdRec cmdHidx [] = { 
+ 
+  { "addr",        3, addr_h      }, 
+  { "allspoll",    2, (void(*)(char*)) aspoll_h  },
   { "auto",        2, amode_h     },
   { "clr",         2, (void(*)(char*)) clr_h     },
   { "dcl",         2, (void(*)(char*)) dcl_h     },
@@ -1003,7 +999,6 @@ static cmdRec cmdHidx [] = {
   { "eos",         3, eos_h       },
   { "eot_char",    3, eot_char_h  },
   { "eot_enable",  3, eot_en_h    },
-  { "help",        3, help_h      },
   { "ifc",         2, (void(*)(char*)) ifc_h     },
   { "id",          3, id_h        },
   { "idn",         3, idn_h       },
@@ -1011,7 +1006,10 @@ static cmdRec cmdHidx [] = {
   { "loc",         2, loc_h       },
   { "lon",         1, lon_h       },
   { "macro",       2, macro_h     },
+  { "mla",         2, (void(*)(char*)) sendmla_h },
   { "mode" ,       3, cmode_h     },
+  { "msa",         2, sendmsa_h   },
+  { "mta",         2, (void(*)(char*)) sendmta_h },
   { "ppoll",       2, (void(*)(char*)) ppoll_h   },
   { "read",        2, read_h      },
   { "read_tmo_ms", 2, rtmo_h      },
@@ -1026,97 +1024,22 @@ static cmdRec cmdHidx [] = {
   { "srqauto",     2, srqa_h      },
   { "status",      1, stat_h      },
   { "ton",         1, ton_h       },
+  { "unl",         2, (void(*)(char*)) unlisten_h  },
+  { "unt",         2, (void(*)(char*)) untalk_h    },
   { "ver",         3, ver_h       },
   { "verbose",     3, (void(*)(char*)) verb_h    },
-  { "tmbus",       3, tmbus_h     },
+//  { "tmbus",       3, tmbus_h     },
   { "xdiag",       3, xdiag_h     }
 //  { "xonxoff",     3, xonxoff_h   }
 };
 
 
-
-static const char cmdHelp[] PROGMEM = {
-  "addr: Display/set device address\n"
-  "auto: Automatically request talk and read response\n"
-  "clr: Send Selected Device Clear to current GPIB address\n"
-  "eoi: Enable/disable assertion of EOI signal\n"
-  "eor: Show or set end of receive character(s)\n"
-  "eos: Specify GPIB termination character\n"
-  "eot_char: Set character to append to USB output when EOT enabled\n"
-  "eot_enable: Enable/Disable appending user specified character to USB output on EOI detection\n"
-  "help: This message\n"
-  "ifc: Assert IFC signal for 150 miscoseconds - make AR488 controller in charge\n"
-  "llo: Local lockout - disable front panel operation on instrument\n"
-  "loc: Enable front panel operation on instrument\n"
-  "lon: Put controller in listen-only mode (listen to all traffic)\n"
-  "mode: Set the interface mode (0=controller/1=device)\n"
-  "read: Read data from instrument\n"
-  "read_tmo_ms: Read timeout specified between 1 - 3000 milliseconds\n"
-  "rst: Reset the controller\n"
-  "savecfg: Save configration\n"
-  "spoll: Serial poll the addressed host or all instruments\n"
-  "srq: Return status of srq signal (1-srq asserted/0-srq not asserted)\n"
-  "status: Set the status byte to be returned on being polled (bit 6 = RQS, i.e SRQ asserted)\n"
-  "trg: Send trigger to selected devices (up to 15 addresses)\n"
-  "ver: Display firmware version\n"
-  // proprietary commands
-  "aspoll: Serial poll all instruments (alias: ++spoll all)\n"
-  "dcl: Send unaddressed (all) device clear  [power on reset] (is the rst?)\n"
-  "default: Set configuration to controller default settings\n"
-  "id name: Show/Set the name of the interface\n"
-  "id serial: Show/Set the serial number of the interface\n"
-  "id verstr: Show/Set the version string (replaces setvstr)\n"
-  "idn: Enable/Disable reply to *idn? (disabled by default)\n"
-  "macro: Run a macro (if macro support is compiled)\n"
-  "ppoll: Conduct a parallel poll\n"
-  "ren: Assert or Unassert the REN signal\n"
-  "repeat: Repeat a given command and return result\n"
-  "setvstr: Set custom version string (to identify controller, e.g. \"GPIB-USB\"). Max 47 chars, excess truncated.\n"
-  "srqauto: Automatically condiuct serial poll when SRQ is asserted\n"
-  "ton: Put controller in talk-only mode (send data only)\n"
-  "verbose: Verbose (human readable) mode\n"
-  "tmbus: Timing parameters (see the doc)\n"
-  "xdiag: Bus diagnostics (see the doc)\n"
-};
-
 /***** Show a prompt *****/
 void showPrompt() {
-  // Print prompt
-  arSerial->println();
-  arSerial->print("> ");
+  // Print a prompt
+  dataStream.print("> ");
 }
 
-/***** Show help message *****/
-void help_h(char *params) {
-  char c;
-  char token[20];
-  int i;
-
-  i = 0;
-  for (uint16_t k = 0; k < strlen_P(cmdHelp); k++) {
-    c = pgm_read_byte_near(cmdHelp + k);
-    if (i < 20) {
-      if(c == ':') {
-        token[i] = 0;
-        if((params == NULL) || (strcmp(token, params) == 0)) {
-          arSerial->print(F("++"));
-          arSerial->print(token);
-          arSerial->print(c);
-          i = 255; // means we need to print until \n
-        }
-      } else {
-        token[i] = c;
-        i++;
-      }
-    }
-    else if (i == 255) {
-      arSerial->print(c);
-    }
-    if (c == '\n') {
-      i = 0;
-    }
-  }
-}
 
 /****** Send data to instrument *****/
 /* Processes the parse buffer whenever a full CR or LF
@@ -1124,17 +1047,31 @@ void help_h(char *params) {
  */
 void sendToInstrument(char *buffr, uint8_t dsize) {
 
-#ifdef DEBUG1
-  dbSerial->print(F("sendToInstrument: Received for sending: ")); printHex(buffr, dsize);
+#ifdef DEBUG_SEND_TO_INSTR
+  if (buffr[dsize] != LF) debugStream.println();
+  debugStream.print(F("sendToInstrument: Received for sending: "));
+  printHex(buffr, dsize);
 #endif
 
   // Is this an instrument query command (string ending with ?)
   if (buffr[dsize-1] == '?') isQuery = true;
 
+  // Address device
+  if (!gpibBus.isDeviceAddressed()) gpibBus.addressDevice(gpibBus.cfg.paddr, LISTEN);
+
   // Send string to instrument
-  gpibSendData(buffr, dsize);
-  // Clear data buffer full flag
-  if (dataBufferFull) dataBufferFull = false;
+  gpibBus.sendData(buffr, dsize);
+
+  // Address device
+  if (dataBufferFull) {
+    dataBufferFull = false;
+  }else{
+    gpibBus.unAddressDevice();
+  }
+
+#ifdef DEBUG_SEND_TO_INSTR
+  debugStream.println(F("sendToInstrument: done."));
+#endif
 
   // Show a prompt on completion?
   if (isVerb) showPrompt();
@@ -1142,11 +1079,6 @@ void sendToInstrument(char *buffr, uint8_t dsize) {
   // Flush the parse buffer
   flushPbuf();
   lnRdy = 0;
-
-#ifdef DEBUG1
-  dbSerial->println(F("sendToInstrument: Sent."));
-#endif
-
 }
 
 
@@ -1161,8 +1093,8 @@ void execCmd(char *buffr, uint8_t dsize) {
   flushPbuf();
   lnRdy = 0;
 
-#ifdef DEBUG1
-  dbSerial->print(F("execCmd: Command received: ")); printHex(line, dsize);
+#ifdef DEBUG_CMD_PARSER
+  debugStream.print(F("execCmd: command received: ")); printHex(line, dsize);
 #endif
 
   // Its a ++command so shift everything two bytes left (ignore ++) and parse
@@ -1172,11 +1104,11 @@ void execCmd(char *buffr, uint8_t dsize) {
   // Replace last two bytes with a null (\0) character
   line[dsize - 2] = '\0';
   line[dsize - 1] = '\0';
-#ifdef DEBUG1
-  dbSerial->print(F("execCmd: Sent to the command processor: ")); printHex(line, dsize-2);
+#ifdef DEBUG_CMD_PARSER
+  debugStream.print(F("execCmd: sent to command processor: ")); printHex(line, dsize-2);
 #endif
   // Execute the command
-  if (isVerb) arSerial->println(); // Shift output to next line
+  if (isVerb) dataStream.println(); // Shift output to next line
   getCmd(line);
 
   // Show a prompt on completion?
@@ -1189,16 +1121,16 @@ void getCmd(char *buffr) {
 
   char *token;  // Pointer to command token
   char *params; // Pointer to parameters (remaining buffer characters)
-
+  
   int casize = sizeof(cmdHidx) / sizeof(cmdHidx[0]);
   int i = 0;
 
-#ifdef DEBUG1
-  dbSerial->print("getCmd: ");
-  dbSerial->print(buffr); dbSerial->print(F(" - length:")); dbSerial->println(strlen(buffr));
+#ifdef DEBUG_CMD_PARSER
+  debugStream.print("getCmd: ");
+  debugStream.print(buffr); debugStream.print(F(" - length: ")); debugStream.println(strlen(buffr));
 #endif
 
-  // If terminator on blank line then return immediately without processing anything
+  // If terminator on blank line then return immediately without processing anything 
   if (buffr[0] == 0x00) return;
   if (buffr[0] == CR) return;
   if (buffr[0] == LF) return;
@@ -1206,8 +1138,8 @@ void getCmd(char *buffr) {
   // Get the first token
   token = strtok(buffr, " \t");
 
-#ifdef DEBUG1
-  dbSerial->print("getCmd: process token: "); dbSerial->println(token);
+#ifdef DEBUG_CMD_PARSER
+  debugStream.print("getCmd: process token: "); debugStream.println(token);
 #endif
 
   // Check whether it is a valid command token
@@ -1219,52 +1151,60 @@ void getCmd(char *buffr) {
 
   if (i < casize) {
     // We have found a valid command and handler
-#ifdef DEBUG1
-    dbSerial->print("getCmd: found handler for: "); dbSerial->println(cmdHidx[i].token);
+#ifdef DEBUG_CMD_PARSER
+    debugStream.print("getCmd: found handler for: "); debugStream.println(cmdHidx[i].token);
 #endif
     // If command is relevant to mode then execute it
-    if (cmdHidx[i].opmode & AR488.cmode) {
+    if (cmdHidx[i].opmode & gpibBus.cfg.cmode) {
       // If its a command with parameters
       // Copy command parameters to params and call handler with parameters
       params = token + strlen(token) + 1;
-
+  
       // If command parameters were specified
       if (strlen(params) > 0) {
-#ifdef DEBUG1
-        dbSerial->print(F("Calling handler with parameters: ")); dbSerial->println(params);
+#ifdef DEBUG_CMD_PARSER
+        debugStream.print(F("getCmd: calling handler with parameters: "));
+        debugStream.println(params);
 #endif
         // Call handler with parameters specified
         cmdHidx[i].handler(params);
       }else{
+#ifdef DEBUG_CMD_PARSER
+        debugStream.println(F("getCmd: calling handler without parameters..."));
+#endif
         // Call handler without parameters
         cmdHidx[i].handler(NULL);
       }
+#ifdef DEBUG_CMD_PARSER
+      debugStream.println(F("getCmd: handler done."));
+#endif
     }else{
       errBadCmd();
-      if (isVerb) arSerial->println(F("Command not available in this mode."));
+      if (isVerb) dataStream.println(F("getCmd: command not available in this mode."));
     }
-
   } else {
     // No valid command found
     errBadCmd();
   }
-
+ 
 }
 
 
 /***** Prints charaters as hex bytes *****/
 void printHex(char *buffr, int dsize) {
+#ifdef DB_SERIAL_ENABLE
   for (int i = 0; i < dsize; i++) {
-    dbSerial->print(buffr[i], HEX); dbSerial->print(" ");
+    debugStream.print(buffr[i], HEX); debugStream.print(" ");
   }
-  dbSerial->println();
+  debugStream.println();
+#endif
 }
 
 
 /***** Check whether a parameter is in range *****/
 /* Convert string to integer and check whether value is within
  * lowl to higl inclusive. Also returns converted text in param
- * to a uint16_t integer in rval. Returns true if successful,
+ * to a uint16_t integer in rval. Returns true if successful, 
  * false if not
 */
 bool notInRange(char *param, uint16_t lowl, uint16_t higl, uint16_t &rval) {
@@ -1280,10 +1220,10 @@ bool notInRange(char *param, uint16_t lowl, uint16_t higl, uint16_t &rval) {
   if (rval < lowl || rval > higl) {
     errBadCmd();
     if (isVerb) {
-      arSerial->print(F("Valid range is between "));
-      arSerial->print(lowl);
-      arSerial->print(F(" and "));
-      arSerial->println(higl);
+      dataStream.print(F("Valid range is between "));
+      dataStream.print(lowl);
+      dataStream.print(F(" and "));
+      dataStream.println(higl);
     }
     return true;
   }
@@ -1302,11 +1242,11 @@ void execMacro(uint8_t idx) {
   for (int i = 0; i < ssize; i++) {
     c = pgm_read_byte_near(macro + i);
     if (c == CR || c == LF || i == (ssize - 1)) {
-      // Reached last character before NL. Add to buffer before processing
+      // Reached terminator or end of marcro. Add to buffer before processing
       if (i == ssize-1) {
         // Check buffer and add character
-        if (pbPtr < (PBSIZE - 2)){
-          addPbuf(c);
+        if (pbPtr < (PBSIZE - 1)){
+          if ((c != CR) && (c != LF)) addPbuf(c);
         }else{
           // Buffer full - clear and exit
           flushPbuf();
@@ -1322,7 +1262,7 @@ void execMacro(uint8_t idx) {
       flushPbuf();
     } else {
       // Check buffer and add character
-      if (pbPtr < (PBSIZE - 2)) {
+      if (pbPtr < (PBSIZE - 1)) {
         addPbuf(c);
       } else {
         // Exceeds buffer size - clear buffer and exit
@@ -1345,44 +1285,48 @@ void execMacro(uint8_t idx) {
 /***** Show or change device address *****/
 void addr_h(char *params) {
   //  char *param, *stat;
-  char *param;
+//  char *param;
   uint16_t val;
   if (params != NULL) {
 
     // Primary address
-    param = strtok(params, " \t");
-    if (notInRange(param, 1, 30, val)) return;
-    if (val == AR488.caddr) {
+//    param = strtok(params, " \t");
+//    if (notInRange(param, 1, 30, val)) return;
+    if (notInRange(params, 1, 30, val)) return;
+    if (val == gpibBus.cfg.caddr) {
       errBadCmd();
-      if (isVerb) arSerial->println(F("That is my address! Address of a remote device is required."));
+      if (isVerb) dataStream.println(F("That is my address! Address of a remote device is required."));
       return;
     }
-    AR488.paddr = val;
+    gpibBus.cfg.paddr = val;
     if (isVerb) {
-      arSerial->print(F("Set device primary address to: "));
-      arSerial->println(val);
+      dataStream.print(F("Set device primary address to: "));
+      dataStream.println(val);
     }
-
+/*
     // Secondary address
-    AR488.saddr = 0;
+    gpibBus.cfg.saddr = 0;
     val = 0;
     param = strtok(NULL, " \t");
     if (param != NULL) {
       if (notInRange(param, 96, 126, val)) return;
-      AR488.saddr = val;
+      gpibBus.cfg.saddr = val;
       if (isVerb) {
-        arSerial->print("Set device secondary address to: ");
-        arSerial->println(val);
+        dataStream.print("Set device secondary address to: ");
+        dataStream.println(val);
       }
     }
-
+*/
   } else {
-    arSerial->print(AR488.paddr);
-    if (AR488.saddr > 0) {
-      arSerial->print(F(" "));
-      arSerial->print(AR488.saddr);
+//    dataStream.print(gpibBus.cfg.paddr);
+    dataStream.println(gpibBus.cfg.paddr);
+/*    
+    if (gpibBus.cfg.saddr > 0) {
+      dataStream.print(F(" "));
+      dataStream.print(gpibBus.cfg.saddr);
     }
-    arSerial->println();
+    dataStream.println();
+*/
   }
 }
 
@@ -1392,14 +1336,14 @@ void rtmo_h(char *params) {
   uint16_t val;
   if (params != NULL) {
     if (notInRange(params, 1, 32000, val)) return;
-    AR488.rtmo = val;
+    gpibBus.cfg.rtmo = val;
     if (isVerb) {
-      arSerial->print(F("Set [read_tmo_ms] to: "));
-      arSerial->print(val);
-      arSerial->println(F(" milliseconds"));
+      dataStream.print(F("Set [read_tmo_ms] to: "));
+      dataStream.print(val);
+      dataStream.println(F(" milliseconds"));
     }
   } else {
-    arSerial->println(AR488.rtmo);
+    dataStream.println(gpibBus.cfg.rtmo);
   }
 }
 
@@ -1409,13 +1353,13 @@ void eos_h(char *params) {
   uint16_t val;
   if (params != NULL) {
     if (notInRange(params, 0, 3, val)) return;
-    AR488.eos = (uint8_t)val;
+    gpibBus.cfg.eos = (uint8_t)val;
     if (isVerb) {
-      arSerial->print(F("Set EOS to: "));
-      arSerial->println(val);
+      dataStream.print(F("Set EOS to: "));
+      dataStream.println(val);
     };
   } else {
-    arSerial->println(AR488.eos);
+    dataStream.println(gpibBus.cfg.eos);
   }
 }
 
@@ -1425,13 +1369,13 @@ void eoi_h(char *params) {
   uint16_t val;
   if (params != NULL) {
     if (notInRange(params, 0, 1, val)) return;
-    AR488.eoi = val ? true : false;
+    gpibBus.cfg.eoi = val ? true : false;
     if (isVerb) {
-      arSerial->print(F("Set EOI assertion: "));
-      arSerial->println(val ? "ON" : "OFF");
+      dataStream.print(F("Set EOI assertion: "));
+      dataStream.println(val ? "ON" : "OFF");
     };
   } else {
-    arSerial->println(AR488.eoi);
+    dataStream.println(gpibBus.cfg.eoi);
   }
 }
 
@@ -1443,20 +1387,18 @@ void cmode_h(char *params) {
     if (notInRange(params, 0, 1, val)) return;
     switch (val) {
       case 0:
-        AR488.cmode = 1;
-        initDevice();
+        gpibBus.startDeviceMode();
         break;
       case 1:
-        AR488.cmode = 2;
-        initController();
+        gpibBus.startControllerMode();
         break;
     }
     if (isVerb) {
-      arSerial->print(F("Interface mode set to: "));
-      arSerial->println(val ? "CONTROLLER" : "DEVICE");
+      dataStream.print(F("Interface mode set to: "));
+      dataStream.println(val ? "CONTROLLER" : "DEVICE");
     }
   } else {
-    arSerial->println(AR488.cmode - 1);
+    dataStream.println(gpibBus.isController());
   }
 }
 
@@ -1466,13 +1408,13 @@ void eot_en_h(char *params) {
   uint16_t val;
   if (params != NULL) {
     if (notInRange(params, 0, 1, val)) return;
-    AR488.eot_en = val ? true : false;
+    gpibBus.cfg.eot_en = val ? true : false;
     if (isVerb) {
-      arSerial->print(F("Appending of EOT character: "));
-      arSerial->println(val ? "ON" : "OFF");
+      dataStream.print(F("Appending of EOT character: "));
+      dataStream.println(val ? "ON" : "OFF");
     }
   } else {
-    arSerial->println(AR488.eot_en);
+    dataStream.println(gpibBus.cfg.eot_en);
   }
 }
 
@@ -1482,13 +1424,13 @@ void eot_char_h(char *params) {
   uint16_t val;
   if (params != NULL) {
     if (notInRange(params, 0, 255, val)) return;
-    AR488.eot_ch = (uint8_t)val;
+    gpibBus.cfg.eot_ch = (uint8_t)val;
     if (isVerb) {
-      arSerial->print(F("EOT set to ASCII character: "));
-      arSerial->println(val);
+      dataStream.print(F("EOT set to ASCII character: "));
+      dataStream.println(val);
     };
   } else {
-    arSerial->println(AR488.eot_ch, DEC);
+    dataStream.println(gpibBus.cfg.eot_ch, DEC);
   }
 }
 
@@ -1499,17 +1441,17 @@ void amode_h(char *params) {
   if (params != NULL) {
     if (notInRange(params, 0, 3, val)) return;
     if (val > 0 && isVerb) {
-      arSerial->println(F("WARNING: automode ON can cause some devices to generate"));
-      arSerial->println(F("         'addressed to talk but nothing to say' errors"));
+      dataStream.println(F("WARNING: automode ON can cause some devices to generate"));
+      dataStream.println(F("         'addressed to talk but nothing to say' errors"));
     }
-    AR488.amode = (uint8_t)val;
-    if (AR488.amode < 3) aRead = false;
+    gpibBus.cfg.amode = (uint8_t)val;
+    if (gpibBus.cfg.amode < 3) autoReading = false;
     if (isVerb) {
-      arSerial->print(F("Auto mode: "));
-      arSerial->println(AR488.amode);
+      dataStream.print(F("Auto mode: "));
+      dataStream.println(gpibBus.cfg.amode);
     }
   } else {
-    arSerial->println(AR488.amode);
+    dataStream.println(gpibBus.cfg.amode);
   }
 }
 
@@ -1517,14 +1459,14 @@ void amode_h(char *params) {
 /***** Display the controller version string *****/
 void ver_h(char *params) {
   // If "real" requested
-  if (params != NULL && strncmp(params, "real", 3) == 0) {
-    arSerial->println(F(FWVER));
+  if (params != NULL && strncasecmp(params, "real", 3) == 0) {
+    dataStream.println(F(FWVER));
     // Otherwise depends on whether we have a custom string set
   } else {
-    if (strlen(AR488.vstr) > 0) {
-      arSerial->println(AR488.vstr);
+    if (strlen(gpibBus.cfg.vstr) > 0) {
+      dataStream.println(gpibBus.cfg.vstr);
     } else {
-      arSerial->println(F(FWVER));
+      dataStream.println(F(FWVER));
     }
   }
 }
@@ -1533,45 +1475,57 @@ void ver_h(char *params) {
 /***** Address device to talk and read the sent data *****/
 void read_h(char *params) {
   // Clear read flags
-  rEoi = false;
-  rEbt = false;
+  readWithEoi = false;
+  readWithEndByte = false;
+  endByte = 0;
   // Read any parameters
   if (params != NULL) {
     if (strlen(params) > 3) {
-      if (isVerb) arSerial->println(F("Invalid termination character - ignored!")); void addr_h(char *params);
-    } else if (strncmp(params, "eoi", 3) == 0) { // Read with eoi detection
-      rEoi = true;
+      if (isVerb) dataStream.println(F("Invalid parameter - ignored!"));
+    } else if (strncasecmp(params, "eoi", 3) == 0) { // Read with eoi detection
+      readWithEoi = true;
+/*
+    } else if (strncasecmp(params, "nae", 3) == 0) { // Read with no addressing and with eoi detection
+      readWithEoi = true;
+      suppressAddressing = true;
+    } else if (strncasecmp(params, "nad", 3) == 0) { // Read with no addressing
+      readWithEoi = false;
+      suppressAddressing = true;
+*/
     } else { // Assume ASCII character given and convert to an 8 bit byte
-      rEbt = true;
-      eByte = atoi(params);
+      readWithEndByte = true;
+      endByte = atoi(params);
     }
   }
-  if (AR488.amode == 3) {
+
+debugStream.print(F("readWithEoi:     "));
+debugStream.println(readWithEoi);
+debugStream.print(F("readWithEndByte: "));
+debugStream.println(readWithEndByte);
+
+  
+  if (gpibBus.cfg.amode == 3) {
     // In auto continuous mode we set this flag to indicate we are ready for continuous read
-    aRead = true;
+    autoReading = true;
+    if (!gpibBus.isDeviceAddressed()) gpibBus.addressDevice(gpibBus.cfg.paddr, TALK);
   } else {
     // If auto mode is disabled we do a single read
-    gpibReceiveData();
+    if ((!addressingSuppressed) && (!gpibBus.isDeviceAddressed())) gpibBus.addressDevice(gpibBus.cfg.paddr, TALK);
+    gpibBus.receiveData(dataStream, readWithEoi, readWithEndByte, endByte);
+    if (!addressingSuppressed) gpibBus.unAddressDevice();
   }
+  if (addressingSuppressed) addressingSuppressed = false;
 }
 
 
 /***** Send device clear (usually resets the device to power on state) *****/
 void clr_h() {
-  if (addrDev(AR488.paddr, 0)) {
-    if (isVerb) arSerial->println(F("Failed to address device"));
-    return;
-  }
-  if (gpibSendCmd(GC_SDC))  {
-    if (isVerb) arSerial->println(F("Failed to send SDC"));
-    return;
-  }
-  if (uaddrDev()) {
-    if (isVerb) arSerial->println(F("Failed to untalk GPIB bus"));
+  if (gpibBus.sendSDC())  {
+    if (isVerb) dataStream.println(F("Failed to send SDC"));
     return;
   }
   // Set GPIB controls back to idle state
-  setGpibControls(CIDS);
+  gpibBus.setControls(CIDS);
 }
 
 
@@ -1579,33 +1533,23 @@ void clr_h() {
 void llo_h(char *params) {
   // NOTE: REN *MUST* be asserted (LOW)
   if (digitalRead(REN)==LOW) {
-    // For 'all' send LLO to the bus without addressing any device - devices will show REM
+    // For 'all' send LLO to the bus without addressing any device
+    // Devices will show REM as soon as they are addressed and need to be released with LOC
     if (params != NULL) {
       if (0 == strncmp(params, "all", 3)) {
-        if (gpibSendCmd(GC_LLO)) {
-          if (isVerb) arSerial->println(F("Failed to send universal LLO."));
+        if (gpibBus.sendCmd(GC_LLO)) {
+          if (isVerb) dataStream.println(F("Failed to send universal LLO."));
         }
       }
     } else {
-      // Address current device
-      if (addrDev(AR488.paddr, 0)) {
-        if (isVerb) arSerial->println(F("Failed to address the device."));
-        return;
-      }
       // Send LLO to currently addressed device
-      if (gpibSendCmd(GC_LLO)) {
-        if (isVerb) arSerial->println(F("Failed to send LLO to device"));
-        return;
-      }
-      // Unlisten bus
-      if (uaddrDev()) {
-        if (isVerb) arSerial->println(F("Failed to unlisten the GPIB bus"));
-        return;
+      if (gpibBus.sendLLO()){
+        if (isVerb) dataStream.println(F("Failed to send LLO!"));
       }
     }
   }
   // Set GPIB controls back to idle state
-  setGpibControls(CIDS);
+  gpibBus.setControls(CIDS);
 }
 
 
@@ -1615,33 +1559,16 @@ void loc_h(char *params) {
   if (digitalRead(REN)==LOW) {
     if (params != NULL) {
       if (strncmp(params, "all", 3) == 0) {
-        // Un-assert REN
-        setGpibState(0b00100000, 0b00100000, 0);
-        delay(40);
-        // Simultaneously assert ATN and REN
-        setGpibState(0b00000000, 0b10100000, 0);
-        delay(40);
-        // Unassert ATN
-        setGpibState(0b10000000, 0b10000000, 0);
+        // Send request to clear all devices to local
+        gpibBus.sendAllClear();
       }
     } else {
-      // Address device to listen
-      if (addrDev(AR488.paddr, 0)) {
-        if (isVerb) arSerial->println(F("Failed to address device."));
-        return;
-      }
-      // Send GTL
-      if (gpibSendCmd(GC_GTL)) {
-        if (isVerb) arSerial->println(F("Failed sending LOC."));
-        return;
-      }
-      // Unlisten bus
-      if (uaddrDev()) {
-        if (isVerb) arSerial->println(F("Failed to unlisten GPIB bus."));
-        return;
+      // Send GTL to addressed device
+      if (gpibBus.sendGTL()) {
+        if (isVerb) dataStream.println(F("Failed to send LOC!"));
       }
       // Set GPIB controls back to idle state
-      setGpibControls(CIDS);
+      gpibBus.setControls(CIDS);
     }
   }
 }
@@ -1649,17 +1576,17 @@ void loc_h(char *params) {
 
 /***** Assert IFC for 150 microseconds *****/
 /* This indicates that the AR488 the Controller-in-Charge on
- * the bus and causes all interfaces to return to their idle
+ * the bus and causes all interfaces to return to their idle 
  * state
  */
 void ifc_h() {
-  if (AR488.cmode==2) {
+  if (gpibBus.cfg.cmode==2) {
     // Assert IFC
-    setGpibState(0b00000000, 0b00000001, 0);
+    gpibBus.setControlVal(0b00000000, 0b00000001, 0);
     delayMicroseconds(150);
     // De-assert IFC
-    setGpibState(0b00000001, 0b00000001, 0);
-    if (isVerb) arSerial->println(F("IFC signal asserted for 150 microseconds"));
+    gpibBus.setControlVal(0b00000001, 0b00000001, 0);
+    if (isVerb) dataStream.println(F("IFC signal asserted for 150 microseconds"));
   }
 }
 
@@ -1667,19 +1594,16 @@ void ifc_h() {
 /***** Send a trigger command *****/
 void trg_h(char *params) {
   char *param;
-  uint8_t addrs[15];
+  uint8_t addrs[15] = {0};
   uint16_t val = 0;
   uint8_t cnt = 0;
 
-  // Initialise address array
-  for (int i = 0; i < 15; i++) {
-    addrs[i] = 0;
-  }
+  addrs[0] = addrs[0]; // Meaningless as both are zero but defaults compiler warning!
 
   // Read parameters
   if (params == NULL) {
     // No parameters - trigger addressed device only
-    addrs[0] = AR488.paddr;
+    addrs[0] = gpibBus.cfg.paddr;
     cnt++;
   } else {
     // Read address parameters into array
@@ -1689,36 +1613,30 @@ void trg_h(char *params) {
       } else {
         param = strtok(NULL, " \t");
       }
-      if (notInRange(param, 1, 30, val)) return;
-      addrs[cnt] = (uint8_t)val;
-      cnt++;
+      if (param == NULL) {
+        break;  // Stop when there are no more parameters
+      }else{    
+        if (notInRange(param, 1, 30, val)) return;
+        addrs[cnt] = (uint8_t)val;
+        cnt++;
+      }
     }
   }
 
   // If we have some addresses to trigger....
   if (cnt > 0) {
     for (int i = 0; i < cnt; i++) {
-      // Address the device
-      if (addrDev(addrs[i], 0)) {
-        if (isVerb) arSerial->println(F("Failed to address device"));
-        return;
-      }
-      // Send GTL
-      if (gpibSendCmd(GC_GET))  {
-        if (isVerb) arSerial->println(F("Failed to trigger device"));
-        return;
-      }
-      // Unaddress device
-      if (uaddrDev()) {
-        if (isVerb) arSerial->println(F("Failed to unlisten GPIB bus"));
+      // Sent GET to the requested device
+      if (gpibBus.sendGET(addrs[i]))  {
+        if (isVerb) dataStream.println(F("Failed to trigger device!"));
         return;
       }
     }
 
     // Set GPIB controls back to idle state
-    setGpibControls(CIDS);
+    gpibBus.setControls(CIDS);
 
-    if (isVerb) arSerial->println(F("Group trigger completed."));
+    if (isVerb) dataStream.println(F("Group trigger completed."));
   }
 }
 
@@ -1729,7 +1647,7 @@ void trg_h(char *params) {
  * For other devices, we restart the program instead by
  * jumping to address 0x0000. This is not a hardware reset
  * and will not reset a crashed MCU, but it will re-start
- * the interface program and re-initialise all parameters.
+ * the interface program and re-initialise all parameters. 
  */
 void rst_h() {
 #ifdef WDTO_1S
@@ -1740,7 +1658,7 @@ void rst_h() {
   while (millis() < tout) {};
   // Should never reach here....
   if (isVerb) {
-    arSerial->println(F("Reset FAILED."));
+    dataStream.println(F("Reset FAILED."));
   };
 #else
   // Otherwise restart program (soft reset)
@@ -1769,7 +1687,7 @@ void spoll_h(char *params) {
   // Read parameters
   if (params == NULL) {
     // No parameters - trigger addressed device only
-    addrs[0] = AR488.paddr;
+    addrs[0] = gpibBus.cfg.paddr;
     j = 1;
   } else {
     // Read address parameters into array
@@ -1783,7 +1701,7 @@ void spoll_h(char *params) {
       if (strncmp(param, "all", 3) == 0) {
         all = true;
         j = 30;
-        if (isVerb) arSerial->println(F("Serial poll of all devices requested..."));
+        if (isVerb) dataStream.println(F("Serial poll of all devices requested..."));
         break;
         // Read all address parameters
       } else if (strlen(params) < 3) { // No more than 2 characters
@@ -1792,32 +1710,32 @@ void spoll_h(char *params) {
         j++;
       } else {
         errBadCmd();
-        if (isVerb) arSerial->println(F("Invalid parameter"));
+        if (isVerb) dataStream.println(F("Invalid parameter"));
         return;
       }
     }
   }
 
   // Send Unlisten [UNL] to all devices
-  if ( gpibSendCmd(GC_UNL) )  {
-#ifdef DEBUG4
-    dbSerial->println(F("spoll_h: failed to send UNL"));
+  if ( gpibBus.sendCmd(GC_UNL) )  {
+#ifdef DEBUG_SPOLL
+    debugStream.println(F("spoll_h: failed to send UNL"));
 #endif
     return;
   }
 
   // Controller addresses itself as listner
-  if ( gpibSendCmd(GC_LAD + AR488.caddr) )  {
-#ifdef DEBUG4
-    dbSerial->println(F("spoll_h: failed to send LAD"));
+  if ( gpibBus.sendCmd(GC_LAD + gpibBus.cfg.caddr) )  {
+#ifdef DEBUG_SPOLL
+    debugStream.println(F("spoll_h: failed to send LAD"));
 #endif
     return;
   }
 
   // Send Serial Poll Enable [SPE] to all devices
-  if ( gpibSendCmd(GC_SPE) )  {
-#ifdef DEBUG4
-    dbSerial->println(F("spoll_h: failed to send SPE"));
+  if ( gpibBus.sendCmd(GC_SPE) )  {
+#ifdef DEBUG_SPOLL
+    debugStream.println(F("spoll_h: failed to send SPE"));
 #endif
     return;
   }
@@ -1833,22 +1751,22 @@ void spoll_h(char *params) {
     }
 
     // Don't need to poll own address
-    if (val != AR488.caddr) {
+    if (val != gpibBus.cfg.caddr) {
 
       // Address a device to talk
-      if ( gpibSendCmd(GC_TAD + val) )  {
+      if ( gpibBus.sendCmd(GC_TAD + val) )  {
 
-#ifdef DEBUG4
-        dbSerial->println(F("spoll_h: failed to send TAD"));
+#ifdef DEBUG_SPOLL
+        debugStream.println(F("spoll_h: failed to send TAD"));
 #endif
         return;
       }
 
       // Set GPIB control to controller active listner state (ATN unasserted)
-      setGpibControls(CLAS);
+      gpibBus.setControls(CLAS);
 
-      // Read the response byte (usually device status) using handshake
-      r = gpibReadByte(&sb, &eoiDetected);
+      // Read the response byte (usually device status) using handshake - suppress EOI detection
+      r = gpibBus.readByte(&sb, false, &eoiDetected);
 
       // If we successfully read a byte
       if (!r) {
@@ -1856,53 +1774,53 @@ void spoll_h(char *params) {
           // If all, return specially formatted response: SRQ:addr,status
           // but only when RQS bit set
           if (sb & 0x40) {
-            arSerial->print(F("SRQ:")); arSerial->print(i); arSerial->print(F(",")); arSerial->println(sb, DEC);
+            dataStream.print(F("SRQ:")); dataStream.print(i); dataStream.print(F(",")); dataStream.println(sb, DEC);
             i = j;
           }
         } else {
           // Return decimal number representing status byte
-          arSerial->println(sb, DEC);
+          dataStream.println(sb, DEC);
           if (isVerb) {
-            arSerial->print(F("Received status byte ["));
-            arSerial->print(sb);
-            arSerial->print(F("] from device at address: "));
-            arSerial->println(val);
+            dataStream.print(F("Received status byte ["));
+            dataStream.print(sb);
+            dataStream.print(F("] from device at address: "));
+            dataStream.println(val);
           }
           i = j;
         }
       } else {
-        if (isVerb) arSerial->println(F("Failed to retrieve status byte"));
+        if (isVerb) dataStream.println(F("Failed to retrieve status byte"));
       }
     }
   }
-  if (all) arSerial->println();
+  if (all) dataStream.println();
 
   // Send Serial Poll Disable [SPD] to all devices
-  if ( gpibSendCmd(GC_SPD) )  {
-#ifdef DEBUG4
-    dbSerial->println(F("spoll_h: failed to send SPD"));
+  if ( gpibBus.sendCmd(GC_SPD) )  {
+#ifdef DEBUG_SPOLL
+    debugStream.println(F("spoll_h: failed to send SPD"));
 #endif
     return;
   }
 
   // Send Untalk [UNT] to all devices
-  if ( gpibSendCmd(GC_UNT) )  {
-#ifdef DEBUG4
-    dbSerial->println(F("spoll_h: failed to send UNT"));
+  if ( gpibBus.sendCmd(GC_UNT) )  {
+#ifdef DEBUG_SPOLL
+    debugStream.println(F("spoll_h: failed to send UNT"));
 #endif
     return;
   }
 
   // Unadress listners [UNL] to all devices
-  if ( gpibSendCmd(GC_UNL) )  {
-#ifdef DEBUG4
-    dbSerial->println(F("spoll_h: failed to send UNL"));
+  if ( gpibBus.sendCmd(GC_UNL) )  {
+#ifdef DEBUG_SPOLL
+    debugStream.println(F("spoll_h: failed to send UNL"));
 #endif
     return;
   }
 
   // Set GPIB control to controller idle state
-  setGpibControls(CIDS);
+  gpibBus.setControls(CIDS);
 
   // Set SRQ to status of SRQ line. Should now be unasserted but, if it is
   // still asserted, then another device may be requesting service so another
@@ -1914,7 +1832,7 @@ void spoll_h(char *params) {
     isSRQ = false;
   }
 */
-  if (isVerb) arSerial->println(F("Serial poll completed."));
+  if (isVerb) dataStream.println(F("Serial poll completed."));
 
 }
 
@@ -1922,29 +1840,22 @@ void spoll_h(char *params) {
 /***** Return status of SRQ line *****/
 void srq_h() {
   //NOTE: LOW=0=asserted, HIGH=1=unasserted
-//  arSerial->println(!digitalRead(SRQ));
-  arSerial->println(isAsserted(SRQ));
+//  dataStream.println(!digitalRead(SRQ));
+  dataStream.println(gpibBus.isAsserted(SRQ));
 }
 
 
 /***** Set the status byte (device mode) *****/
 void stat_h(char *params) {
-  uint16_t val = 0;
+  uint16_t statusByte = 0;
   // A parameter given?
   if (params != NULL) {
     // Byte value given?
-    if (notInRange(params, 0, 255, val)) return;
-    AR488.stat = (uint8_t)val;
-    if (val & 0x40) {
-      setSrqSig();
-      if (isVerb) arSerial->println(F("SRQ asserted."));
-    } else {
-      clrSrqSig();
-      if (isVerb) arSerial->println(F("SRQ un-asserted."));
-    }
+    if (notInRange(params, 0, 255, statusByte)) return;
+    gpibBus.setStatus((uint8_t)statusByte);
   } else {
     // Return the currently set status byte
-    arSerial->println(AR488.stat);
+    dataStream.println(gpibBus.cfg.stat);
   }
 }
 
@@ -1952,10 +1863,10 @@ void stat_h(char *params) {
 /***** Save controller configuration *****/
 void save_h() {
 #ifdef E2END
-  epWriteData(AR488.db, AR_CFG_SIZE);
-  if (isVerb) arSerial->println(F("Settings saved."));
+  epWriteData(gpibBus.cfg.db, GPIB_CFG_SIZE);
+  if (isVerb) dataStream.println(F("Settings saved."));
 #else
-  arSerial->println(F("EEPROM not supported."));
+  dataStream.println(F("EEPROM not supported."));
 #endif
 }
 
@@ -1968,30 +1879,13 @@ void lon_h(char *params) {
     isRO = val ? true : false;
     if (isTO) isTO = false; // Talk-only mode must be disabled!
     if (isVerb) {
-      arSerial->print(F("LON: "));
-      arSerial->println(val ? "ON" : "OFF") ;
+      dataStream.print(F("LON: "));
+      dataStream.println(val ? "ON" : "OFF") ;
     }
   } else {
-    arSerial->println(isRO);
+    dataStream.println(isRO);
   }
 }
-
-
-/***** Set the SRQ signal *****/
-void setSrqSig() {
-  // Set SRQ line to OUTPUT HIGH (asserted)
-  setGpibState(0b01000000, 0b01000000, 1);
-  setGpibState(0b00000000, 0b01000000, 0);
-}
-
-
-/***** Clear the SRQ signal *****/
-void clrSrqSig() {
-  // Set SRQ line to INPUT_PULLUP (un-asserted)
-  setGpibState(0b00000000, 0b01000000, 1);
-  setGpibState(0b01000000, 0b01000000, 0);
-}
-
 
 
 /***********************************/
@@ -2015,18 +1909,18 @@ void aspoll_h() {
  * The universal Device Clear (DCL) is unaddressed and affects all devices on the Gpib bus.
  */
 void dcl_h() {
-  if ( gpibSendCmd(GC_DCL) )  {
-    if (isVerb) arSerial->println(F("Sending DCL failed"));
+  if ( gpibBus.sendCmd(GC_DCL) )  {
+    if (isVerb) dataStream.println(F("Sending DCL failed"));
     return;
   }
   // Set GPIB controls back to idle state
-  setGpibControls(CIDS);
+  gpibBus.setControls(CIDS);
 }
 
 
 /***** Re-load default configuration *****/
 void default_h() {
-  initAR488();
+  gpibBus.setDefaultCfg();
 }
 
 
@@ -2035,14 +1929,14 @@ void eor_h(char *params) {
   uint16_t val;
   if (params != NULL) {
     if (notInRange(params, 0, 15, val)) return;
-    AR488.eor = (uint8_t)val;
+    gpibBus.cfg.eor = (uint8_t)val;
     if (isVerb) {
-      arSerial->print(F("Set EOR to: "));
-      arSerial->println(val);
+      dataStream.print(F("Set EOR to: "));
+      dataStream.println(val);
     };
   } else {
-    if (AR488.eor>7) AR488.eor = 0;  // Needed to reset FF read from EEPROM after FW upgrade
-    arSerial->println(AR488.eor);
+    if (gpibBus.cfg.eor>7) gpibBus.cfg.eor = 0;  // Needed to reset FF read from EEPROM after FW upgrade
+    dataStream.println(gpibBus.cfg.eor);
   }
 }
 
@@ -2056,21 +1950,21 @@ void ppoll_h() {
 
   // Poll devices
   // Start in controller idle state
-  setGpibControls(CIDS);
+  gpibBus.setControls(CIDS);
   delayMicroseconds(20);
   // Assert ATN and EOI
-  setGpibState(0b00000000, 0b10010000, 0);
+  gpibBus.setControlVal(0b00000000, 0b10010000, 0);
   //  setGpibState(0b10010000, 0b00000000, 0b10010000);
   delayMicroseconds(20);
   // Read data byte from GPIB bus without handshake
   sb = readGpibDbus();
   // Return to controller idle state (ATN and EOI unasserted)
-  setGpibControls(CIDS);
+  gpibBus.setControls(CIDS);
 
   // Output the response byte
-  arSerial->println(sb, DEC);
+  dataStream.println(sb, DEC);
 
-  if (isVerb) arSerial->println(F("Parallel poll completed."));
+  if (isVerb) dataStream.println(F("Parallel poll completed."));
 }
 
 
@@ -2078,7 +1972,7 @@ void ppoll_h() {
 void ren_h(char *params) {
 #if defined (SN7516X) && not defined (SN7516X_DC)
   params = params;
-  arSerial->println(F("Unavailable")) ;
+  dataStream.println(F("Unavailable")) ;
 #else
   // char *stat;
   uint16_t val;
@@ -2086,11 +1980,11 @@ void ren_h(char *params) {
     if (notInRange(params, 0, 1, val)) return;
     digitalWrite(REN, (val ? LOW : HIGH));
     if (isVerb) {
-      arSerial->print(F("REN: "));
-      arSerial->println(val ? "REN asserted" : "REN un-asserted") ;
+      dataStream.print(F("REN: "));
+      dataStream.println(val ? "REN asserted" : "REN un-asserted") ;
     };
   } else {
-    arSerial->println(digitalRead(REN) ? 0 : 1);
+    dataStream.println(digitalRead(REN) ? 0 : 1);
   }
 #endif
 }
@@ -2099,8 +1993,8 @@ void ren_h(char *params) {
 /***** Enable verbose mode 0=OFF; 1=ON *****/
 void verb_h() {
   isVerb = !isVerb;
-  arSerial->print("Verbose: ");
-  arSerial->println(isVerb ? "ON" : "OFF");
+  dataStream.print("Verbose: ");
+  dataStream.println(isVerb ? "ON" : "OFF");
 }
 
 
@@ -2118,19 +2012,19 @@ void setvstr_h(char *params) {
   strncat(idparams, params, plen);
 
   id_h(idparams);
-
-/*
+  
+/*  
   if (params != NULL) {
     len = strlen(params);
     if (len>47) len=47; 
     memset(AR488.vstr, '\0', 48);
     strncpy(AR488.vstr, params, len);
     if (isVerb) {
-      arSerial->print(F("Changed version string to: "));
-      arSerial->println(params);
+      dataStream.print(F("Changed version string to: "));
+      dataStream.println(params);
     };
   }
-*/
+*/  
 }
 
 
@@ -2142,11 +2036,11 @@ void ton_h(char *params) {
     isTO = val ? true : false;
     if (isTO) isRO = false; // Read-only mode must be disabled in TO mode!
     if (isVerb) {
-      arSerial->print(F("TON: "));
-      arSerial->println(val ? "ON" : "OFF") ;
+      dataStream.print(F("TON: "));
+      dataStream.println(val ? "ON" : "OFF") ;
     }
   } else {
-    arSerial->println(isTO);
+    dataStream.println(isTO);
   }
 }
 
@@ -2172,9 +2066,9 @@ void srqa_h(char *params) {
         isSrqa = true;
         break;
     }
-    if (isVerb) arSerial->println(isSrqa ? "SRQ auto ON" : "SRQ auto OFF") ;
+    if (isVerb) dataStream.println(isSrqa ? "SRQ auto ON" : "SRQ auto OFF") ;
   } else {
-    arSerial->println(isSrqa);
+    dataStream.println(isSrqa);
   }
 }
 
@@ -2203,18 +2097,18 @@ void repeat_h(char *params) {
     if (strlen(param) > 0) {
       for (uint16_t i = 0; i < count; i++) {
         // Send string to instrument
-        gpibSendData(param, strlen(param));
+        gpibBus.sendData(param, strlen(param));
         delay(tmdly);
-        gpibReceiveData();
+        gpibBus.receiveData(dataStream, gpibBus.cfg.eoi, false, 0);
       }
     } else {
       errBadCmd();
-      if (isVerb) arSerial->println(F("Missing parameter"));
+      if (isVerb) dataStream.println(F("Missing parameter"));
       return;
     }
   } else {
     errBadCmd();
-    if (isVerb) arSerial->println(F("Missing parameters"));
+    if (isVerb) dataStream.println(F("Missing parameters"));
   }
 
 }
@@ -2233,17 +2127,17 @@ void macro_h(char *params) {
   } else {
     for (int i = 0; i < 10; i++) {
       macro = (pgm_read_word(macros + i));
-      //      arSerial->print(i);arSerial->print(F(": "));
+      //      dataStream.print(i);dataStream.print(F(": "));
       if (strlen_P(macro) > 0) {
-        arSerial->print(i);
-        arSerial->print(" ");
+        dataStream.print(i);
+        dataStream.print(" ");
       }
     }
-    arSerial->println();
+    dataStream.println();
   }
 #else
   memset(params, '\0', 5);
-  arSerial->println(F("Disabled"));
+  dataStream.println(F("Disabled"));
 #endif
 }
 
@@ -2259,14 +2153,14 @@ void xdiag_h(char *params){
   char *param;
   uint8_t mode = 0;
   uint8_t val = 0;
-
+  
   // Get first parameter (mode = 0 or 1)
   param = strtok(params, " \t");
   if (param != NULL) {
     if (strlen(param)<4){
       mode = atoi(param);
       if (mode>2) {
-        arSerial->println(F("Invalid: 0=data bus; 1=control bus"));
+        dataStream.println(F("Invalid: 0=data bus; 1=control bus"));
         return;
       }
     }
@@ -2281,21 +2175,21 @@ void xdiag_h(char *params){
     switch (mode) {
       case 0:
           // Set to required value
-          setGpibDbus(val);
+          gpibBus.setDataVal(val);
           // Reset after 10 seconds
           delay(10000);
-          setGpibDbus(0);
+          gpibBus.setDataVal(0);
           break;
       case 1:
           // Set to required state
-          setGpibState(0xFF, 0xFF, 1);  // Set direction
-          setGpibState(~val, 0xFF, 0);  // Set state (low=asserted so must be inverse of value)
+          gpibBus.setControlVal(0xFF, 0xFF, 1);  // Set direction
+          gpibBus.setControlVal(~val, 0xFF, 0);  // Set state (low=asserted so must be inverse of value)
           // Reset after 10 seconds
           delay(10000);
-          if (AR488.cmode==2) {
-            setGpibControls(CINI);
+          if (gpibBus.cfg.cmode==2) {
+            gpibBus.setControls(CINI);
           }else{
-            setGpibControls(DINI);
+            gpibBus.setControls(DINI);
           }
           break;
 #ifdef AR488_MCP23S17
@@ -2326,32 +2220,32 @@ void xonxoff_h(char *params){
     if (notInRange(params, 0, 1, val)) return;
     xonxoff = val ? true : false;
     if (isVerb) {
-      arSerial->print(F("Xon/Xoff: "));
-      arSerial->println(val ? "ON" : "OFF") ;
+      dataStream.print(F("Xon/Xoff: "));
+      dataStream.println(val ? "ON" : "OFF") ;
     }
   } else {
-    arSerial->println(xonxoff);
+    dataStream.println(xonxoff);
   }
 }
 */
 
 
 /****** Timing parameters ******/
-
+/*
 void tmbus_h(char *params) {
   uint16_t val;
   if (params != NULL) {
     if (notInRange(params, 0, 30000, val)) return;
     AR488.tmbus = val;
     if (isVerb) {
-      arSerial->print(F("TmBus set to: "));
-      arSerial->println(val);
+      dataStream.print(F("TmBus set to: "));
+      dataStream.println(val);
     };
   } else {
-    arSerial->println(AR488.tmbus, DEC);
+    dataStream.println(AR488.tmbus, DEC);
   }
 }
-
+*/
 
 /***** Set device ID *****/
 /*
@@ -2366,9 +2260,9 @@ void id_h(char *params) {
   char * datastr; // Pointer to supplied data (remaining characters in buffer)
   char serialStr[10];
 
-#ifdef DEBUG10
-  arSerial->print(F("Params: "));
-  arSerial->println(params);
+#ifdef DEBUG_IDFUNC
+  dataStream.print(F("Params: "));
+  dataStream.println(params);
 #endif
 
   if (params != NULL) {
@@ -2377,67 +2271,70 @@ void id_h(char *params) {
     dlen = strlen(datastr);
     if (dlen) {
       if (strncmp(keyword, "verstr", 6)==0) {
-#ifdef DEBUG10
-        arSerial->print(F("Keyword: "));
-        arSerial->println(keyword);
-        arSerial->print(F("DataStr: "));
-        arSerial->println(datastr);
+#ifdef DEBUG_IDFUNC
+        dataStream.print(F("Keyword: "));
+        dataStream.println(keyword);
+        dataStream.print(F("DataStr: "));
+        dataStream.println(datastr);
 #endif
         if (dlen>0 && dlen<48) {
-#ifdef DEBUG10
-        arSerial->println(F("Length OK"));
+#ifdef DEBUG_IDFUNC
+        dataStream.println(F("Length OK"));
 #endif
-          memset(AR488.vstr, '\0', 48);
-          strncpy(AR488.vstr, datastr, dlen);
-          if (isVerb) arSerial->print(F("VerStr: "));arSerial->println(AR488.vstr);
+          memset(gpibBus.cfg.vstr, '\0', 48);
+          strncpy(gpibBus.cfg.vstr, datastr, dlen);
+          if (isVerb) dataStream.print(F("VerStr: "));dataStream.println(gpibBus.cfg.vstr);
         }else{
-          if (isVerb) arSerial->println(F("Length of version string must not exceed 48 characters!"));
+          if (isVerb) dataStream.println(F("Length of version string must not exceed 48 characters!"));
           errBadCmd();
         }
         return;
       }
-      if (strncmp(keyword, "name", 4)==0) {
+      if (strncasecmp(keyword, "name", 4)==0) {
         if (dlen>0 && dlen<16) {
-          memset(AR488.sname, '\0', 16);
-          strncpy(AR488.sname, datastr, dlen);
+          memset(gpibBus.cfg.sname, '\0', 16);
+          strncpy(gpibBus.cfg.sname, datastr, dlen);
         }else{
-          if (isVerb) arSerial->println(F("Length of name must not exceed 15 characters!"));
+          if (isVerb) dataStream.println(F("Length of name must not exceed 15 characters!"));
           errBadCmd();
         }
         return;
       }
-      if (strncmp(keyword, "serial", 6)==0) {
+      if (strncasecmp(keyword, "serial", 6)==0) {
         if (dlen < 10) {
-          AR488.serial = atol(datastr);
+          gpibBus.cfg.serial = atol(datastr);
         }else{
-          if (isVerb) arSerial->println(F("Serial number must not exceed 9 characters!"));
+          if (isVerb) dataStream.println(F("Serial number must not exceed 9 characters!"));
           errBadCmd();
         }
         return;
       }
 //      errBadCmd();
     }else{
-      if (strncmp(keyword, "verstr", 6)==0) {
-        arSerial->println(AR488.vstr);
+      if (strncasecmp(keyword, "verstr", 6)==0) {
+        dataStream.println(gpibBus.cfg.vstr);
         return;
       }
-      if (strncmp(keyword, "fwver", 6)==0) {
-        arSerial->println(F(FWVER));
+      if (strncasecmp(keyword, "fwver", 6)==0) {
+        dataStream.println(F(FWVER));
         return;
       }
-      if (strncmp(keyword, "name", 4)==0) {
-        arSerial->println(AR488.sname);
-        return;
-      }
-      if (strncmp(keyword, "serial", 6)==0) {
+      if (strncasecmp(keyword, "name", 4)==0) {
+        dataStream.println(gpibBus.cfg.sname);
+        return;      
+      } void addr_h(char *params);
+      if (strncasecmp(keyword, "serial", 6)==0) {
         memset(serialStr, '\0', 10);
-        snprintf(serialStr, 10, "%09lu", AR488.serial);  // Max str length = 10-1 i.e 9 digits + null terminator
-        arSerial->println(serialStr);
-        return;
+        snprintf(serialStr, 10, "%09lu", gpibBus.cfg.serial);  // Max str length = 10-1 i.e 9 digits + null terminator 
+        dataStream.println(serialStr);
+        return;    
       }
     }
   }
   errBadCmd();
+#ifdef DEBUG_IDFUNC
+    debugStream.println(F(id_h: done.));
+#endif
 }
 
 
@@ -2445,17 +2342,99 @@ void idn_h(char * params){
   uint16_t val;
   if (params != NULL) {
     if (notInRange(params, 0, 2, val)) return;
-    AR488.idn = (uint8_t)val;
+    gpibBus.cfg.idn = (uint8_t)val;
     if (isVerb) {
-      arSerial->print(F("Sending IDN: "));
-      arSerial->print(val ? "Enabled" : "Disabled");
-      if (val==2) arSerial->print(F(" with serial number"));
-      arSerial->println();
+      dataStream.print(F("Sending IDN: "));
+      dataStream.print(val ? "Enabled" : "Disabled"); 
+      if (val==2) dataStream.print(F(" with serial number"));
+      dataStream.println();
     };
   } else {
-    arSerial->println(AR488.idn, DEC);
+    dataStream.println(gpibBus.cfg.idn, DEC);
+  }  
+}
+
+
+/***** Send device clear (usually resets the device to power on state) *****/
+void sendmla_h() {
+  if (gpibBus.sendMLA())  {
+    if (isVerb) dataStream.println(F("Failed to send MLA"));
+    return;
   }
 }
+
+
+/***** Send device clear (usually resets the device to power on state) *****/
+void sendmta_h() {
+  if (gpibBus.sendMTA())  {
+    if (isVerb) dataStream.println(F("Failed to send MTA"));
+    return;
+  }
+}
+
+
+/***** Show or set read timout *****/
+void sendmsa_h(char *params) {
+/*
+  uint16_t val;
+  if (params != NULL) {
+    if (notInRange(params, 96, 126, val)) return;
+    if (gpibBus.sendMSA(val)){
+      if (isVerb) dataStream.println(F("Failed to send MSA"));
+      return;
+    }
+  }
+*/
+
+  uint16_t saddr;
+  char * param;
+  if (params != NULL) {
+    // Secondary address
+    param = strtok(params, " \t");
+    if (strlen(param) > 0) {
+      if (notInRange(param, 96, 126, saddr)) return;
+      if (gpibBus.sendMSA(saddr)){
+        if (isVerb) dataStream.println(F("Failed to send MSA"));
+        return;
+      }
+    }
+    // Secondary address command parameter
+    param = strtok(NULL, " \t");
+    if (strlen(param)>0) {
+      gpibBus.setControls(CTAS);
+      gpibBus.sendData(param, strlen(param));
+      gpibBus.setControls(CLAS);
+    }
+    addressingSuppressed = true;
+  }
+}
+
+
+/***** Send device clear (usually resets the device to power on state) *****/
+void unlisten_h() {
+  if (gpibBus.sendUNL())  {
+    if (isVerb) dataStream.println(F("Failed to send UNL"));
+    return;
+  }
+  // Set GPIB controls back to idle state
+  gpibBus.setControls(CIDS);
+  addressingSuppressed = false;
+}
+
+
+/***** Send device clear (usually resets the device to power on state) *****/
+void untalk_h() {
+  if (gpibBus.sendUNT())  {
+    if (isVerb) dataStream.println(F("Failed to send UNT"));
+    return;
+  }
+  // Set GPIB controls back to idle state
+  gpibBus.setControls(CIDS);
+  addressingSuppressed = false;
+}
+
+
+
 
 
 /******************************************************/
@@ -2472,45 +2451,81 @@ void attnRequired() {
   uint8_t stat = 0;
   bool mla = false;
   bool mta = false;
-  bool spe = false;
-  bool spd = false;
+//  bool spe = false;
+//  bool spd = false;
   bool eoiDetected = false;
+  uint8_t gpibcmd = 0;
+  uint8_t saddrcmd = 0;
 
+//dataStream.print(F("attnRequired: LnRdy: "));
+//dataStream.println(lnRdy);
 
+  
   // Set device listner active state (assert NDAC+NRFD (low), DAV=INPUT_PULLUP)
-  setGpibControls(DLAS);
+  gpibBus.setControls(DLAS);
 
-#ifdef DEBUG5
-  dbSerial->println(F("Answering attention!"));
+#ifdef DEBUG_DEVICE_ATN
+  debugStream.println(F("attnRequired: Answering attention!"));
 #endif
 
   // Read bytes
 //  while (isATN) {
 //  while (digitalRead(ATN)==LOW) {
-  while (isAsserted(ATN)) {
-    stat = gpibReadByte(&db, &eoiDetected);
+  while (gpibBus.isAsserted(ATN)) {
+
+#ifdef DEBUG_DEVICE_ATN
+      debugStream.println(F("attnRequired: Reading byte..."));
+#endif
+
+    // Read the next byte from the bus, no EOI detection
+    stat = gpibBus.readByte(&db, false, &eoiDetected);
     if (!stat) {
 
-#ifdef DEBUG5
-      dbSerial->println(db, HEX);
+#ifdef DEBUG_DEVICE_ATN
+      debugStream.println(db, HEX);
 #endif
 
       // Device is addressed to listen
-      if (AR488.paddr == (db ^ 0x20)) { // MLA = db^0x20
-#ifdef DEBUG5
-        dbSerial->println(F("attnRequired: Controller wants me to data accept data <<<"));
+      if (gpibBus.cfg.paddr == (db ^ 0x20)) { // MLA = db^0x20
+#ifdef DEBUG_DEVICE_ATN
+        debugStream.println(F("attnRequired: Controller wants me to data accept data <<<"));
 #endif
         mla = true;
-      }
+//      }
 
       // Device is addressed to talk
-      if (AR488.paddr == (db ^ 0x40)) { // MLA = db^0x40
-          // Call talk handler to send data
-          mta = true;
-#ifdef DEBUG5
-          if (!spe) dbSerial->println(F("attnRequired: Controller wants me to send data >>>"));
+      }else if (gpibBus.cfg.paddr == (db ^ 0x40)) { // MLA = db^0x40
+        // Call talk handler to send data
+        mta = true;
+#ifdef DEBUG_DEVICE_ATN
+        if (db != GC_SPE) debugStream.println(F("attnRequired: Controller wants me to send data >>>"));
 #endif
+      }else if (db>0x5F && db<0x80) {
+        // Secondary addressing command received
+        if (mla || mta) {
+          saddrcmd = db;
+#ifdef DEBUG_DEVICE_ATN
+          debugStream.print(F("attnRequired: Secondary addressing command received: "));
+          debugStream.println(saddrcmd, HEX);
+#endif
+        }
+      }else{
+        if (mla || mta) {
+          gpibcmd = db;
+#ifdef DEBUG_DEVICE_ATN
+          debugStream.print(F("attnRequired: GPIB command received: "));
+          debugStream.println(gpibcmd, HEX);
+#endif
+        }
       }
+    }
+  }
+
+
+
+      // If we have been addressed then check if we need to take action
+/*
+      if (mla || mta) {
 
 
       // Serial poll enable request
@@ -2518,126 +2533,174 @@ void attnRequired() {
 
       // Serial poll disable request
       if (db==GC_SPD) spd = true;
-
+ 
       // Unlisten
-      if (db==GC_UNL) unl_h();
+      if (db==GC_UNL) device_unl_h();
 
       // Untalk
-      if (db==GC_UNT) unt_h();
+      if (db==GC_UNT) device_unt_h();
+
+      // Reset
 
     #ifdef PIN_REMOTE
       // Remote mode
-      if (db==GC_LLO) llo_h();
+      if (db==GC_LLO) device_llo_h();
       // Local mode
-      if (db==GC_GTL) gtl_h();
+      if (db==GC_GTL) device_gtl_h();
     #endif
+
 
     }
 
+  
+  }
+*/
+
+#ifdef DEBUG_DEVICE_ATN
+  debugStream.println(F("End ATN loop."));
+#endif
+
+/***** Perform GPIB copmmand actions *****/
+
+  if (gpibcmd) {
+    // Respond to GPIB command
+    switch (db) {
+      case GC_SPE:
+        // Serial Poll enable request
+#ifdef DEBUG_DEVICE_ATN
+          debugStream.println(F("attnRequired: Received serial poll enable."));
+#endif
+          device_spe_h();
+          break;
+      case GC_SPD:
+          // Serial poll disable request
+#ifdef DEBUG_DEVICE_ATN
+          debugStream.println(F("attnRequired: Received serial poll disable."));
+#endif
+          device_spd_h();
+          mta = false;
+          break;
+      case GC_UNL:
+          // Unlisten
+          device_unl_h();
+          break;
+      case GC_UNT:
+          // Untalk
+          device_unt_h();
+          break;
+      case GC_SDC:
+          // Device clear (reset)
+          device_sdc_h();
+          break;
+#ifdef PIN_REMOTE
+      case GC_LLO:
+          // Remote lockout mode
+          device_llo_h();
+          break;
+      case GC_GTL:
+          // Local mode
+          device_gtl_h();
+          break;
+#endif
+    } // End switch
+    // Clear flags
+    mta = false;
+    mla = false;
+    gpibcmd = 0;
   }
 
-#ifdef DEBUG5
-  dbSerial->println(F("End ATN loop."));
-#endif
 
-  if (mla) {
-#ifdef DEBUG5
-    dbSerial->println(F("Listening..."));
+/***** Perform secondry address command actions *****/
+
+  if (saddrcmd) {
+
+    // Clear flags
+    saddrcmd = 0;
+  }
+
+
+/***** Otherwise perform read or write *****/
+  // Listen for data
+  if (mla) { 
+#ifdef DEBUG_DEVICE_ATN
+    debugStream.println(F("Listening..."));
 #endif
-    // Call listen handler (receive data)
-    mla_h();
+    device_mla_h();
     mla = false;
   }
 
-  // Addressed to listen?
+  // Talk (send data)
   if (mta) {
-    // Serial poll enabled
-    if (spe) {
-#ifdef DEBUG5
-      dbSerial->println(F("attnRequired: Received serial poll enable."));
+#ifdef DEBUG_DEVICE_ATN
+    debugStream.println(F("Talking..."));
 #endif
-      spe_h();
-      spe = false;
-    // Otherwise just send data
-    }else{
-      mta_h();
-      mta = false;
-    }
-  }
-
-  // Serial poll disable received
-  if (spd) {
-#ifdef DEBUG5
-    dbSerial->println(F("attnRequired: Received serial poll disable."));
-#endif
-    spd_h();
+    device_mta_h();
     mta = false;
-    spe = false;
-    spd = false;
   }
 
   // Finished attention - set controls to idle
-  setGpibControls(DIDS);
+  gpibBus.setControls(DIDS);
 
-#ifdef DEBUG5
-  dbSerial->println(F("attnRequired: END attnReceived."));
+#ifdef DEBUG_DEVICE_ATN
+  debugStream.println(F("attnRequired: END attnReceived."));
 #endif
 
 }
 
 
 /***** Device is addressed to listen - so listen *****/
-void mla_h(){
-  gpibReceiveData();
+void device_mla_h(){
+  gpibBus.receiveData(dataStream, false, false, 0);
 }
 
 
 /***** Device is addressed to talk - so send data *****/
-void mta_h(){
-//  arSerial->print(F("mta_h: LnRdy: "));
-//  arSerial->println(lnRdy);
+void device_mta_h(){
+//  dataStream.print(F("mta_h: LnRdy: "));
+//  dataStream.println(lnRdy);
   if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
 }
 
 
 /***** Selected Device Clear *****/
-void sdc_h() {
+void device_sdc_h() {
   // If being addressed then reset
-  if (isVerb) arSerial->println(F("Resetting..."));
-#ifdef DEBUG5
-  dbSerial->print(F("Reset adressed to me: ")); dbSerial->println(aTl);
+  if (isVerb) dataStream.println(F("Resetting..."));
+#ifdef DEBUG_DEVICE_ATN
+  debugStream.print(F("Reset adressed to me: "));
+//  debugStream.println(aTl);
 #endif
-  if (aTl) rst_h();
-  if (isVerb) arSerial->println(F("Reset failed."));
+  rst_h();
+  if (isVerb) dataStream.println(F("Reset failed."));
 }
 
 
 /***** Serial Poll Disable *****/
-void spd_h() {
-  if (isVerb) arSerial->println(F("<- serial poll request ended."));
+void device_spd_h() {
+  if (isVerb) dataStream.println(F("<- serial poll request ended."));
 }
 
 
 /***** Serial Poll Enable *****/
-void spe_h() {
-  if (isVerb) arSerial->println(F("Serial poll request received from controller ->"));
-  gpibSendStatus();
-  if (isVerb) arSerial->println(F("Status sent."));
-  // Clear the SRQ bit
-  AR488.stat = AR488.stat & ~0x40;
-  // Clear the SRQ signal
-  clrSrqSig();
-  if (isVerb) arSerial->println(F("SRQ bit cleared (if set)."));
+void device_spe_h() {
+  if (isVerb) dataStream.println(F("Serial poll request received from controller ->"));
+  gpibBus.sendStatus();
+  if (isVerb) dataStream.println(F("Status sent."));
+  // Check if SRQ bit is set and clear it
+  if (gpibBus.cfg.stat & 0x40) {
+    gpibBus.setStatus(gpibBus.cfg.stat & ~0x40);
+    if (isVerb) dataStream.println(F("SRQ bit cleared."));
+  }
 }
 
 
 /***** Unlisten *****/
-void unl_h() {
+void device_unl_h() {
   // Stop receiving and go to idle
-#ifdef DEBUG5
-  dbSerial->println(F("Unlisten received."));
+#ifdef DEBUG_DEVICE_ATN
+  debugStream.println(F("Unlisten received."));
 #endif
-  rEoi = false;
+  readWithEoi = false;
 
   // Immediate break - shouldn't ATN do this anyway?
   tranBrk = 3;  // Stop receving transmission
@@ -2646,746 +2709,32 @@ void unl_h() {
 
 
 /***** Untalk *****/
-void unt_h() {
+void device_unt_h() {
   // Stop sending data and go to idle
-#ifdef DEBUG5
-  dbSerial->println(F("Untalk received."));
+#ifdef DEBUG_DEVICE_ATN
+  debugStream.println(F("Untalk received."));
 #endif
 }
 
 
-#ifdef PIN_REMOTE
+#ifdef REMOTE_SIGNAL_PIN
 /***** Enabled remote mode *****/
-void llo_h(){
+void device_llo_h(){
   digitalWrite(PIN_REMOTE, HIGH);
 }
 
 
 /***** Disable remote mode *****/
-void gtl_h(){
+void device_gtl_h(){
   digitalWrite(PIN_REMOTE, LOW);
 }
 #endif
 
+
 void lonMode(){
 
-  gpibReceiveData();
+  gpibBus.receiveData(dataStream, false, false, 0);
 
   // Clear the buffer to prevent it getting blocked
   if (lnRdy==2) flushPbuf();
-}
-
-
-/***************************************/
-/***** GPIB DATA HANDLING ROUTINES *****/
-/***************************************/
-
-/*****  Send a single byte GPIB command *****/
-bool gpibSendCmd(uint8_t cmdByte) {
-
-  bool stat = false;
-
-  // Set lines for command and assert ATN
-  setGpibControls(CCMS);
-
-  // Send the command
-  stat = gpibWriteByte(cmdByte);
-  if (stat && isVerb) {
-    arSerial->print(F("gpibSendCmd: failed to send command "));
-    arSerial->print(cmdByte, HEX);
-    arSerial->println(F(" to device"));
-  }
-
-  // Return to controller idle state
-  //  setGpibControls(CIDS);
-  // NOTE: this breaks serial poll
-
-  return stat ? ERR : OK;
-}
-
-
-/***** Send the status byte *****/
-void gpibSendStatus() {
-  // Have been addressed and polled so send the status byte
-  if (isVerb) {
-    arSerial->print(F("Sending status byte: "));
-    arSerial->println(AR488.stat);
-  };
-  setGpibControls(DTAS);
-  gpibWriteByte(AR488.stat);
-  setGpibControls(DIDS);
-}
-
-
-/***** Send a series of characters as data to the GPIB bus *****/
-void gpibSendData(char *data, uint8_t dsize) {
-
-  bool err = false;
-
-  // If lon is turned on we cannot send data so exit
-  if (isRO) return;
-
-  // Controler can unlisten bus and address devices
-  if (AR488.cmode == 2) {
-
-    if (deviceAddressing) {
-      // Address device to listen
-      if (addrDev(AR488.paddr, 0)) {
-        if (isVerb) {
-          arSerial->print(F("gpibSendData: failed to address device "));
-          arSerial->print(AR488.paddr);
-          arSerial->println(F(" to listen"));
-        }
-        return;
-      }
-    }
-
-    deviceAddressing = dataBufferFull ? false : true;
-
-#ifdef DEBUG3
-    dbSerial->println(F("Device addressed."));
-#endif
-
-    // Set control lines to write data (ATN unasserted)
-    setGpibControls(CTAS);
-
-  } else {
-    setGpibControls(DTAS);
-  }
-#ifdef DEBUG3
-  dbSerial->println(F("Set write data mode."));
-  dbSerial->print(F("Send->"));
-#endif
-
-  // Write the data string
-  for (int i = 0; i < dsize; i++) {
-    // If EOI asserting is on
-    if (AR488.eoi) {
-      // Send all characters
-      err = gpibWriteByte(data[i]);
-    } else {
-      // Otherwise ignore non-escaped CR, LF and ESC
-      if ((data[i] != CR) || (data[i] != LF) || (data[i] != ESC)) err = gpibWriteByte(data[i]);
-    }
-#ifdef DEBUG3
-    dbSerial->print(data[i]);
-#endif
-    if (err) break;
-  }
-
-#ifdef DEBUG3
-  dbSerial->println("<-End.");
-#endif
-
-  if (!err  && !dataBufferFull) {
-    // Write terminators according to EOS setting
-    // Do we need to write a CR?
-    if ((AR488.eos & 0x2) == 0) {
-      gpibWriteByte(CR);
-#ifdef DEBUG3
-      dbSerial->println(F("Appended CR"));
-#endif
-    }
-    // Do we need to write an LF?
-    if ((AR488.eos & 0x1) == 0) {
-      gpibWriteByte(LF);
-#ifdef DEBUG3
-      dbSerial->println(F("Appended LF"));
-#endif
-    }
-  }
-
-  // If EOI enabled and no more data to follow then assert EOI
-  if (AR488.eoi && !dataBufferFull) {
-    setGpibState(0b00000000, 0b00010000, 0);
-    //    setGpibState(0b00010000, 0b00000000, 0b00010000);
-    delayMicroseconds(40);
-    setGpibState(0b00010000, 0b00010000, 0);
-    //    setGpibState(0b00010000, 0b00010000, 0b00010000);
-#ifdef DEBUG3
-    dbSerial->println(F("Asserted EOI"));
-#endif
-  }
-
-  if (AR488.cmode == 2) {   // Controller mode
-    if (!err && !dataBufferFull) {
-      if (deviceAddressing) {
-        // Untalk controller and unlisten bus
-        if (uaddrDev()) {
-          if (isVerb) arSerial->println(F("gpibSendData: Failed to unlisten bus"));
-        }
-
-#ifdef DEBUG3
-        dbSerial->println(F("Unlisten done"));
-#endif
-      }
-    }
-
-    // Controller - set lines to idle?
-    setGpibControls(CIDS);
-
-  }else{    // Device mode
-    // Set control lines to idle
-    setGpibControls(DIDS);
-  }
-
-#ifdef DEBUG3
-    dbSerial->println(F("<- End of send."));
-#endif
-
-}
-
-
-/***** Receive data from the GPIB bus ****/
-/*
- * Readbreak:
- * 5 - EOI detected
- * 7 - command received via serial
- */
-bool gpibReceiveData() {
-
-  uint8_t r = 0; //, db;
-  uint8_t bytes[3] = {0};
-  uint8_t eor = AR488.eor&7;
-  int x = 0;
-  bool eoiStatus;
-  bool eoiDetected = false;
-
-  // Reset transmission break flag
-  tranBrk = 0;
-
-  // Set status of EOI detection
-  eoiStatus = rEoi; // Save status of rEoi flag
-  if (AR488.eor==7) rEoi = true;    // Using EOI as terminator
-
-  // Set up for reading in Controller mode
-  if (AR488.cmode == 2) {   // Controler mode
-    // Address device to talk
-    if (addrDev(AR488.paddr, 1)) {
-      if (isVerb) {
-        arSerial->print(F("Failed to address device "));
-        arSerial->print(AR488.paddr);
-        arSerial->println(F(" to talk"));
-      }
-    }
-    // Wait for instrument ready
-    waitOnPinState(HIGH, NRFD, AR488.rtmo);
-    // Set GPIB control lines to controller read mode
-    setGpibControls(CLAS);
-
-  // Set up for reading in Device mode
-  } else {  // Device mode
-    // Set GPIB controls to device read mode
-    setGpibControls(DLAS);
-    rEoi = true;  // In device mode we read with EOI by default
-  }
-
-#ifdef DEBUG7
-    dbSerial->println(F("gpibReceiveData: Start listen ->"));
-    dbSerial->println(F("Before loop flags:"));
-    dbSerial->print(F("TRNb: "));
-    dbSerial->println(tranBrk);
-    dbSerial->print(F("rEOI: "));
-    dbSerial->println(rEoi);
-    dbSerial->print(F("ATN:  "));
-//    dbSerial->println(isAtnAsserted() ? 1 : 0);
-    dbSerial->println(isAsserted(ATN) ? 1 : 0);
-#endif
-
-  // Ready the data bus
-  readyGpibDbus();
-
-  // Perform read of data (r=0: data read OK; r>0: GPIB read error);
-  while (r == 0) {
-
-//arSerial->println(F("Loop entered."));
-
-    // Tranbreak > 0 indicates break condition
-    if (tranBrk > 0) break;
-
-//arSerial->println(F("Passed tranbrk."));
-
-    // ATN asserted (check needed only in device mode)
-    if ((AR488.cmode==1) && isAsserted(ATN)) break;
-
-//arSerial->println(F("Passed ATN asserted."));
-
-    // Read the next character on the GPIB bus
-    r = gpibReadByte(&bytes[0], &eoiDetected);
-
-//arSerial->println(F("Read first character."));
-
-    // When reading with amode=3 or EOI check serial input and break loop if neccessary
-    if ((AR488.amode==3) || rEoi) lnRdy = serialIn_h();
-
-    // Line terminator detected (loop breaks on command being detected or data buffer full)
-    if (lnRdy > 0) {
-      aRead = false;  // Stop auto read
-      break;
-    }
-
-#ifdef DEBUG7
-    if (eoiDetected) dbSerial->println(F("\r\nEOI detected."));
-#endif
-
-    // If break condition ocurred or ATN asserted then break here
-//    if (isAsserted(ATN)) break;
-
-#ifdef DEBUG7
-    dbSerial->print(bytes[0], HEX), dbSerial->print(' ');
-#else
-    // Output the character to the serial port
-    arSerial->print((char)bytes[0]);
-#endif
-
-    // Byte counter
-    x++;
-
-    // EOI detection enabled and EOI detected?
-    if (rEoi) {
-      if (eoiDetected) break;
-    }else{
-      // Has a termination sequence been found ?
-      if (isTerminatorDetected(bytes, eor)) break;
-    }
-
-    // Stop on timeout
-    if (r > 0) break;
-
-    // Shift last three bytes in memory
-    bytes[2] = bytes[1];
-    bytes[1] = bytes[0];
-  }
-
-#ifdef DEBUG7
-  dbSerial->println();
-  dbSerial->println(F("After loop flags:"));
-  dbSerial->print(F("ATN: "));
-//  dbSerial->println(isAtnAsserted());
-  dbSerial->println(isAsserted(ATN));
-  dbSerial->print(F("TMO:  "));
-  dbSerial->println(r);
-#endif
-
-  // End of data - if verbose, report how many bytes read
-  if (isVerb) {
-    arSerial->print(F("Bytes read: "));
-    arSerial->println(x);
-  }
-
-  // Detected that EOI has been asserted
-  if (eoiDetected) {
-    if (isVerb) arSerial->println(F("EOI detected!"));
-    // If eot_enabled then add EOT character
-    if (AR488.eot_en) arSerial->print(AR488.eot_ch);
-  }
-
-  // Return rEoi to previous state
-  rEoi = eoiStatus;
-
-  // Verbose timeout error
-  if (r > 0) {
-    if (isVerb && r == 1) arSerial->println(F("Timeout waiting for sender!"));
-    if (isVerb && r == 2) arSerial->println(F("Timeout waiting for transfer to complete!"));
-  }
-
-  // Return controller to idle state
-  if (AR488.cmode == 2) {
-
-    // Untalk bus and unlisten controller
-    if (uaddrDev()) {
-      if (isVerb) arSerial->print(F("gpibSendData: Failed to untalk bus"));
-    }
-
-    // Set controller back to idle state
-    setGpibControls(CIDS);
-
-  } else {
-    // Set device back to idle state
-    setGpibControls(DIDS);
-  }
-
-#ifdef DEBUG7
-    dbSerial->println(F("<- End listen."));
-#endif
-
-  // Reset flags
-//  isReading = false;
-  if (tranBrk > 0) tranBrk = 0;
-
-  if (r > 0) return ERR;
-
-  return OK;
-}
-
-
-/***** Check for terminator *****/
-bool isTerminatorDetected(uint8_t bytes[3], uint8_t eor_sequence){
-  if (rEbt) {
-    // Stop on specified <char> if appended to ++read command
-    if (bytes[0] == eByte) return true;
-  }else{
-    // Look for specified terminator (CR+LF by default)
-    switch (eor_sequence) {
-      case 0:
-          // CR+LF terminator
-          if (bytes[0]==LF && bytes[1]==CR) return true;
-          break;
-      case 1:
-          // CR only as terminator
-          if (bytes[0]==CR) return true;
-          break;
-      case 2:
-          // LF only as terminator
-          if (bytes[0]==LF) return true;
-          break;
-      case 3:
-          // No terminator (will rely on timeout)
-          break;
-      case 4:
-          // Keithley can use LF+CR instead of CR+LF
-          if (bytes[0]==CR && bytes[1]==LF) return true;
-          break;
-      case 5:
-          // Solarton (possibly others) can also use ETX (0x03)
-          if (bytes[0]==0x03) return true;
-          break;
-      case 6:
-          // Solarton (possibly others) can also use CR+LF+ETX (0x03)
-          if (bytes[0]==0x03 && bytes[1]==LF && bytes[2]==CR) return true;
-          break;
-      default:
-          // Use CR+LF terminator by default
-          if (bytes[0]==LF && bytes[1]==CR) return true;
-          break;
-      }
-  }
-  return false;
-}
-
-
-/***** Read a SINGLE BYTE of data from the GPIB bus using 3-way handshake *****/
-/*
- * (- this function is called in a loop to read data    )
- * (- the GPIB bus must already be configured to listen )
- */
-uint8_t gpibReadByte(uint8_t *db, bool *eoi) {
-//  bool atnStat = (digitalRead(ATN) ? false : true); // Set to reverse, i.e. asserted=true; unasserted=false;
-//  bool atnStat = isAtnAsserted();
-  bool atnStat = isAsserted(ATN);
-  *eoi = false;
-
-  // Unassert NRFD (we are ready for more data)
-  setGpibState(0b00000100, 0b00000100, 0);
-
-  // ATN asserted and just got unasserted - abort - we are not ready yet
-//  if (atnStat && (digitalRead(ATN)==HIGH)) {
-//  if (atnStat && (!isAtnAsserted())) {
-  if (atnStat && (!isAsserted(ATN))) {
-    
-    setGpibState(0b00000000, 0b00000100, 0);
-    return 3;
-  }
-
-  // Wait for DAV to go LOW indicating talker has finished setting data lines..
-  if (waitOnPinState(LOW, DAV, AR488.rtmo))  {
-    if (isVerb) arSerial->println(F("gpibReadByte: timeout waiting for DAV to go LOW"));
-    setGpibState(0b00000000, 0b00000100, 0);
-    // No more data for you?
-    return 1;
-  }
-
-  // Assert NRFD (NOT ready - busy reading data)
-  setGpibState(0b00000000, 0b00000100, 0);
-
-  // Check for EOI signal
-//  if (rEoi && digitalRead(EOI) == LOW) *eoi = true;
-  if (rEoi && isAsserted(EOI)) *eoi = true;
-
-  // read from DIO
-  *db = readGpibDbus();
-
-  // Unassert NDAC signalling data accepted
-  setGpibState(0b00000010, 0b00000010, 0);
-
-  // Wait for DAV to go HIGH indicating data no longer valid (i.e. transfer complete)
-  if (waitOnPinState(HIGH, DAV, AR488.rtmo))  {
-    if (isVerb) arSerial->println(F("gpibReadByte: timeout waiting DAV to go HIGH"));
-    return 2;
-  }
-
-  // Re-assert NDAC - handshake complete, ready to accept data again
-  setGpibState(0b00000000, 0b00000010, 0);
-
-  // GPIB bus DELAY
-  delayMicroseconds(AR488.tmbus);
-
-  return 0;
-
-}
-
-
-/***** Write a SINGLE BYTE onto the GPIB bus using 3-way handshake *****/
-/*
- * (- this function is called in a loop to send data )
- */
-bool gpibWriteByte(uint8_t db) {
-
-  bool err;
-
-  err = gpibWriteByteHandshake(db);
-
-  // Unassert DAV
-  setGpibState(0b00001000, 0b00001000, 0);
-
-  // Reset the data bus
-  setGpibDbus(0);
-
-  // GPIB bus DELAY
-  delayMicroseconds(AR488.tmbus);
-
-  // Exit successfully
-  return err;
-}
-
-
-/***** GPIB send byte handshake *****/
-bool gpibWriteByteHandshake(uint8_t db) {
-
-    // Wait for NDAC to go LOW (indicating that devices are at attention)
-  if (waitOnPinState(LOW, NDAC, AR488.rtmo)) {
-    if (isVerb) arSerial->println(F("gpibWriteByte: timeout waiting for receiver attention [NDAC asserted]"));
-    return true;
-  }
-  // Wait for NRFD to go HIGH (indicating that receiver is ready)
-  if (waitOnPinState(HIGH, NRFD, AR488.rtmo))  {
-    if (isVerb) arSerial->println(F("gpibWriteByte: timeout waiting for receiver ready - [NRFD unasserted]"));
-    return true;
-  }
-
-  // Place data on the bus
-  setGpibDbus(db);
-
-  // Assert DAV (data is valid - ready to collect)
-  setGpibState(0b00000000, 0b00001000, 0);
-
-  // Wait for NRFD to go LOW (receiver accepting data)
-  if (waitOnPinState(LOW, NRFD, AR488.rtmo))  {
-    if (isVerb) arSerial->println(F("gpibWriteByte: timeout waiting for data to be accepted - [NRFD asserted]"));
-    return true;
-  }
-
-  // Wait for NDAC to go HIGH (data accepted)
-  if (waitOnPinState(HIGH, NDAC, AR488.rtmo))  {
-    if (isVerb) arSerial->println(F("gpibWriteByte: timeout waiting for data accepted signal - [NDAC unasserted]"));
-    return true;
-  }
-
-  return false;
-}
-
-
-/***** Untalk bus then address a device *****/
-/*
- * dir: 0=listen; 1=talk;
- */
-bool addrDev(uint8_t addr, bool dir) {
-  if (gpibSendCmd(GC_UNL)) return ERR;
-  if (dir) {
-    // Device to talk, controller to listen
-    if (gpibSendCmd(GC_TAD + addr)) return ERR;
-    if (gpibSendCmd(GC_LAD + AR488.caddr)) return ERR;
-  } else {
-    // Device to listen, controller to talk
-    if (gpibSendCmd(GC_LAD + addr)) return ERR;
-    if (gpibSendCmd(GC_TAD + AR488.caddr)) return ERR;
-  }
-  return OK;
-}
-
-
-/***** Unaddress a device (untalk bus) *****/
-bool uaddrDev() {
-  // De-bounce
-  delayMicroseconds(30);
-  // Utalk/unlisten
-  if (gpibSendCmd(GC_UNL)) return ERR;
-  if (gpibSendCmd(GC_UNT)) return ERR;
-  return OK;
-}
-
-
-/**********************************/
-/*****  GPIB CONTROL ROUTINES *****/
-/**********************************/
-
-
-/***** Wait for "pin" to reach a specific state *****/
-/*
- * Returns false on success, true on timeout.
- * Pin MUST be set as INPUT_PULLUP otherwise it will not change and simply time out!
- */
-boolean waitOnPinState(uint8_t state, uint8_t pin, int interval) {
-
-  unsigned long timeout = millis() + interval;
-//  bool atnStat = (digitalRead(ATN) ? false : true); // Set to reverse - asserted=true; unasserted=false;
-  bool atnStat = ((getGpibPinState(ATN)==LOW) ? true : false);
-
-//  while (digitalRead(pin) != state) {
-  while (getGpibPinState(pin) != state) {
-    // Check timer
-    if (millis() >= timeout) return true;
-    // ATN status was asserted but now unasserted so abort
-//    if (atnStat && (digitalRead(ATN)==HIGH)) return true;
-    if (atnStat && (getGpibPinState(ATN)==HIGH)) return true;
-    delayMicroseconds(100);
-  }
-  return false;        // = no timeout therefore succeeded!
-}
-
-/***** Control the GPIB bus - set various GPIB states *****/
-/*
- * state is a predefined state (CINI, CIDS, CCMS, CLAS, CTAS, DINI, DIDS, DLAS, DTAS);
- * Bits control lines as follows: 8-ATN, 7-SRQ, 6-REN, 5-EOI, 4-DAV, 3-NRFD, 2-NDAC, 1-IFC
- * setGpibState byte1 (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
- * setGpibState byte2 (mask)     : 0=unaffected, 1=enabled
- * setGpibState byte3 (mode)     : 0=set pin state, 1=set pin direction
- */
-void setGpibControls(uint8_t state) {
-
-  // Switch state
-  switch (state) {
-    // Controller states
-
-    case CINI:  // Initialisation
-      // Set pin direction
-      setGpibState(0b10111000, 0b11111111, 1);
-      // Set pin state
-      setGpibState(0b11011111, 0b11111111, 0);
-#ifdef SN7516X
-      digitalWrite(SN7516X_TE,LOW);
-  #ifdef SN7516X_DC
-        digitalWrite(SN7516X_DC,LOW);
-  #endif
-  #ifdef SN7516X_SC
-        digitalWrite(SN7516X_SC,HIGH);
-  #endif
-#endif
-#ifdef DEBUG2
-      dbSerial->println(F("Initialised GPIB control mode"));
-#endif
-      break;
-
-    case CIDS:  // Controller idle state
-      setGpibState(0b10111000, 0b10011110, 1);
-      setGpibState(0b11011111, 0b10011110, 0);
-#ifdef SN7516X
-      digitalWrite(SN7516X_TE,LOW);
-#endif
-#ifdef DEBUG2
-      dbSerial->println(F("Set GPIB lines to idle state"));
-#endif
-      break;
-
-    case CCMS:  // Controller active - send commands
-      setGpibState(0b10111001, 0b10011111, 1);
-      setGpibState(0b01011111, 0b10011111, 0);
-#ifdef SN7516X
-      digitalWrite(SN7516X_TE,HIGH);
-#endif
-#ifdef DEBUG2
-      dbSerial->println(F("Set GPIB lines for sending a command"));
-#endif
-      break;
-
-    case CLAS:  // Controller - read data bus
-      // Set state for receiving data
-      setGpibState(0b10100110, 0b10011110, 1);
-      setGpibState(0b11011000, 0b10011110, 0);
-#ifdef SN7516X
-      digitalWrite(SN7516X_TE,LOW);
-#endif
-#ifdef DEBUG2
-      dbSerial->println(F("Set GPIB lines for reading data"));
-#endif
-      break;
-
-    case CTAS:  // Controller - write data bus
-      setGpibState(0b10111001, 0b10011110, 1);
-      setGpibState(0b11011111, 0b10011110, 0);
-#ifdef SN7516X
-      digitalWrite(SN7516X_TE,HIGH);
-#endif
-#ifdef DEBUG2
-      dbSerial->println(F("Set GPIB lines for writing data"));
-#endif
-      break;
-
-    /* Bits control lines as follows: 8-ATN, 7-SRQ, 6-REN, 5-EOI, 4-DAV, 3-NRFD, 2-NDAC, 1-IFC */
-
-    // Listener states
-    case DINI:  // Listner initialisation
-#ifdef SN7516X
-      digitalWrite(SN7516X_TE,HIGH);
-  #ifdef SN7516X_DC
-        digitalWrite(SN7516X_DC,HIGH);
-  #endif
-  #ifdef SN7516X_SC
-        digitalWrite(SN7516X_SC,LOW);
-  #endif
-#endif
-      setGpibState(0b00000000, 0b11111111, 1);
-      setGpibState(0b11111111, 0b11111111, 0);
-#ifdef DEBUG2
-      dbSerial->println(F("Initialised GPIB listener mode"));
-#endif
-      break;
-
-    case DIDS:  // Device idle state
-#ifdef SN7516X
-      digitalWrite(SN7516X_TE,HIGH);
-#endif
-      setGpibState(0b00000000, 0b00001110, 1);
-      setGpibState(0b11111111, 0b00001110, 0);
-#ifdef DEBUG2
-      dbSerial->println(F("Set GPIB lines to idle state"));
-#endif
-      break;
-
-    case DLAS:  // Device listner active (actively listening - can handshake)
-#ifdef SN7516X
-      digitalWrite(SN7516X_TE,LOW);
-#endif
-      setGpibState(0b00000110, 0b00001110, 1);
-      setGpibState(0b11111001, 0b00001110, 0);
-#ifdef DEBUG2
-      dbSerial->println(F("Set GPIB lines to idle state"));
-#endif
-      break;
-
-    case DTAS:  // Device talker active (sending data)
-#ifdef SN7516X
-      digitalWrite(SN7516X_TE,HIGH);
-#endif
-      setGpibState(0b00001000, 0b00001110, 1);
-      setGpibState(0b11111001, 0b00001110, 0);
-#ifdef DEBUG2
-      dbSerial->println(F("Set GPIB lines for listening as addresed device"));
-#endif
-      break;
-#ifdef DEBUG2
-
-    default:
-      // Should never get here!
-      //      setGpibState(0b00000110, 0b10111001, 0b11111111);
-      dbSerial->println(F("Unknown GPIB state requested!"));
-#endif
-  }
-
-  // Save state
-  cstate = state;
-
-  // GPIB bus delay (to allow state to settle)
-  delayMicroseconds(AR488.tmbus);
-
 }

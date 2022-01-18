@@ -7,7 +7,8 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.50.17, 02/06/2021"
+#define FWVER "AR488 GPIB controller, ver. 0.51.00, 18/01/2022"
+
 
 
 /***** BOARD CONFIGURATION *****/
@@ -35,50 +36,24 @@
    * Define board layout in the AR488 CUSTOM LAYOUT
    * section below
    */
-  /* Serial ports */
-  #define AR_HW_SERIAL
-  #define AR_SERIAL_PORT Serial
-  //#define AR_SERIAL_PORT Serial1
-  //#define AR_SERIAL_PORT Serial2
-  //#define AR_SERIAL_PORT Serial3
-  //#define AR_CDC_SERIAL
-  //#define AR_SW_SERIAL
+  /* Default serial port type */
+  #define AR_SERIAL_TYPE_HW
 
 /*** UNO and NANO boards ***/
 #elif __AVR_ATmega328P__
   /* Board/layout selection */
   #define AR488_UNO
   //#define AR488_NANO
-  /*** Serial port type ***/
-  // Select hardware (AR_HW_SERIAL) or software (AR_SW_SERIAL) port
-  // UNO/NANO default = AR_HW_SERIAL (hardware serial port)
-  // (Comment out #define AR_HW_SERIAL if using SoftwareSerial)
-  #define AR_HW_SERIAL
-  #ifdef AR_HW_SERIAL
-    #define AR_SERIAL_PORT Serial
-  #else
-    // Select software serial port
-    #define AR_SW_SERIAL
-  #endif
+  /* Default serial port type */
+  #define AR_SERIAL_TYPE_HW
 
 /*** MEGA 32U4 based boards (Micro, Leonardo) ***/
 #elif __AVR_ATmega32U4__
   /*** Board/layout selection ***/
   #define AR488_MEGA32U4_MICRO  // Artag's design for Micro board
   //#define AR488_MEGA32U4_LR3  // Leonardo R3 (same pin layout as Uno)
-  /*** Serial ports ***/
-  // Select hardware (AR_CDC_SERIAL) or hardware (AR_HW_SERIAL) port
-  // 32U4/Micro/Leonardo default = AR_HW_SERIAL (hardware serial port)
-  // Comment out #define AR_CDC_SERIAL if using RXI, TXO pins
-  #define AR_CDC_SERIAL
-  #ifdef AR_CDC_SERIAL
-    // The Mega 32u4 default port is a virtual USB CDC port named 'Serial'
-    #define AR_SERIAL_PORT Serial
-  #else
-    // Use hardware port Serial1
-    #define AR_HW_SERIAL
-    #define AR_SERIAL_PORT Serial1
-  #endif
+  /* Default serial port type */
+  #define AR_SERIAL_TYPE_CDC
   
 /*** MEGA 2560 board ***/
 #elif __AVR_ATmega2560__
@@ -88,49 +63,67 @@
   //#define AR488_MEGA2560_E2
 //  #define AR488_MCP23S17
   #define AR488_MCP23017
-  /*** Serial ports ***/
-  // Mega 2560 supports Serial, Serial1, Serial2, Serial3. Since the pins 
-  // associated with Serial2 are used in the default pin layout, Serial2
-  // is unavailable. The default port is 'Serial'. Choose ONE port only.
-  #define AR_HW_SERIAL
-  #define AR_SERIAL_PORT Serial
-  //#define AR_SERIAL_PORT Serial1
-  //#define AR_SERIAL_PORT Serial3
+  /* Default serial port type */
+  #define AR_SERIAL_TYPE_HW
 
+/***** Panduino Mega 644 or Mega 1284 board *****/
+#elif defined(__AVR_ATmega644P__) || defined(__AVR_ATmega1284P__)
+  /* Board/layout selection */
+  #define AR488_MEGA644P_MCGRAW
+  /* Default serial port type */
+  #define AR_SERIAL_TYPE_HW
+  #define SAY_HELLO
+  
 #endif  // Board/layout selection
 
 
-/***** Hardware serial ports *****/
-/*
- *  Select the hardware serial port 
- */
-/*
- #ifdef AR_HW_SERIAL
-  // All common to all boards except 32U4 (default)
-  #define AR_SERIAL_PORT Serial
-  // 32U4 board and Mega 2560 (optional)
-  //#define AR_SERIAL_PORT Serial1
-  // Mega 2560 (optional)
-  //#define AR_SERIAL_PORT Serial3
-#endif
-*/
 
-/***** Software Serial Support *****/
+/***** SERIAL PORT CONFIGURATION *****/
+/*
+ * Serial type should be one of:
+ * AR_SERIAL_TYPE_HW
+ * AR_SERIAL_TYPE_CDC
+ * AR_SERIAL_TYPE_SW
+ * Note1: The default port type on 32u4 boards (Micro Pro, Leonardo) is AR_SERIAL_TYPE_CDC
+ *        For other boards use type AR_SERIAL_TYPE_HW or optionally AR_SERIAL_TYPE_SW if required
+ * Note2: On most boards the serial device is named Serial. Boards that have a secondary
+ *        UART port this is named Serial1. Mega2560 also supports Serial3 and Serial4
+ */
+/***** Communication port *****/
+#define AR_SERIAL_ENABLE
+#ifdef AR_SERIAL_ENABLE
+  // Serial port device
+  #define AR_SERIAL_PORT Serial
+  // Select port type
+  /* Defining type here will override automatic selection */
+//  #define AR_SERIAL_TYPE_HW
+  // Set port operating speed
+  #define AR_SERIAL_SPEED 115200
+#endif
+/***** Debug port *****/
+#define DB_SERIAL_ENABLE
+#ifdef DB_SERIAL_ENABLE
+  // Serial port device
+  #define DB_SERIAL_PORT Serial
+  // Select port type
+  #define DB_SERIAL_TYPE_HW
+  // Set port operating speed
+  #define DB_SERIAL_SPEED 115200
+#endif
+/***** Configure SoftwareSerial Port *****/
 /*
  * Configure the SoftwareSerial TX/RX pins and baud rate here
  * Note: SoftwareSerial support conflicts with PCINT support
  * When using SoftwareSerial, disable USE_INTERRUPTS.
  */
-#ifdef AR_SW_SERIAL
-  #define AR_SW_SERIAL_RX 53
-  #define AR_SW_SERIAL_TX 51
-  #define AR_SW_SERIAL_BAUD 57600
-#else
-  #define AR_SERIAL_BAUD 115200
+#if defined(AR_SERIAL_TYPE_SW) || defined(DB_SERIAL_TYPE_SW)
+  #define SW_SERIAL_RX_PIN 11
+  #define SW_SERIAL_TX_PIN 12
 #endif
 /*
  * Note: SoftwareSerial reliable only up to a MAX of 57600 baud only
  */
+
 
 
 /***** Pin State Detection *****/
@@ -212,14 +205,14 @@
  */
 //#define AR_BT_EN 12             // Bluetooth enable and control pin
 #ifdef AR_BT_EN
-  #define AR_BT_BAUD 115200     // Bluetooth module preferred baud rate
+  #define AR_BT_SPEED 115200    // Bluetooth module preferred baud rate
   #define AR_BT_NAME "AR488-BT" // Bluetooth device name
   #define AR_BT_CODE "488488"   // Bluetooth pairing code
 #endif
 
 
 /***** Local/remote signal (LED) *****/
-//#define PIN_REMOTE 7
+//#define REMOTE_SIGNAL_PIN 7
 
 
 /***** 8-way address DIP switch *****/
@@ -238,9 +231,11 @@
 
 
 /***** Acknowledge interface is ready *****/
-#define SAY_HELLO
+//#define SAY_HELLO
+
 
 /***** Debug options *****/
+/*
 // Uncomment to send debug messages to another port
 //#define DB_SERIAL_PORT Serial1
 // Configure alternative port for debug messages
@@ -250,17 +245,34 @@
   #define DB_SW_SERIAL_RX 53
   #define DB_SW_SERIAL_TX 51
 #endif
-// Configure debug level
-//#define DEBUG1  // getCmd
-//#define DEBUG2  // setGpibControls
-//#define DEBUG3  // gpibSendData
-//#define DEBUG4  // spoll_h
-//#define DEBUG5  // attnRequired
-//#define DEBUG6  // EEPROM
-//#define DEBUG7  // gpibReceiveData
-//#define DEBUG8  // ppoll_h
-//#define DEBUG9  // bluetooth
-//#define DEBUG10 // ID command
+*/
+
+/***** Configure debug levels *****/
+#ifdef DB_SERIAL_ENABLE
+  // Main module
+  //#define DEBUG_SERIAL_INPUT    // serialIn_h(), parseInput_h()
+  //#define DEBUG_CMD_PARSER      // getCmd()
+  //#define DEBUG_SEND_TO_INSTR   // sendToInstrument();
+  //#define DEBUG_SPOLL           // spoll_h()
+  //#define DEBUG_DEVICE_ATN      // attnRequired()
+  //#define DEBUG_IDFUNC          // ID command
+
+  // AR488_GPIBbus module
+  //#define DEBUG_GPIBbus_RECEIVE // GPIBbus::receiveData()
+  #define DEBUG_GPIBbus_SEND    // GPIBbus::sendData()
+  //#define DEBUG_GPIBbus_CONTROL // GPIBbus::setControls()
+  //#define DEBUG_GPIB_COMMANDS   // GPIBbus::sendCDC(), GPIBbus::sendLLO(), GPIBbus::sendLOC(), GPIBbus::sendGTL()
+  //#define DEBUG_GPIBbus_UNLUNT  // Untalk/unlisten
+
+  // GPIB layout module
+  //#define DEBUG_LAYOUTS
+
+  // EEPROM module
+  //#define DEBUG_EEPROM          // EEPROM
+
+  // AR488 Bluetooth module
+  //#define DEBUG_BLUETOOTH       // bluetooth
+#endif
 
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
@@ -369,31 +381,6 @@ M3\n\
 /***** !!! DO NOT EDIT BELOW HERE !!! *****/
 /******vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv******/
 
-
-/*********************************************/
-/***** SERIAL PORT EXTERNAL DECLARATIONS *****/
-/******vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv******/
-
-/*
-#ifdef AR_BT_EN
-  #ifdef AR_CDC_SERIAL
-    Serial_ *btSerial = &(AR_SERIAL_PORT);
-  #endif
-  #ifdef AR_HW_SERIAL
-    HardwareSerial *btSerial = &(AR_SERIAL_PORT);
-  #endif
-  // Note: SoftwareSerial support conflicts with PCINT support
-  #ifdef AR_SW_SERIAL
-    #include <SoftwareSerial.h>
-    SoftwareSerial btSerial(AR_SW_SERIAL_RX, AR_SW_SERIAL_TX);
-    SoftwareSerial *btSerial = &btSerial;
-  #endif
-#endif
-*/
-
-/******^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^******/
-/***** SERIAL PORT EXTERNAL DECLARATIONS *****/
-/*********************************************/
 
 
 /*********************************************/
