@@ -71,6 +71,10 @@
 #define TALK true
 #define LISTEN false
 
+/***** Lastbyte - send EOI *****/
+#define NO_EOI false
+#define WITH_EOI true
+
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** GPIB COMMAND & STATUS DEFINITIONS *****/
 /*********************************************/
@@ -143,22 +147,22 @@ class GPIBbus {
     bool isAsserted(uint8_t gpibsig);
     void setControls(uint8_t state);
     void sendStatus();
+
     void setStatus(uint8_t statusByte);
     bool sendCmd(uint8_t cmdByte);
     uint8_t readByte(uint8_t *db, bool readWithEoi, bool *eoi);  
+    uint8_t writeByte(uint8_t db, bool isLastByte);
     bool receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte, uint8_t endByte);
     void sendData(char *data, uint8_t dsize);
     void setControlVal(uint8_t value, uint8_t mask, uint8_t mode);
     void setDataVal(uint8_t);
 
-#ifdef EN_STORAGE
-    bool receiveData(iostream& fileStream, bool detectEoi, bool detectEndByte, uint8_t endByte);
-    void sendData(iostream& fileStream);
-#endif
+    void setDeviceAddressedState(uint8_t stat);
+    bool isDeviceAddressedToListen();
+    bool isDeviceAddressedToTalk();
+    bool isDeviceNotAddressed();
 
     void signalBreak();
-//    void setDataContinuity(bool flag);
-//    void setAddressingSuppressed(bool flag);
 
     bool addressDevice(uint8_t addr, bool dir);
     bool unAddressDevice();
@@ -166,13 +170,11 @@ class GPIBbus {
 
   private:
 
-//    bool addressingSuppressed;
-//    bool dataContinuity;
     bool deviceAddressed;
-
-    bool writeByte(uint8_t db);
-    bool writeByteHandshake(uint8_t db);
-    boolean waitOnPinState(uint8_t state, uint8_t pin, int interval);
+    uint8_t deviceAddressedState;
+    
+//    bool writeByteHandshake(uint8_t db);
+//    boolean waitOnPinState(uint8_t state, uint8_t pin, int interval);
     bool isTerminatorDetected(uint8_t bytes[3], uint8_t eorSequence);
     void setSrqSig();
     void clrSrqSig();
