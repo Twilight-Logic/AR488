@@ -35,7 +35,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.51.00, 18/01/2022" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.51.01, 18/01/2022" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
