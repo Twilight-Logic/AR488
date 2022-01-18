@@ -31,7 +31,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.50.16, 02/06/2021" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.50.17, 02/06/2021" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -109,6 +109,7 @@
    ++srqauto      - automatically condiuct serial poll when SRQ is asserted
    ++ton          - put controller in talk-only mode (send data only)
    ++verbose      - verbose (human readable) mode
+   ++xonxoff
 */
 
 /*
@@ -413,6 +414,9 @@ uint8_t runMacro = 0;
 
 // Send response to *idn?
 bool sendIdn = false;
+
+// Xon/Xoff flag (off by default)
+//bool xonxoff = false;
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** COMMON VARIABLES SECTION *****/
@@ -808,8 +812,13 @@ void errBadCmd() {
 uint8_t parseInput(char c) {
 
   uint8_t r = 0;
-
-  // Read until buffer full (buffer-size - 2 characters)
+/*
+  if (xonxoff){
+    // Send XOFF when buffer around 80% full
+    if (pbPtr < (PBSIZE*0.8)) arSerial->print(0x13);
+  }
+*/
+  // Read until buffer full
   if (pbPtr < PBSIZE) {
     if (isVerb) arSerial->print(c);  // Humans like to see what they are typing...
     // Actions on specific characters
@@ -1009,7 +1018,7 @@ static cmdRec cmdHidx [] = {
   { "verbose",     3, (void(*)(char*)) verb_h    },
   { "tmbus",       3, tmbus_h     },
   { "xdiag",       3, xdiag_h     }
-
+//  { "xonxoff",     3, xonxoff_h   }
 };
 
 
@@ -2221,6 +2230,24 @@ void xdiag_h(char *params){
 }
 
 
+/***** Enable Xon/Xoff handshaking for data transmission *****/
+/*
+void xonxoff_h(char *params){
+  uint16_t val;
+  if (params != NULL) {
+    if (notInRange(params, 0, 1, val)) return;
+    xonxoff = val ? true : false;
+    if (isVerb) {
+      arSerial->print(F("Xon/Xoff: "));
+      arSerial->println(val ? "ON" : "OFF") ;
+    }
+  } else {
+    arSerial->println(xonxoff);
+  }
+}
+*/
+
+
 /****** Timing parameters ******/
 
 void tmbus_h(char *params) {
@@ -2665,7 +2692,7 @@ void gpibSendData(char *data, uint8_t dsize) {
   dbSerial->println("<-End.");
 #endif
 
-  if (!err) {
+  if (!err  && !dataBufferFull) {
     // Write terminators according to EOS setting
     // Do we need to write a CR?
     if ((AR488.eos & 0x2) == 0) {
@@ -2696,7 +2723,7 @@ void gpibSendData(char *data, uint8_t dsize) {
   }
 
   if (AR488.cmode == 2) {   // Controller mode
-    if (!err) {
+    if (!err && !dataBufferFull) {
       if (deviceAddressing) {
         // Untalk controller and unlisten bus
         if (uaddrDev()) {
