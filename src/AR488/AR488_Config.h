@@ -315,7 +315,7 @@ M3\n\
 /***** SERIAL PORT EXTERNAL DECLARATIONS *****/
 /******vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv******/
 
-
+/*
 #ifdef AR_BT_EN
   #ifdef AR_CDC_SERIAL
     Serial_ *btSerial = &(AR_SERIAL_PORT);
@@ -330,7 +330,7 @@ M3\n\
     SoftwareSerial *btSerial = &btSerial;
   #endif
 #endif
-
+*/
 
 /******^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^******/
 /***** SERIAL PORT EXTERNAL DECLARATIONS *****/
