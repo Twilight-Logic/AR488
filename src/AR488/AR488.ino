@@ -35,7 +35,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.51.01, 18/01/2022" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.51.03, 19/01/2022" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -250,7 +250,7 @@ uint8_t pbPtr = 0;
 /***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
 
 // Universal Multiline commands (apply to all devices)
-
+/* NOW IN AR488_Gpibbus.h
 #define GC_LLO 0x11
 #define GC_DCL 0x14
 #define GC_PPU 0x15
@@ -268,9 +268,11 @@ uint8_t pbPtr = 0;
 #define GC_SDC 0x04
 #define GC_PPC 0x05
 #define GC_GET 0x08
+*/
 
 /***** GPIB control states *****/
 // Controller mode
+/* NOW IN AR488_Gpibbus.h
 #define CINI 0x01 // Controller idle state
 #define CIDS 0x02 // Controller idle state
 #define CCMS 0x03 // Controller command state
@@ -281,7 +283,7 @@ uint8_t pbPtr = 0;
 #define DIDS 0x07 // Device idle state
 #define DLAS 0x08 // Device listener active (listening/receiving)
 #define DTAS 0x09 // Device talker active (sending) state
-
+*/
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** GPIB COMMAND & STATUS DEFINITIONS *****/
 /*********************************************/
@@ -350,8 +352,8 @@ uint8_t lnRdy = 0;
 
 // GPIB data receive flags
 //bool isReading = false;           // Is a GPIB read in progress?
-bool addressingSuppressed = false;  // Read with addressing suppressed
-bool autoReading = false;           // Auto reading (auto mode 3) GPIB data in progress
+//bool addressingSuppressed = false;  // Read with addressing suppressed
+bool autoRead = false;              // Auto reading (auto mode 3) GPIB data in progress
 bool readWithEoi = false;           // Read eoi requested
 bool readWithEndByte = false;       // Read with specified terminator character
 bool isQuery = false;               // Direct instrument command is a query
@@ -515,20 +517,19 @@ void setup() {
 //  initAR488();
 
 #ifdef E2END
-  debugStream.println(F("EEPROM detected!"));
+//  debugStream.println(F("EEPROM detected!"));
   // Read data from non-volatile memory
   //(will only read if previous config has already been saved)
-//  epGetCfg();
   if (!isEepromClear()) {
-debugStream.println(F("EEPROM has data."));
+//debugStream.println(F("EEPROM has data."));
     if (!epReadData(gpibBus.cfg.db, GPIB_CFG_SIZE)) {
       // CRC check failed - config data does not match EEPROM
-debugStream.println(F("CRC check failed. Erasing EEPROM...."));
+//debugStream.println(F("CRC check failed. Erasing EEPROM...."));
       epErase();
       gpibBus.setDefaultCfg();
 //      initAR488();
       epWriteData(gpibBus.cfg.db, GPIB_CFG_SIZE);
-debugStream.println(F("EEPROM data set to default."));
+//debugStream.println(F("EEPROM data set to default."));
     }
   }
 #endif
@@ -621,9 +622,9 @@ if (lnRdy>0){
 
   // lnRdy=1: received a command so execute it...
   if (lnRdy == 1) {
-    if (autoReading) {
-      // Issuing any command stops autoreading
-      autoReading = false;
+    if (autoRead) {
+      // Issuing any command stops autoread mode
+      autoRead = false;
       gpibBus.unAddressDevice();
     }
     execCmd(pBuf, pbPtr);
@@ -661,7 +662,7 @@ if (lnRdy>0){
     }
 
     // Continuous auto-receive data from GPIB bus
-    if ((gpibBus.cfg.amode==3) && autoReading) {
+    if ((gpibBus.cfg.amode==3) && autoRead) {
       // Nothing is waiting on the serial input so read data from GPIB
       if (lnRdy==0) {
         errFlg = gpibBus.receiveData(dataStream, readWithEoi, readWithEndByte, endByte);
@@ -1445,7 +1446,7 @@ void amode_h(char *params) {
       dataStream.println(F("         'addressed to talk but nothing to say' errors"));
     }
     gpibBus.cfg.amode = (uint8_t)val;
-    if (gpibBus.cfg.amode < 3) autoReading = false;
+    if (gpibBus.cfg.amode < 3) autoRead = false;
     if (isVerb) {
       dataStream.print(F("Auto mode: "));
       dataStream.println(gpibBus.cfg.amode);
@@ -1484,37 +1485,31 @@ void read_h(char *params) {
       if (isVerb) dataStream.println(F("Invalid parameter - ignored!"));
     } else if (strncasecmp(params, "eoi", 3) == 0) { // Read with eoi detection
       readWithEoi = true;
-/*
-    } else if (strncasecmp(params, "nae", 3) == 0) { // Read with no addressing and with eoi detection
-      readWithEoi = true;
-      suppressAddressing = true;
-    } else if (strncasecmp(params, "nad", 3) == 0) { // Read with no addressing
-      readWithEoi = false;
-      suppressAddressing = true;
-*/
     } else { // Assume ASCII character given and convert to an 8 bit byte
       readWithEndByte = true;
       endByte = atoi(params);
     }
   }
 
-debugStream.print(F("readWithEoi:     "));
-debugStream.println(readWithEoi);
-debugStream.print(F("readWithEndByte: "));
-debugStream.println(readWithEndByte);
+//debugStream.print(F("readWithEoi:     "));
+//debugStream.println(readWithEoi);
+//debugStream.print(F("readWithEndByte: "));
+//debugStream.println(readWithEndByte);
 
   
   if (gpibBus.cfg.amode == 3) {
     // In auto continuous mode we set this flag to indicate we are ready for continuous read
-    autoReading = true;
-    if (!gpibBus.isDeviceAddressed()) gpibBus.addressDevice(gpibBus.cfg.paddr, TALK);
+    autoRead = true;
+//    if (!gpibBus.isDeviceAddressed()) gpibBus.addressDevice(gpibBus.cfg.paddr, TALK);
   } else {
     // If auto mode is disabled we do a single read
-    if ((!addressingSuppressed) && (!gpibBus.isDeviceAddressed())) gpibBus.addressDevice(gpibBus.cfg.paddr, TALK);
+//    if ((!addressingSuppressed) && (!gpibBus.isDeviceAddressed()))
+    gpibBus.addressDevice(gpibBus.cfg.paddr, TALK);
     gpibBus.receiveData(dataStream, readWithEoi, readWithEndByte, endByte);
-    if (!addressingSuppressed) gpibBus.unAddressDevice();
+//    gpibBus.addressDevice(gpibBus.cfg.paddr, LISTEN);
+//    if (!addressingSuppressed) gpibBus.unAddressDevice();
   }
-  if (addressingSuppressed) addressingSuppressed = false;
+//  if (addressingSuppressed) addressingSuppressed = false;
 }
 
 
@@ -2375,17 +2370,6 @@ void sendmta_h() {
 
 /***** Show or set read timout *****/
 void sendmsa_h(char *params) {
-/*
-  uint16_t val;
-  if (params != NULL) {
-    if (notInRange(params, 96, 126, val)) return;
-    if (gpibBus.sendMSA(val)){
-      if (isVerb) dataStream.println(F("Failed to send MSA"));
-      return;
-    }
-  }
-*/
-
   uint16_t saddr;
   char * param;
   if (params != NULL) {
@@ -2405,7 +2389,7 @@ void sendmsa_h(char *params) {
       gpibBus.sendData(param, strlen(param));
       gpibBus.setControls(CLAS);
     }
-    addressingSuppressed = true;
+//    addressingSuppressed = true;
   }
 }
 
@@ -2418,7 +2402,7 @@ void unlisten_h() {
   }
   // Set GPIB controls back to idle state
   gpibBus.setControls(CIDS);
-  addressingSuppressed = false;
+//  addressingSuppressed = false;
 }
 
 
@@ -2430,7 +2414,7 @@ void untalk_h() {
   }
   // Set GPIB controls back to idle state
   gpibBus.setControls(CIDS);
-  addressingSuppressed = false;
+//  addressingSuppressed = false;
 }
 
 
@@ -2447,70 +2431,84 @@ void untalk_h() {
  */
 void attnRequired() {
 
+  uint8_t cmdbytes[5] = {0};
   uint8_t db = 0;
   uint8_t stat = 0;
-  bool mla = false;
-  bool mta = false;
-//  bool spe = false;
-//  bool spd = false;
   bool eoiDetected = false;
   uint8_t gpibcmd = 0;
+  uint8_t cnt = 0;
+#ifdef EN_STORAGE
   uint8_t saddrcmd = 0;
+#endif
 
-//dataStream.print(F("attnRequired: LnRdy: "));
-//dataStream.println(lnRdy);
-
-  
   // Set device listner active state (assert NDAC+NRFD (low), DAV=INPUT_PULLUP)
   gpibBus.setControls(DLAS);
 
 #ifdef DEBUG_DEVICE_ATN
   debugStream.println(F("attnRequired: Answering attention!"));
+  debugStream.println(F("attnRequired: Reading CMD bytes..."));
 #endif
 
   // Read bytes
-//  while (isATN) {
-//  while (digitalRead(ATN)==LOW) {
-  while (gpibBus.isAsserted(ATN)) {
-
-#ifdef DEBUG_DEVICE_ATN
-      debugStream.println(F("attnRequired: Reading byte..."));
-#endif
-
+  while ( (gpibBus.isAsserted(ATN)) && (cnt <5)  && !stat ) {
     // Read the next byte from the bus, no EOI detection
-    stat = gpibBus.readByte(&db, false, &eoiDetected);
-    if (!stat) {
+    stat = gpibBus.readByte(&cmdbytes[cnt], false, &eoiDetected);
+#ifdef DEBUG_DEVICE_ATN
+    debugStream.println(cmdbytes[cnt], HEX);
+#endif
+    if (!stat) cnt++;
+  }
 
 #ifdef DEBUG_DEVICE_ATN
-      debugStream.println(db, HEX);
+  debugStream.println(F("attnRequired: ATN loop end."));
+  debugStream.print(cnt);
+  debugStream.println(F(" bytes read."));
+  debugStream.print(F("Stat: "));
+  debugStream.println(stat);
 #endif
+
+  if (!stat) {  // Check for error
+
+#ifdef DEBUG_DEVICE_ATN
+  debugStream.println(F("attnRequired: started command process loop..."));
+#endif
+    
+    // Process commands
+    for (uint8_t i=0; i<cnt; i++) { 
+
+      if (!cmdbytes[i]) break;  // End loop on zero
+
+      db = cmdbytes[i];
 
       // Device is addressed to listen
       if (gpibBus.cfg.paddr == (db ^ 0x20)) { // MLA = db^0x20
 #ifdef DEBUG_DEVICE_ATN
         debugStream.println(F("attnRequired: Controller wants me to data accept data <<<"));
 #endif
-        mla = true;
-//      }
+        gpibBus.setDeviceAddressedState(DLAS);
 
       // Device is addressed to talk
       }else if (gpibBus.cfg.paddr == (db ^ 0x40)) { // MLA = db^0x40
         // Call talk handler to send data
-        mta = true;
+        gpibBus.setDeviceAddressedState(DTAS);
 #ifdef DEBUG_DEVICE_ATN
         if (db != GC_SPE) debugStream.println(F("attnRequired: Controller wants me to send data >>>"));
 #endif
+
+#ifdef EN_STORAGE
       }else if (db>0x5F && db<0x80) {
         // Secondary addressing command received
-        if (mla || mta) {
+        if (!gpibBus.isDeviceNotAddressed()) { // If we have been addressed
           saddrcmd = db;
-#ifdef DEBUG_DEVICE_ATN
+  #ifdef DEBUG_DEVICE_ATN
           debugStream.print(F("attnRequired: Secondary addressing command received: "));
           debugStream.println(saddrcmd, HEX);
-#endif
+  #endif
         }
+#endif
+
       }else{
-        if (mla || mta) {
+        if (!gpibBus.isDeviceNotAddressed()) { // If we have been addressed
           gpibcmd = db;
 #ifdef DEBUG_DEVICE_ATN
           debugStream.print(F("attnRequired: GPIB command received: "));
@@ -2518,128 +2516,85 @@ void attnRequired() {
 #endif
         }
       }
-    }
-  }
 
 
 
-      // If we have been addressed then check if we need to take action
-/*
-      if (mla || mta) {
-
-
-      // Serial poll enable request
-      if (db==GC_SPE) spe = true;
-
-      // Serial poll disable request
-      if (db==GC_SPD) spd = true;
- 
-      // Unlisten
-      if (db==GC_UNL) device_unl_h();
-
-      // Untalk
-      if (db==GC_UNT) device_unt_h();
-
-      // Reset
-
-    #ifdef PIN_REMOTE
-      // Remote mode
-      if (db==GC_LLO) device_llo_h();
-      // Local mode
-      if (db==GC_GTL) device_gtl_h();
-    #endif
-
-
-    }
-
-  
-  }
-*/
-
-#ifdef DEBUG_DEVICE_ATN
-  debugStream.println(F("End ATN loop."));
-#endif
-
-/***** Perform GPIB copmmand actions *****/
-
-  if (gpibcmd) {
-    // Respond to GPIB command
-    switch (db) {
-      case GC_SPE:
-        // Serial Poll enable request
-#ifdef DEBUG_DEVICE_ATN
-          debugStream.println(F("attnRequired: Received serial poll enable."));
-#endif
-          device_spe_h();
-          break;
-      case GC_SPD:
-          // Serial poll disable request
-#ifdef DEBUG_DEVICE_ATN
-          debugStream.println(F("attnRequired: Received serial poll disable."));
-#endif
-          device_spd_h();
-          mta = false;
-          break;
-      case GC_UNL:
-          // Unlisten
-          device_unl_h();
-          break;
-      case GC_UNT:
-          // Untalk
-          device_unt_h();
-          break;
-      case GC_SDC:
-          // Device clear (reset)
-          device_sdc_h();
-          break;
-#ifdef PIN_REMOTE
-      case GC_LLO:
-          // Remote lockout mode
-          device_llo_h();
-          break;
-      case GC_GTL:
-          // Local mode
-          device_gtl_h();
-          break;
-#endif
-    } // End switch
-    // Clear flags
-    mta = false;
-    mla = false;
-    gpibcmd = 0;
-  }
+/***** Perform GPIB command actions *****/
+      if (gpibcmd) {
+        // Respond to GPIB command
+        execGpibCmd(gpibcmd);
+        // Clear flags
+        gpibcmd = 0;
+      }
 
 
 /***** Perform secondry address command actions *****/
+#ifdef EN_STORAGE
+      if (saddrcmd) {
+        // If addressed to listen then set GPIB to listen
+        if (gpibBus.isDeviceAddressedToListen()) gpibBus.setControls(DLAS);
 
-  if (saddrcmd) {
+        // If addressed to talk then set GPIB to talk
+        if (gpibBus.isDeviceAddressedToTalk()) {
+          gpibBus.setControls(DTAS);
+        }
+    
+        // Execute the GPIB secondary addressing command
+        storage.storeExecCmd(saddrcmd);
 
-    // Clear flags
-    saddrcmd = 0;
-  }
+        // Make sure we drop back to listen for next command
+        gpibBus.setControls(DLAS);
+    
+        // Clear flags
+        saddrcmd = 0;
+
+        // reset GPIB BUS back to idle
+//      is this needed ?    
+//      gpibBus.setControls(DIDS);
+//      is this needed ?    
+      }
+
+#endif
 
 
 /***** Otherwise perform read or write *****/
-  // Listen for data
-  if (mla) { 
-#ifdef DEBUG_DEVICE_ATN
-    debugStream.println(F("Listening..."));
-#endif
-    device_mla_h();
-    mla = false;
-  }
+      if (gpibBus.cfg.cmode == 2) { 
 
-  // Talk (send data)
-  if (mta) {
+        // Listen for data
+        if (gpibBus.isDeviceAddressedToListen()) { 
 #ifdef DEBUG_DEVICE_ATN
-    debugStream.println(F("Talking..."));
+          debugStream.println(F("Listening..."));
 #endif
-    device_mta_h();
-    mta = false;
-  }
+          device_listen_h();
+          return;
+        }
+
+        // Talk (send data)
+        if (gpibBus.isDeviceAddressedToTalk()) {
+#ifdef DEBUG_DEVICE_ATN
+          debugStream.println(F("Talking..."));
+#endif
+          device_talk_h();
+          gpibBus.setControls(DLAS);  // Data sent. Now listen for next CMD
+          return;
+        }
 
   // Finished attention - set controls to idle
-  gpibBus.setControls(DIDS);
+//    gpibBus.setControls(DIDS);  // his should be done by UNT or UNL
+      }
+
+    }
+
+#ifdef DEBUG_DEVICE_ATN
+    debugStream.println(F("End command process loop."));
+#endif
+
+#ifdef DEBUG_DEVICE_ATN
+  }else{
+    debugStream.print(F("Error reading command: "));
+    debugStream.println(stat);
+#endif
+  }
 
 #ifdef DEBUG_DEVICE_ATN
   debugStream.println(F("attnRequired: END attnReceived."));
@@ -2648,16 +2603,60 @@ void attnRequired() {
 }
 
 
+/***** Execute GPIB command *****/
+void execGpibCmd(uint8_t gpibcmd){
+
+  // Respond to GPIB command
+  switch (gpibcmd) {
+    case GC_SPE:
+      // Serial Poll enable request
+#ifdef DEBUG_DEVICE_ATN
+        debugStream.println(F("attnRequired: Received serial poll enable."));
+#endif
+        device_spe_h();
+        break;
+      case GC_SPD:
+        // Serial poll disable request
+#ifdef DEBUG_DEVICE_ATN
+        debugStream.println(F("attnRequired: Received serial poll disable."));
+#endif
+        device_spd_h();
+        break;       
+    case GC_UNL:
+        // Unlisten
+        device_unl_h();
+        break;
+    case GC_UNT:
+        // Untalk
+        device_unt_h();
+        break;
+    case GC_SDC:
+        // Device clear (reset)
+        device_sdc_h();
+        break;
+#ifdef PIN_REMOTE
+    case GC_LLO:
+        // Remote lockout mode
+        device_llo_h();
+        break;
+    case GC_GTL:
+        // Local mode
+        device_gtl_h();
+        break;
+#endif
+  } // End switch
+}
+
+
 /***** Device is addressed to listen - so listen *****/
-void device_mla_h(){
-  gpibBus.receiveData(dataStream, false, false, 0);
+void device_listen_h(){
+  // Receivedata params: stream, detectEOI, detectEndByte, endByte
+  gpibBus.receiveData(dataStream, false, false, 0x0);
 }
 
 
 /***** Device is addressed to talk - so send data *****/
-void device_mta_h(){
-//  dataStream.print(F("mta_h: LnRdy: "));
-//  dataStream.println(lnRdy);
+void device_talk_h(){
   if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
 }
 
@@ -2676,20 +2675,30 @@ void device_sdc_h() {
 
 
 /***** Serial Poll Disable *****/
+/***** Serial Poll Disable *****/
 void device_spd_h() {
-  if (isVerb) dataStream.println(F("<- serial poll request ended."));
+#ifdef DEBUG_DEVICE_ATN
+  debugStream.println(F("<- serial poll request ended."));
+#endif
+  gpibBus.setDeviceAddressedState(DIDS);
 }
 
 
 /***** Serial Poll Enable *****/
 void device_spe_h() {
-  if (isVerb) dataStream.println(F("Serial poll request received from controller ->"));
+#ifdef DEBUG_DEVICE_ATN
+  debugStream.println(F("Serial poll request received from controller ->"));
+#endif
   gpibBus.sendStatus();
-  if (isVerb) dataStream.println(F("Status sent."));
+#ifdef DEBUG_DEVICE_ATN
+  debugStream.println(F("Status sent."));
+#endif
   // Check if SRQ bit is set and clear it
   if (gpibBus.cfg.stat & 0x40) {
     gpibBus.setStatus(gpibBus.cfg.stat & ~0x40);
-    if (isVerb) dataStream.println(F("SRQ bit cleared."));
+#ifdef DEBUG_DEVICE_ATN
+    debugStream.println(F("SRQ bit cleared."));
+#endif
   }
 }
 
@@ -2701,19 +2710,24 @@ void device_unl_h() {
   debugStream.println(F("Unlisten received."));
 #endif
   readWithEoi = false;
-
   // Immediate break - shouldn't ATN do this anyway?
   tranBrk = 3;  // Stop receving transmission
-  // Immediate break - shouldn't ATN do this anyway?
+  // Clear addressed state flag and set controls to idle
+  gpibBus.setDeviceAddressedState(DIDS);
+  gpibBus.setControls(DIDS);
+
 }
 
 
 /***** Untalk *****/
-void device_unt_h() {
+void device_unt_h(){
   // Stop sending data and go to idle
 #ifdef DEBUG_DEVICE_ATN
   debugStream.println(F("Untalk received."));
 #endif
+  // Clear addressed state flag and set controls to listen
+  gpibBus.setDeviceAddressedState(DLAS);
+  gpibBus.setControls(DLAS);
 }
 
 

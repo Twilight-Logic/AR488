@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.51.01, 18/01/2022"
+#define FWVER "AR488 GPIB controller, ver. 0.51.03, 19/01/2022"
 
 
 
@@ -259,7 +259,7 @@
 
   // AR488_GPIBbus module
   //#define DEBUG_GPIBbus_RECEIVE // GPIBbus::receiveData()
-  #define DEBUG_GPIBbus_SEND    // GPIBbus::sendData()
+  //#define DEBUG_GPIBbus_SEND    // GPIBbus::sendData()
   //#define DEBUG_GPIBbus_CONTROL // GPIBbus::setControls()
   //#define DEBUG_GPIB_COMMANDS   // GPIBbus::sendCDC(), GPIBbus::sendLLO(), GPIBbus::sendLOC(), GPIBbus::sendGTL()
   //#define DEBUG_GPIBbus_UNLUNT  // Untalk/unlisten

@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_GPIBbus.h"
 
-/***** AR488_GPIB.cpp, ver. 0.51.01, 18/01/2022 *****/
+/***** AR488_GPIB.cpp, ver. 0.51.03, 19/01/2022 *****/
 
 
 /****** Process status values *****/
@@ -419,7 +419,7 @@ bool GPIBbus::receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte
 
   // Set up for reading in Controller mode
   if (cfg.cmode == 2) {   // Controler mode
-/*    
+    
     // Address device to talk
     if (addressDevice(cfg.paddr, 1)) {
 #ifdef DEBUG_GPIBbus_RECEIVE
@@ -428,7 +428,7 @@ bool GPIBbus::receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte
       debugStream.println(F(" to talk"));
 #endif
     }
-*/   
+   
     // Wait for instrument ready
 //    waitOnPinState(HIGH, NRFD, cfg.rtmo); // readByte already does this
     // Set GPIB control lines to controller read mode
@@ -533,14 +533,14 @@ bool GPIBbus::receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte
   // Return controller to idle state
   if (cfg.cmode == 2) {
 
-/*
+
     // Untalk bus and unlisten controller
     if (unAddressDevice()) {
 #ifdef DEBUG_GPIBbus_RECEIVE
       debugStream.println(F("GPIBbus::receiveData: Failed to untalk bus"));
 #endif
     }
-*/
+
 
     // Set controller back to idle state
     setControls(CIDS);
