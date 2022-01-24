@@ -1,7 +1,7 @@
 /*
  * AR488 ESP8266 WiFi Module
  * 
- * John Chajecki, @August 2019
+ * John Chajecki, @January 2022
  * Licenced under GPL 3.0
  * 
  * WiFi module for the AR488 GPIB to USB adapter
@@ -15,15 +15,19 @@
 //#define _DISABLE_TLS_
 */
 
-#include <EEPROM.h>
+
 #include <ESP8266WiFi.h>
+#include <EEPROM.h>
 //#include <Crypto.h>
 //#include <SHA256.h>
 
-#define VERSION "0.04.11" // 25-02-2020
+//#include <NTPClient.h>
 
 
-//#define DISABLE_SSL
+#define VERSION "0.04.12" // 26-02-2020
+
+
+#define DISABLE_SSL
 
 #ifdef DISABLE_SSL
   #include <ESP8266WebServer.h>
@@ -130,7 +134,7 @@ union cfgObj AP;
 
 /***** Server and client objects *****/
 
-WiFiServer *passSrv = new WiFiServer(8488);
+WiFiServer passSrv(8488);
 WiFiClient passCli;
 
 
@@ -894,8 +898,11 @@ void setup() {
     startWebServer();
     
     if (AP.gpib) {
+/*
       passSrv = new WiFiServer(AP.gpibp);
       passSrv->begin();
+*/
+      passSrv.begin(AP.gpibp);
     }
   }
 
@@ -934,8 +941,11 @@ void loop() {
           sbPtr++;
         }
       }
-      passCli.write((char*)sBuf, sbPtr);
-      clrSBuf(sbPtr);
+
+      if (sbPtr) {
+        passCli.write((char*)sBuf, sbPtr);
+        clrSBuf(sbPtr);
+      }
 
 #ifdef DEBUG_6
       if (!passCli.connected()) Serial.println("<= disconnected.");
@@ -943,18 +953,25 @@ void loop() {
 
     } else {
       // Wait for a connection
-      passCli = passSrv->available();
+//      passCli = passSrv->available();
+      passCli = passSrv.available();
       if (passCli.connected()) {
 #ifdef DEBUG_6        
         Serial.println("Connected =>");
 #endif
         // Initialise buffer
-        clrSBuf(64);
+        clrSBuf(sbPtr);
         delay(50);
         // Clear spurious characters after connection established
         while (passCli.available()) { passCli.read(); }
+      }else{
+        // Discard anything coming into the serial port
+        while (Serial.available()) { Serial.read(); }
       }
     }
+  }else{
+    // Discard anything coming into the serial port
+    while (Serial.available()) { Serial.read(); }
   }
 }
 
@@ -1622,11 +1639,11 @@ if (AP.dhcp) {
     strcpy(msg,"\0\0");
   }else{
     strncat(msg, AR488srv.arg("addr1").c_str(), sizeof(AR488srv.arg("addr1")));
-    strncat(msg, ".",1);
+    strncat(msg, ".",2);  // Last parameter must include the terminating NULL
     strncat(msg, AR488srv.arg("addr2").c_str(), sizeof(AR488srv.arg("addr2")));
-    strncat(msg, ".",1);
+    strncat(msg, ".",2);
     strncat(msg, AR488srv.arg("addr3").c_str(), sizeof(AR488srv.arg("addr3")));
-    strncat(msg, ".",1);
+    strncat(msg, ".",2);
     strncat(msg, AR488srv.arg("addr4").c_str(), sizeof(AR488srv.arg("addr4")));
     strncat(msg,"...\0",4);
 
@@ -1698,18 +1715,28 @@ void setGen() {
       Serial.print(F("Restarting TCP server on port: "));
       Serial.println(AP.gpibp);
 #endif
+/*
       if (passSrv) delete passSrv;
       passSrv = new WiFiServer(gpibp);
       passSrv->begin();
+*/
+      if (passSrv.status() != CLOSED) passSrv.stop();
+      delay(10);
+      passSrv.begin(gpibp);
     }
   } else {
     if (AP.gpib) {
-      AP.gpib = false;
       // Disconnect any client
-      if (passCli.connected()) passCli.stop();
-      // Kill the server (note: causes reboot!)
-      passSrv->stop();
-      //      delete passSrv;
+      if (passCli.connected()) {
+        passCli.stop();
+        passCli.flush();
+      }
+      // Stop any processing in the main loop
+      AP.gpib = false;
+      // Clear the receiving buffer
+      clrSBuf(sbPtr);      
+      // Stop the passthrough server (note: causes reboot!)
+      passSrv.stop();
     }
   }
 
@@ -1818,7 +1845,14 @@ void admin() {
 #endif
         setDefaultCfg();
         epWriteData(EESTART,&AP,sizeof(AP));
-        startWifiAP(dfltSSID, dfltPwd, AP.addr, AP.addr, AP.mask);
+//        startWifiAP(dfltSSID, dfltPwd, AP.addr, AP.addr, AP.mask);
+/*
+ * NOTE: If this is meant to drop through to restart - then presumably no need to startWiFiAP? 
+ */
+//        redirect(10, AP.addr, AP.webp, "Success!");
+        delay(500);
+        ESP.restart();
+        break;
       case 3:
 #ifdef DEBUG_5
         Serial.println(F("Rebooting..."));
@@ -1919,7 +1953,7 @@ void flushIncoming() {
 
 
 /***** Clear buffer *****/
-void clrSBuf(uint8_t ptr) {
+void clrSBuf(uint16_t ptr) {
   memset(sBuf, '\0',ptr);
   sbPtr = 0;
 }
