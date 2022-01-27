@@ -11,7 +11,7 @@
   #endif
 #endif
 
-/***** AR488_GPIBbus.cpp, ver. 0.51.03, 19/01/2022 *****/
+/***** AR488_GPIBbus.cpp, ver. 0.51.04, 27/01/2022 *****/
 
 
 /*********************************************/
@@ -89,6 +89,7 @@ class GPIBbus {
 
   public:
 
+    /***** Controller configuration *****/
     union GPIBconf{
       struct{
         bool eot_en;      // Enable/disable append EOT char to string received from GPIB bus before sending to USB

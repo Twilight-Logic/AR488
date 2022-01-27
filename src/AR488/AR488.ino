@@ -35,7 +35,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.51.03, 19/01/2022" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.51.04, 27/01/2022" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -303,38 +303,6 @@ uint8_t pbPtr = 0;
 #define CR   0xD    // Carriage return
 #define LF   0xA    // Newline/linefeed
 #define PLUS 0x2B   // '+' character
-
-/***** Controller configuration *****/
-/*   
- * Default values set for controller mode
- */
-/*
-union AR488conf{
-  struct{
-    bool eot_en;      // Enable/disable append EOT char to string received from GPIB bus before sending to USB
-    bool eoi;         // Assert EOI on last data char written to GPIB - 0-disable, 1-enable
-    uint8_t cmode;    // Controller/device mode (0=unset, 1=device, 2=controller)
-    uint8_t caddr;    // Controller address
-    uint8_t paddr;    // Primary device address
-    uint8_t saddr;    // Secondary device address
-    uint8_t eos;      // EOS (end of send to GPIB) characters [0=CRLF, 1=CR, 2=LF, 3=None]
-    uint8_t stat;     // Status byte to return in response to a serial poll
-    uint8_t amode;    // Auto mode setting (0=off; 1=Prologix; 2=onquery; 3=continuous);
-    int rtmo;         // Read timout (read_tmo_ms) in milliseconds - 0-3000 - value depends on instrument
-    char eot_ch;      // EOT character to append to USB output when EOI signal detected
-    char vstr[48];    // Custom version string
-    uint16_t tmbus;   // Delay to allow the bus control/data lines to settle (1-30,000 microseconds)
-    uint8_t eor;      // EOR (end of receive from GPIB instrument) characters [0=CRLF, 1=CR, 2=LF, 3=None, 4=LFCR, 5=ETX, 6=CRLF+ETX, 7=SPACE]
-    char sname[16];   // Interface short name
-    uint32_t serial;  // Serial number
-    uint8_t idn;      // Send ID in response to *idn? 0=disable, 1=send name; 2=send name+serial
-  };
-  uint8_t db[AR_CFG_SIZE];
-};
-
-//struct AR488conf AR488;
-union AR488conf AR488;
-*/
 
 /****** Global variables with volatile values related to controller state *****/
 

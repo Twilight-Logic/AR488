@@ -16,13 +16,13 @@
 #define LF   0xA    // Newline/linefeed
 #define PLUS 0x2B   // '+' character
 
-/***** Serial/debug port *****/
+/***** Serial/debugStream port *****/
 #ifdef AR_SERIAL_ENABLE
   extern Stream& dataStream;
 #endif
 
 #ifdef DB_SERIAL_ENABLE
-  extern Stream& debugStream;
+  extern Stream& debugStreamStream;
 #endif
 
 
@@ -463,42 +463,46 @@ bool GPIBbus::receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte
     if (txBreak) break;
 
     // ATN asserted
-    if (isAsserted(ATN)) break;
+//    if (isAsserted(ATN)) break; // Breaks LON mode (gets into an ATN asserted loop)
+//    note: not needed since we check prior to reading in readByte
 
     // Read the next character on the GPIB bus
     r = readByte(&bytes[0], readWithEoi, &eoiDetected);
 
-    // If ATN asserted then break here
-    if (isAsserted(ATN)) break;
+    // If IFC or ATN asserted then break here
+    if ( (r==1) || (r==2) ) break;
 
+    // If successfully received character
+    if (r==0) {
 #ifdef DEBUG_GPIBbus_RECEIVE
-    debugStream.print(bytes[0], HEX), debugStream.print(' ');
+      debugStream.print(bytes[0], HEX), debugStream.print(' ');
 #else
-    // Output the character to the serial port
-    dataStream.print((char)bytes[0]);
+      // Output the character to the serial port
+      dataStream.print((char)bytes[0]);
 #endif
 
-    // Byte counter
-    x++;
+      // Byte counter
+      x++;
 
-    // EOI detection enabled and EOI detected?
-    if (readWithEoi) {
-      if (eoiDetected) break;
-    }else{
-      // Has a termination sequence been found ?
-      if (detectEndByte) {
-        if (r == endByte) break;
+      // EOI detection enabled and EOI detected?
+      if (readWithEoi) {
+        if (eoiDetected) break;
       }else{
-        if (isTerminatorDetected(bytes, eor)) break;
+        // Has a termination sequence been found ?
+        if (detectEndByte) {
+          if (r == endByte) break;
+        }else{
+          if (isTerminatorDetected(bytes, eor)) break;
+        }
       }
+
+      // Shift last three bytes in memory
+      bytes[2] = bytes[1];
+      bytes[1] = bytes[0];
+    }else{
+      // Stop (error or timeout)
+      break;
     }
-
-    // Stop on timeout
-    if (r > 0) break;
-
-    // Shift last three bytes in memory
-    bytes[2] = bytes[1];
-    bytes[1] = bytes[0];
   }
 
 #ifdef DEBUG_GPIBbus_RECEIVE
@@ -540,7 +544,6 @@ bool GPIBbus::receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte
       debugStream.println(F("GPIBbus::receiveData: Failed to untalk bus"));
 #endif
     }
-
 
     // Set controller back to idle state
     setControls(CIDS);
@@ -1060,8 +1063,8 @@ uint8_t GPIBbus::readByte(uint8_t *db, bool readWithEoi, bool *eoi) {
   // Completed
   if (stage == 9) return 0;
 
-  if (stage==1) return 4;
-  if (stage==2) return 3;
+//  if (stage==1) return 4;
+//  if (stage==2) return 3;
   
   // Otherwise return stage
 #ifdef DEBUG_GPIBbus_RECEIVE
