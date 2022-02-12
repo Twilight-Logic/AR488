@@ -1142,6 +1142,7 @@ void mcpInterruptsEn(){
 /***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
 #ifdef AR488_MCP23017
 
+uint8_t mcpPinAssertedReg = 0;
 
 // MCP23017 hardware config
 //const uint8_t chipSelect = MCP_SELECTPIN;
@@ -1311,7 +1312,7 @@ uint8_t getGpibPinState(uint8_t pin){
       // Reset interrupt flag
       mcpIntA = false;
       // Return status of selected pin
-      return (mcpPinAssertedReg & (1<<gpibsig));
+      return (mcpPinAssertedReg & (1<<pin));
     }
   }
   return mcpDigitalRead(pin);

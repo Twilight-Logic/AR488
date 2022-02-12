@@ -58,11 +58,11 @@
 /*** MEGA 2560 board ***/
 #elif __AVR_ATmega2560__
   /*** Board/layout selection ***/
-  //#define AR488_MEGA2560_D
+  #define AR488_MEGA2560_D
   //#define AR488_MEGA2560_E1
   //#define AR488_MEGA2560_E2
 //  #define AR488_MCP23S17
-  #define AR488_MCP23017
+  //#define AR488_MCP23017
   /* Default serial port type */
   #define AR_SERIAL_TYPE_HW
 

@@ -349,10 +349,10 @@ bool aTl = false;
 bool dataBufferFull = false;    // Flag when parse buffer is full
 
 // Interrupt flag for MCP23S17
-#if defined(AR488_MCP23S17) || defined(AR488_MCP23017)
+//#if defined(AR488_MCP23S17) || defined(AR488_MCP23017)
 //extern volatile bool mcpIntA;  // MCP23S17 interrupt handler
 //uint8_t mcpPinAssertedReg = 0;
-#endif
+//#endif
 
 // State flags set by interrupt being triggered
 //extern volatile bool isATN;  // has ATN been asserted?
