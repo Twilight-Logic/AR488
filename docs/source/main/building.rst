@@ -50,7 +50,7 @@ files into separate tabs. Edit AR488_Config.h as required and save. Then select 
 correct board from the list of boards within the Arduino IDE, Tools | Board menu option
 and compile and upload the sketch.
 
-.. image:: _static/ar488_example.png
+.. image:: ../_static/ar488_example.png
 
 
 The following section details further hardware tweaks that may be required to make the

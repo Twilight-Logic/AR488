@@ -116,25 +116,25 @@ whether this is an error or because my binary is different from the one that the
 was working with. If you can’t find the sequence with ``04`` , check for the one with
 ``02``.
 
-.. image:: _static/ezgpib_hex1.png
+.. image:: ../_static/ezgpib_hex1.png
 
 That sequence is the check for ``RTS``. Change the penultimate byte to ``75``, so that
 the sequence now reads::
 
   F6 04 24 10 75 06
 
-.. image:: _static/ezgpib_hex2.png
+.. image:: ../_static/ezgpib_hex2.png
 
 Now look for sequence::
 
   24 04 10 0F 95
 
-.. image:: _static/ezgpib_hex3.png
+.. image:: ../_static/ezgpib_hex3.png
 
 Change the last byte to ``94`` so that the sequence now reads::
 
   24 04 10 0F 94
 
-.. image:: _static/ezgpib_hex4.png
+.. image:: ../_static/ezgpib_hex4.png
 
 save the file and close the hex editor. EZGPIB should now find your adapter.

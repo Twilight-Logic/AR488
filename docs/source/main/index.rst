@@ -210,7 +210,7 @@ to provide Bluetooth communication, it has to be configured manually.
 
    configuration
    commands
-   build
+   building
    tools
    appendixes
 

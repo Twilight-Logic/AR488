@@ -34,7 +34,7 @@ GND     18,19,20,21,22,23 GND
 Wiring diagram
 --------------
 
-.. image:: /_static/wiring_uno.png
+.. image:: ../_static/wiring_uno.png
 
 When using SN75160 and SN75161 integrated circuits, the connections involve at least one
 extra pin to control the talk-enable (``TE``) pin of the IC. The ``PE`` pin on the
@@ -46,4 +46,4 @@ On the SN75161, the ``DC`` pin can be connected to a separate GPIO pin on the Un
 or, since ren is always asserted when in controller mode and de-asserted in device mode,
 to the GPIO pin used for the ``REN`` signal.
 
-.. image:: /_static/wiring_uno_sn7516x.png
+.. image:: ../_static/wiring_uno_sn7516x.png

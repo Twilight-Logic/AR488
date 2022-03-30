@@ -47,19 +47,19 @@ belong to port H along with pins 6 – 9.
 Wiring diagram - default layout
 -------------------------------
 
-.. image:: /_static/wiring_mega.png
+.. image:: ../_static/wiring_mega.png
 
 
 Wiring diagram - layout E1 & E2
 -------------------------------
 
-.. figure:: /_static/wiring_mega_e1e2.png
+.. figure:: ../_static/wiring_mega_e1e2.png
    :alt: Arduino Mega 2560 wiring diagram
 
    Arduino Mega 2560 wiring diagram
 
 
-.. figure:: /_static/wiring_mega_e1e2_pinout.png
+.. figure:: ../_static/wiring_mega_e1e2_pinout.png
    :alt: Arduino Mega 2560 E1/E2 pinout
 
    Arduino Mega 2560 E1/E2 pinout
