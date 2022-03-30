@@ -36,7 +36,7 @@ commands can be found in the Command Reference section.
 
 
 Uploading updates to your MCU board
------------------
+-----------------------------------
 The firmware is upgradeable by compiling the sketch sources and using the Sketch->Upload
 option found in the Arduino IDE. An AVR programmer can also be used to upload the firmware
 to an Arduino microcontroller. In this case, the Sketch->Upload Using programmer option
