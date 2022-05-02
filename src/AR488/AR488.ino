@@ -35,7 +35,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.51.04, 27/01/2022" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.51.05, 02/05/2022" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -508,7 +508,7 @@ void setup() {
   #ifdef SN7516X_DC
     pinMode(SN7516X_DC, OUTPUT);
   #endif
-  if (AR488.cmode==2) {
+  if (gpibBus.cfg.cmode==2) {
     // Set controller mode on SN75161/2
     digitalWrite(SN7516X_TE, LOW);
     #ifdef SN7516X_DC 

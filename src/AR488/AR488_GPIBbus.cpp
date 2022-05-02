@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_GPIBbus.h"
 
-/***** AR488_GPIB.cpp, ver. 0.51.03, 19/01/2022 *****/
+/***** AR488_GPIB.cpp, ver. 0.51.05, 02/05/2022 *****/
 
 
 /****** Process status values *****/

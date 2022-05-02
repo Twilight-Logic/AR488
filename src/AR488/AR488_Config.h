@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.51.04, 27/01/2022"
+#define FWVER "AR488 GPIB controller, ver. 0.51.05, 02/05/2022"
 
 
 
@@ -168,6 +168,7 @@
 /*
  * 
  */
+//#define AR488_MCP23S17
 #ifdef AR488_MCP23S17
   #define MCP_ADDRESS   0
   #define MCP_SELECTPIN 8
