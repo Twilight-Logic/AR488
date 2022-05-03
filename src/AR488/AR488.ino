@@ -35,7 +35,7 @@
 #endif
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.51.05, 02/05/2022" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.51.06, 03/05/2022" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -2296,7 +2296,7 @@ void id_h(char *params) {
   }
   errBadCmd();
 #ifdef DEBUG_IDFUNC
-    debugStream.println(F(id_h: done.));
+    debugStream.println(F("id_h: done."));
 #endif
 }
 

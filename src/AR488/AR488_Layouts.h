@@ -6,10 +6,10 @@
 #include "AR488_Config.h"
 
 #ifdef DEBUG_LAYOUTS
-  extern debugStream;
+  extern Stream& debugStream;
 #endif
 
-/***** AR488_Hardware.h, ver. 0.51.05, 02/05/2022 *****/
+/***** AR488_Hardware.h, ver. 0.51.06, 03/05/2022 *****/
 /*
  * Hardware pin layout definitions
  */

@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.51.05, 02/05/2022 *****/
+/***** AR488_Hardware.cpp, ver. 0.51.06, 03/05/2022 *****/
 /*
  * Hardware layout function definitions
  */
