@@ -11,7 +11,7 @@
   #endif
 #endif
 
-/***** AR488_GPIBbus.cpp, ver. 0.51.06, 03/05/2022 *****/
+/***** AR488_GPIBbus.cpp, ver. 0.51.07, 05/05/2022 *****/
 
 
 /*********************************************/
@@ -155,19 +155,20 @@ class GPIBbus {
     uint8_t writeByte(uint8_t db, bool isLastByte);
     bool receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte, uint8_t endByte);
     void sendData(char *data, uint8_t dsize);
+    void clearDataBus();
     void setControlVal(uint8_t value, uint8_t mask, uint8_t mode);
     void setDataVal(uint8_t);
 
-    void setDeviceAddressedState(uint8_t stat);
+//    void setDeviceAddressedState(uint8_t stat);
     bool isDeviceAddressedToListen();
     bool isDeviceAddressedToTalk();
-    bool isDeviceNotAddressed();
+    bool isDeviceInIdleState();
 
     void signalBreak();
 
     bool addressDevice(uint8_t addr, bool dir);
     bool unAddressDevice();
-    bool isDeviceAddressed();
+    bool haveAddressedDevice();
 
   private:
 

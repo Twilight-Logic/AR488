@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.51.06, 03/05/2022"
+#define FWVER "AR488 GPIB controller, ver. 0.51.07, 05/05/2022"
 
 
 
@@ -194,7 +194,7 @@
  */
 //#define SN7516X
 #ifdef SN7516X
-  #define SN7516X_TE 7
+  #define SN7516X_TE 6
 //  #define SN7516X_DC 13
 //  #define SN7516X_SC 12
 #endif

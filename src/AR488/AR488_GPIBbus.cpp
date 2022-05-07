@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_GPIBbus.h"
 
-/***** AR488_GPIB.cpp, ver. 0.51.06, 03/05/2022 *****/
+/***** AR488_GPIB.cpp, ver. 0.51.07, 05/05/2022 *****/
 
 
 /****** Process status values *****/
@@ -943,15 +943,15 @@ bool GPIBbus::addressDevice(uint8_t addr, bool talk) {
 }
 
 
-/***** Returns status of device addressing *****/
+/***** Returns status of controller device addressing *****/
 /*
  * true = device addressed; false = device is not addressed
  */
-bool GPIBbus::isDeviceAddressed(){
+bool GPIBbus::haveAddressedDevice(){
   return deviceAddressed;
 }
 
-
+/*
 void GPIBbus::setDeviceAddressedState(uint8_t state){
   // Valid state supplied
   if (state==DLAS || state==DTAS) {
@@ -961,7 +961,7 @@ void GPIBbus::setDeviceAddressedState(uint8_t state){
   // Otherwise set to idle
   deviceAddressedState = DIDS;
 }
-
+*/
 
 /***** Device is addressed to listen? *****/
 bool GPIBbus::isDeviceAddressedToListen(){
@@ -978,9 +978,15 @@ bool GPIBbus::isDeviceAddressedToTalk(){
 
 
 /***** Device is not addressed? *****/
-bool GPIBbus::isDeviceNotAddressed(){
-  if (deviceAddressedState == DIDS) return true;
+bool GPIBbus::isDeviceInIdleState(){
+  if (cstate == DIDS) return true;
   return false;
+}
+
+
+/***** Clear the data bus - set to listen state *****/
+void GPIBbus::clearDataBus(){
+  readyGpibDbus();
 }
 
 
