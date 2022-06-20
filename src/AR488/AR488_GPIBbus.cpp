@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_GPIBbus.h"
 
-/***** AR488_GPIB.cpp, ver. 0.51.07, 05/05/2022 *****/
+/***** AR488_GPIB.cpp, ver. 0.51.09, 20/06/2022 *****/
 
 
 /****** Process status values *****/
@@ -17,14 +17,15 @@
 #define PLUS 0x2B   // '+' character
 
 /***** Serial/debugStream port *****/
+/*
 #ifdef AR_SERIAL_ENABLE
   extern Stream& dataStream;
 #endif
 
 #ifdef DB_SERIAL_ENABLE
-  extern Stream& debugStreamStream;
+  extern Stream& debugStream;
 #endif
-
+*/
 
 /***************************************/
 /***** GPIB CLASS PUBLIC FUNCTIONS *****/
@@ -163,30 +164,30 @@ void GPIBbus::sendIFC(){
 /***** Send SDC GPIB command *****/
 bool GPIBbus::sendSDC(){
 #ifdef DEBUG_GPIB_COMMANDS    
-  dataStream.println(F("GPIBbus::sendSDC: sending SDC..."));
+  DB_PRINT(F("sending SDC..."),"");
 #endif
   if (addressDevice(cfg.paddr, 0)) {
 #ifdef DEBUG_GPIB_COMMANDS    
-    dataStream.println(F("GPIBbus::sendSDC: failed to address the device."));
+    DB_PRINT(F("failed to address the device."),"");
 #endif
     return ERR;
   }
   // Send SDC to currently addressed device
   if (sendCmd(GC_SDC)) {
 #ifdef DEBUG_GPIB_COMMANDS    
-     dataStream.println(F("GPIBbus::sendSDC: failed to send SDC to device"));
+     DB_PRINT(F("failed to send SDC to device"),"");
 #endif
      return ERR;
   }
   // Unlisten bus
   if (unAddressDevice()) {
 #ifdef DEBUG_GPIB_COMMANDS    
-    dataStream.println(F("GPIBbus::sendSDC: failed to unlisten the GPIB bus"));
+    DB_PRINT(F("failed to unlisten the GPIB bus"),"");
 #endif
     return ERR;
   }
 #ifdef DEBUG_GPIB_COMMANDS    
-  dataStream.println(F("GPIBbus::sendSDC: done."));
+  DB_PRINT(F("done."),"");
 #endif
   return OK;
 }
@@ -195,30 +196,30 @@ bool GPIBbus::sendSDC(){
 /***** Send LLO GPIB command *****/
 bool GPIBbus::sendLLO(){
 #ifdef DEBUG_GPIB_COMMANDS    
-  dataStream.println(F("GPIBbus::sendLLO: sending LLO..."));
+  DB_PRINT(F("sending LLO..."),"");
 #endif
   if (addressDevice(cfg.paddr, 0)) {
 #ifdef DEBUG_GPIB_COMMANDS    
-    dataStream.println(F("GPIBbus::sendLLO: failed to address the device."));
+    DB_PRINT(F("failed to address the device."),"");
 #endif
     return ERR;
   }
   // Send LLO to currently addressed device
   if (sendCmd(GC_LLO)) {
 #ifdef DEBUG_GPIB_COMMANDS    
-     dataStream.println(F("GPIBbus::sendLLO: failed to send LLO to device"));
+     DB_PRINT(F("failed to send LLO to device"),"");
 #endif
      return ERR;
   }
   // Unlisten bus
   if (unAddressDevice()) {
 #ifdef DEBUG_GPIB_COMMANDS    
-    dataStream.println(F("GPIBbus::sendLLO: failed to unlisten the GPIB bus"));
+    DB_PRINT(F("failed to unlisten the GPIB bus"),"");
 #endif
     return ERR;
   }
 #ifdef DEBUG_GPIB_COMMANDS    
-  dataStream.println(F("GPIBbus::sendLLO: done."));
+  DB_PRINT(F("done."),"");
 #endif
   return OK;
 }
@@ -227,30 +228,30 @@ bool GPIBbus::sendLLO(){
 /***** Send LOC GPIB command *****/
 bool GPIBbus::sendGTL(){
 #ifdef DEBUG_GPIB_COMMANDS    
-  dataStream.println(F("GPIBbus::sendLOC: sending LOC..."));
+  DB_PRINT(F("sending LOC..."),"");
 #endif
   if (addressDevice(cfg.paddr, 0)) {
 #ifdef DEBUG_GPIB_COMMANDS    
-    dataStream.println(F("GPIBbus::sendLOC: failed to address the device."));
+    DB_PRINT(F("failed to address the device."),"");
 #endif
     return ERR;
   }
   // Send GTL
   if (sendCmd(GC_GTL)) {
 #ifdef DEBUG_GPIB_COMMANDS    
-    dataStream.println(F("GPIBbus::sendLOC: failed to send LOC to device"));
+    DB_PRINT(F("failed to send LOC to device"),"");
 #endif
     return ERR;
   }
   // Unlisten bus
   if (unAddressDevice()) {
 #ifdef DEBUG_GPIB_COMMANDS    
-    dataStream.println(F("GPIBbus::sendLOC: failed to unlisten the GPIB bus"));
+    DB_PRINT(F("failed to unlisten the GPIB bus"),"");
 #endif
     return ERR;  
   }
 #ifdef DEBUG_GPIB_COMMANDS    
-  dataStream.println(F("GPIBbus::sendLOC: done."));
+  DB_PRINT(F("done."),"");
 #endif
   return OK;
 }
@@ -259,30 +260,30 @@ bool GPIBbus::sendGTL(){
 /***** Send GET (trigger) command *****/
 bool GPIBbus::sendGET(uint8_t addr){
 #ifdef DEBUG_GPIB_COMMANDS    
-  dataStream.println(F("GPIBbus::sendGET: sending GET..."));
+  DB_PRINT(F("sending GET..."),"");
 #endif
   if (addressDevice(addr, 0)) {
 #ifdef DEBUG_GPIB_COMMANDS    
-    dataStream.println(F("GPIBbus::sendGET: failed to address the device."));
+    DB_PRINT(F("failed to address the device."),"");
 #endif
     return ERR;
   }
   // Send GET
   if (sendCmd(GC_GET)) {
 #ifdef DEBUG_GPIB_COMMANDS    
-    dataStream.println(F("GPIBbus::sendGET: failed to send LOC to device"));
+    DB_PRINT(F("failed to send LOC to device"),"");
 #endif
     return ERR;
   }
   // Unlisten bus
   if (unAddressDevice()) {
 #ifdef DEBUG_GPIB_COMMANDS    
-    dataStream.println(F("GPIBbus::sendGET: failed to unlisten the GPIB bus"));
+    DB_PRINT(F("failed to unlisten the GPIB bus"),"");
 #endif
     return ERR;  
   }
 #ifdef DEBUG_GPIB_COMMANDS    
-  dataStream.println(F("GPIBbus::sendGET: done."));
+  DB_PRINT(F("done."),"");
 #endif
   return OK;
 }
@@ -303,28 +304,42 @@ void GPIBbus::sendAllClear(){
 
 /***** Request device to talk *****/
 bool GPIBbus::sendMTA(){
-debugStream.print(F("GPIBbus::sendMTA: address device: "));
-debugStream.println(cfg.paddr);
-debugStream.print(F("GPIBbus::sendMTA: cstate: "));
-debugStream.println(cstate, HEX);
+#ifdef DEBUG_GPIB_ADDRESSING
+  DB_PRINT(F("address device: "), cfg.paddr);
+//  char hexstr[4];
+//  sprintf(hexstr,"%02X", cstate);
+//  DB_PRINT(F("cstate: "),nexstr);
+#endif
   if (cstate!=CCMS) setControls(CCMS);
-debugStream.print(F("GPIBbus::sendMTA: cstate: "));
-debugStream.println(cstate, HEX);
+#ifdef DEBUG_GPIB_ADDRESSING
+//  sprintf(hexstr,"%02X", cstate);
+//  DB_PRINT(F("cstate: "),hexstr);
+#endif
   if (addressDevice(cfg.paddr, 1)) return ERR;
+#ifdef DEBUG_GPIB_ADDRESSING
+  DB_PRINT(F("done."),"");
+#endif
   return OK;
 }
 
 
 /***** Request device to listen *****/
 bool GPIBbus::sendMLA(){
-debugStream.print(F("GPIBbus::sendMTA: address device: "));
-debugStream.println(cfg.paddr);
-debugStream.print(F("GPIBbus::sendMTA: cstate: "));
-debugStream.println(cstate, HEX);
+#ifdef DEBUG_GPIB_ADDRESSING
+  DB_PRINT(F("address device: "), cfg.paddr);
+//  char hexstr[4];
+//  sprintf(hexstr,"%02X", cstate);
+//  DB_PRINT(F("cstate: "),nexstr);
+#endif
   if (cstate!=CCMS) setControls(CCMS);
-debugStream.print(F("GPIBbus::sendMTA: cstate: "));
-debugStream.println(cstate, HEX);
+#ifdef DEBUG_GPIB_ADDRESSING
+//  sprintf(hexstr,"%02X", cstate);
+//  DB_PRINT(F("cstate: "),hexstr);
+#endif
   if (addressDevice(cfg.paddr, 0)) return ERR;
+#ifdef DEBUG_GPIB_ADDRESSING
+  DB_PRINT(F("done."),"");
+#endif
   return OK;
 }
 
@@ -333,8 +348,8 @@ debugStream.println(cstate, HEX);
 bool GPIBbus::sendMSA(uint8_t addr) {
   // Send address
   if (sendCmd(addr)) {
-#ifdef DEBUG_GPIB_COMMANDS    
-    dataStream.println(F("GPIBbus::sendMSA: failed to send MSA to device"));
+#ifdef DEBUG_GPIB_COMMANDS
+    DB_PRINT(F("failed to send MSA to device"),"");
 #endif
     return ERR;
   }
@@ -347,15 +362,18 @@ bool GPIBbus::sendMSA(uint8_t addr) {
 /***** Send untalk (SAD mode) *****/
 bool GPIBbus::sendUNT(){
   if (sendCmd(GC_UNT)) {
-#ifdef DEBUG_GPIB_COMMANDS    
-    dataStream.println(F("GPIBbus::sendUNT: failed to send UNT to device"));
+#ifdef DEBUG_GPIB_ADDRESSING
+    DB_PRINT(F("failed to send UNT to device"),"");
 #endif
     return ERR;
   }
   setControls(CIDS);
   deviceAddressed = false;
-debugStream.print(F("GPIBbus::sendMTA: cstate: "));
-debugStream.println(cstate, HEX);
+#ifdef DEBUG_GPIB_ADDRESSING
+//  char hexstr[4];
+//  sprintf(hexstr,"%02X", cstate);
+//  DB_PRINT(F("cstate: "),nexstr);
+#endif
   return OK;
 }
 
@@ -363,15 +381,18 @@ debugStream.println(cstate, HEX);
 /***** Send unlisten *****/
 bool GPIBbus::sendUNL(){
   if (sendCmd(GC_UNL)) {
-#ifdef DEBUG_GPIB_COMMANDS    
-    dataStream.println(F("GPIBbus::sendUNL: failed to send UNL to device"));
+#ifdef DEBUG_GPIB_ADDRESSING
+    DB_PRINT(F("failed to send UNL to device"),"");
 #endif
     return ERR;
   }
   setControls(CIDS);
   deviceAddressed = false;
-debugStream.print(F("GPIBbus::sendMTA: cstate: "));
-debugStream.println(cstate, HEX);
+#ifdef DEBUG_GPIB_ADDRESSING
+//  char hexstr[4];
+//  sprintf(hexstr,"%02X", cstate);
+//  DB_PRINT(F("cstate: "),nexstr);
+#endif
   return OK;
 }
 
@@ -385,10 +406,10 @@ bool GPIBbus::sendCmd(uint8_t cmdByte){
   stat = writeByte(cmdByte, NO_EOI);
 #if defined (DEBUG_GPIBbus_RECEIVE) || defined (DEBUG_GPIBbus_SEND)
   if (stat) { // true = error
-    dataStream.print(F("GPIBbus::sendCmd: Failed to send command "));
-    dataStream.print(cmdByte, HEX);
-    dataStream.print(" to device ");
-    dataStream.println(cfg.paddr);
+    char hexstr[4];
+    sprintf(hexstr,"%02X", cmdByte);
+    DB_PRINT(F("Failed to send command "), hexstr);
+    DB_PRINT(F("  to device "), cfg.paddr);
   }
 #endif  
   return stat ? ERR : OK;
@@ -423,14 +444,11 @@ bool GPIBbus::receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte
     // Address device to talk
     if (addressDevice(cfg.paddr, 1)) {
 #ifdef DEBUG_GPIBbus_RECEIVE
-      debugStream.print(F("GPIBbus::receiveData: Failed to address device "));
-      debugStream.print(cfg.paddr);
-      debugStream.println(F(" to talk"));
+      DB_PRINT(F("Failed to address device to talk: "), cfg.paddr);
 #endif
     }
    
     // Wait for instrument ready
-//    waitOnPinState(HIGH, NRFD, cfg.rtmo); // readByte already does this
     // Set GPIB control lines to controller read mode
     setControls(CLAS);
     
@@ -443,14 +461,11 @@ bool GPIBbus::receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte
 
   
 #ifdef DEBUG_GPIBbus_RECEIVE
-  debugStream.println(F("GPIBbus::receiveData: Start listen ->"));
-  debugStream.println(F("Before loop flags:"));
-  debugStream.print(F("TRNb: "));
-  debugStream.println(txBreak);
-  debugStream.print(F("rEOI: "));
-  debugStream.println(readWithEoi);
-  debugStream.print(F("ATN:  "));
-  debugStream.println(isAsserted(ATN) ? 1 : 0);
+  DB_PRINT(F("Start listen ->"),"");
+  DB_PRINT(F("Before loop flags:"),"");
+  DB_PRINT(F("TRNb: "), txBreak);
+  DB_PRINT(F("rEOI: "), readWithEoi);
+//  DB_PRINT(F("ATN:  "), (isAsserted(ATN ? 1 : 0));
 #endif
 
   // Ready the data bus
@@ -475,7 +490,7 @@ bool GPIBbus::receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte
     // If successfully received character
     if (r==0) {
 #ifdef DEBUG_GPIBbus_RECEIVE
-      debugStream.print(bytes[0], HEX), debugStream.print(' ');
+      DB_HEX_PRINT(bytes[0]);
 #else
       // Output the character to the serial port
       dataStream.print((char)bytes[0]);
@@ -506,21 +521,18 @@ bool GPIBbus::receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte
   }
 
 #ifdef DEBUG_GPIBbus_RECEIVE
-  debugStream.println();
-  debugStream.println(F("After loop flags:"));
-  debugStream.print(F("ATN: "));
-  debugStream.println(isAsserted(ATN));
-  debugStream.print(F("TMO:  "));
-  debugStream.println(r);
-  debugStream.print(F("Bytes read: "));
-  debugStream.println(x);
-  debugStream.println(F("GPIBbus::receiveData: <- End listen."));
+  DB_RAW_PRINTLN();
+  DB_PRINT(F("After loop flags:"),"");
+//  DB_PRINT(F("ATN: "), (isAsserted(ATN ? 1 : 0));
+  DB_PRINT(F("TMO: "), r);
+  DB_PRINT(F("Bytes read:  "), x);
+  DB_PRINT(F("<- End listen."),"");
 #endif
 
   // Detected that EOI has been asserted
   if (eoiDetected) {
 #ifdef DEBUG_GPIBbus_RECEIVE
-    dataStream.println(F("GPIBbus::receiveData: EOI detected!"));
+    DB_PRINT(F("EOI detected!"),"");
 #endif
     // If eot_enabled then add EOT character
     if (cfg.eot_en) dataStream.print(cfg.eot_ch);
@@ -529,8 +541,8 @@ bool GPIBbus::receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte
   // Verbose timeout error
 #ifdef DEBUG_GPIBbus_RECEIVE
   if (r > 0) {
-    debugStream.println(F("GPIBbus::receiveData: Timeout waiting for sender!"));
-    debugStream.println(F("GPIBbus::receiveData: Timeout waiting for transfer to complete!"));
+    DB_PRINT(F("Timeout waiting for sender!"),"");
+    DB_PRINT(F("Timeout waiting for transfer to complete!"),"");
   }
 #endif
 
@@ -541,7 +553,7 @@ bool GPIBbus::receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte
     // Untalk bus and unlisten controller
     if (unAddressDevice()) {
 #ifdef DEBUG_GPIBbus_RECEIVE
-      debugStream.println(F("GPIBbus::receiveData: Failed to untalk bus"));
+      DB_PRINT(F("Failed to untalk bus"),"");
 #endif
     }
 
@@ -557,7 +569,7 @@ bool GPIBbus::receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte
   if (txBreak) txBreak = false;
 
 #ifdef DEBUG_GPIBbus_RECEIVE
-  debugStream.println(F("GPIBbus::receiveData: done."));
+  DB_PRINT(F("done."),"");
 #endif
 
   if (r > 0) return ERR;
@@ -584,18 +596,14 @@ void GPIBbus::sendData(char *data, uint8_t dsize) {
       // Address device to listen
       if (addressDevice(cfg.paddr, 0)) {
 #ifdef DEBUG_GPIBbus_SEND
-        debugStream.print(F("GPIBbus::sendData: failed to address device "));
-        debugStream.print(cfg.paddr);
-        debugStream.println(F(" to listen"));
+        DB_PRINT(F("failed to address device to listen: "), cfg.paddr);
 #endif
         return;
       }
     }
 
-    addressingSuppressed = dataContinuity;
-
 #ifdef DEBUG_GPIBbus_SEND
-    debugStream.println(F("GPIBbus::sendData: device addressed."));
+    DB_PTINT(F("device addressed."),"");
 #endif
 */
     // Set control lines to write data (ATN unasserted)
@@ -605,8 +613,8 @@ void GPIBbus::sendData(char *data, uint8_t dsize) {
     setControls(DTAS);
   }
 #ifdef DEBUG_GPIBbus_SEND
-  debugStream.println(F("GPIBbus::sendData: write data mode is set."));
-  debugStream.println(F("GPIBbus::sendData: begin send loop->"));
+  DB_PRINT(F("write data mode is set."),"");
+  DB_PRINT(F("begin send loop->"),"");
 #endif
 
   // Write the data string
@@ -620,13 +628,13 @@ void GPIBbus::sendData(char *data, uint8_t dsize) {
       if ((data[i] != CR) || (data[i] != LF) || (data[i] != ESC)) err = writeByte(data[i], NO_EOI);
     }
 #ifdef DEBUG_GPIBbus_SEND
-    debugStream.print(data[i]);
+    DB_RAW_PRINT(data[i]);
 #endif
     if (err) break;
   }
 
 #ifdef DEBUG_GPIBbus_SEND
-  debugStream.println("GPIBbus::sendData: <-End of send loop.");
+  DB_PRINT(F("<-End of send loop."),"");
 #endif
 
 //  if (!err  && !dataContinuity) {
@@ -636,14 +644,14 @@ void GPIBbus::sendData(char *data, uint8_t dsize) {
     if ((cfg.eos & 0x2) == 0) {
       writeByte(CR, NO_EOI);
 #ifdef DEBUG_GPIBbus_SEND
-      debugStream.println(F("GPIBbus::sendData: appended CR"));
+      DB_PRINT(F("appended CR"),"");
 #endif
     }
     // Do we need to write an LF?
     if ((cfg.eos & 0x1) == 0) {
       writeByte(LF, NO_EOI);
 #ifdef DEBUG_GPIBbus_SEND
-      debugStream.println(F("GPIBbus::sendData: appended LF"));
+      DB_PRINT(F("appended LF"),"");
 #endif
     }
   }
@@ -656,7 +664,7 @@ void GPIBbus::sendData(char *data, uint8_t dsize) {
     delayMicroseconds(40);
     setGpibState(0b00010000, 0b00010000, 0);
 #ifdef DEBUG_GPIBbus_SEND
-    debugStream.println(F("Asserted EOI"));
+    DB_PRINT(F("Asserted EOI"),"");
 #endif
   }
 
@@ -667,12 +675,12 @@ void GPIBbus::sendData(char *data, uint8_t dsize) {
         // Untalk controller and unlisten bus
         if (unAddressDevice()) {
 #ifdef DEBUG_GPIBbus_SEND
-          debugStream.println(F("GPIBbus::sendData: failed to unlisten bus"));
+          DB_PRINT(F("failed to unlisten bus"),"");
 #endif
         }
 
 #ifdef DEBUG_GPIBbus_SEND
-        debugStream.println(F("GPIBbus::sendData: unlisten done"));
+        DB_PRINT(F("unlisten done"),"");
 #endif
       }
     }
@@ -686,7 +694,7 @@ void GPIBbus::sendData(char *data, uint8_t dsize) {
   }
 
 #ifdef DEBUG_GPIBbus_SEND
-    debugStream.println(F("GPIBbus::sendData: done."));
+    DB_PRINT(F("done."),"");
 #endif
  
 }
@@ -699,13 +707,6 @@ void GPIBbus::sendData(char *data, uint8_t dsize) {
 
 #ifdef EN_STORAGE
 
-  bool GPIBbus::receiveData(iostream& fileStream, bool detectEoi, bool detectEndByte, uint8_t endByte){
-      
-  }
-
-  void GPIBbus::sendData(iostream& fileStream){
-    
-  }
 
 #endif
 
@@ -750,7 +751,7 @@ void GPIBbus::setControls(uint8_t state) {
   #endif
 #endif      
 #ifdef DEBUG_GPIBbus_CONTROL
-      debugStream.println(F("Initialised GPIB control mode"));
+      DB_PRINT(F("Initialised GPIB control mode"),"");
 #endif
       break;
 
@@ -761,7 +762,7 @@ void GPIBbus::setControls(uint8_t state) {
       digitalWrite(SN7516X_TE,LOW);
 #endif      
 #ifdef DEBUG_GPIBbus_CONTROL
-      debugStream.println(F("Set GPIB lines to idle state"));
+      DB_PRINT(F("Set GPIB lines to idle state"),"");
 #endif
       break;
 
@@ -772,7 +773,7 @@ void GPIBbus::setControls(uint8_t state) {
       digitalWrite(SN7516X_TE,HIGH);
 #endif      
 #ifdef DEBUG_GPIBbus_CONTROL
-      debugStream.println(F("Set GPIB lines for sending a command"));
+      DB_PRINT(F("Set GPIB lines for sending a command"),"");
 #endif
       break;
 
@@ -784,7 +785,7 @@ void GPIBbus::setControls(uint8_t state) {
       digitalWrite(SN7516X_TE,LOW);
 #endif      
 #ifdef DEBUG_GPIBbus_CONTROL
-      debugStream.println(F("Set GPIB lines for reading data"));
+      DB_PRINT(F("Set GPIB lines for reading data"),"");
 #endif
       break;
 
@@ -795,7 +796,7 @@ void GPIBbus::setControls(uint8_t state) {
       digitalWrite(SN7516X_TE,HIGH);
 #endif      
 #ifdef DEBUG_GPIBbus_CONTROL
-      debugStream.println(F("Set GPIB lines for writing data"));
+      DB_PRINT(F("Set GPIB lines for writing data"),"");
 #endif
       break;
 
@@ -817,7 +818,7 @@ void GPIBbus::setControls(uint8_t state) {
       // Set data bus to idle state
       readyGpibDbus();
 #ifdef DEBUG_GPIBbus_CONTROL
-      debugStream.println(F("Initialised GPIB listener mode"));
+      DB_PRINT(F("Initialised GPIB listener mode"),"");
 #endif
       break;
 
@@ -830,7 +831,7 @@ void GPIBbus::setControls(uint8_t state) {
       // Set data bus to idle state
       readyGpibDbus();
 #ifdef DEBUG_GPIBbus_CONTROL
-      debugStream.println(F("Set GPIB lines to idle state"));
+      DB_PRINT(F("Set GPIB lines to idle state"),"");
 #endif
       break;
 
@@ -841,7 +842,7 @@ void GPIBbus::setControls(uint8_t state) {
       setGpibState(0b00000110, 0b00011110, 1);
       setGpibState(0b11111001, 0b00011110, 0);
 #ifdef DEBUG_GPIBbus_CONTROL
-      debugStream.println(F("Set GPIB lines to idle state"));
+      DB_PRINT(F("Set GPIB lines to idle state"),"");
 #endif
       break;
 
@@ -852,14 +853,14 @@ void GPIBbus::setControls(uint8_t state) {
       setGpibState(0b00011000, 0b00011110, 1);
       setGpibState(0b11111001, 0b00011110, 0);
 #ifdef DEBUG_GPIBbus_CONTROL
-      debugStream.println(F("Set GPIB lines for listening as addresed device"));
+      DB_PRINT(F("Set GPIB lines for listening as addresed device"),"");
 #endif
       break;
 #ifdef DEBUG_GPIBbus_CONTROL
     default:
       // Should never get here!
       //      setGpibState(0b00000110, 0b10111001, 0b11111111);
-      debugStream.println(F("Unknown GPIB state requested!"));
+      DB_PRINT(F("Unknown GPIB state requested!"),"");
 #endif
   }
 
@@ -908,8 +909,8 @@ bool GPIBbus::unAddressDevice() {
   if (sendCmd(GC_UNT)) return ERR;
   // Clear flag
   deviceAddressed = false;
-#ifdef DEBUG_GPIBbus_CONTROL
-  debugStream.println(F("unAddressDevice: done."));
+#ifdef DEBUG_GPIBbus_DEVICE
+  DB_PRINT(F("done."),"");
 #endif
   return OK;
 }
@@ -922,23 +923,19 @@ bool GPIBbus::unAddressDevice() {
 bool GPIBbus::addressDevice(uint8_t addr, bool talk) {
 //  uint8_t saddr = 0;
   if (sendCmd(GC_UNL)) return ERR;
-#ifdef DEBUG_GPIBbus_CONTROL
-  debugStream.print(F("addressDevice: "));
-  debugStream.println(addr);  
+#ifdef DEBUG_GPIBbus_DEVICE
+  DB_PRINT(F("addressDevice: "),addr);
 #endif
   if (talk) {
     // Device to talk, controller to listen
     if (sendCmd(GC_TAD + addr)) return ERR;
-//    if (sendCmd(GC_LAD + cfg.caddr)) return ERR;
   } else {
     // Device to listen, controller to talk
     if (sendCmd(GC_LAD + addr)) return ERR;
-//    if (sendCmd(GC_TAD + cfg.caddr)) return ERR;
   }
 
   // Set flag
   deviceAddressed = true;
-
   return OK;
 }
 
@@ -951,17 +948,6 @@ bool GPIBbus::haveAddressedDevice(){
   return deviceAddressed;
 }
 
-/*
-void GPIBbus::setDeviceAddressedState(uint8_t state){
-  // Valid state supplied
-  if (state==DLAS || state==DTAS) {
-    deviceAddressedState = state;
-    return;
-  }
-  // Otherwise set to idle
-  deviceAddressedState = DIDS;
-}
-*/
 
 /***** Device is addressed to listen? *****/
 bool GPIBbus::isDeviceAddressedToListen(){
@@ -1012,7 +998,7 @@ uint8_t GPIBbus::readByte(uint8_t *db, bool readWithEoi, bool *eoi) {
       // If IFC has been asserted then abort
       if (isAsserted(IFC)) {
 #ifdef DEBUG_GPIBbus_RECEIVE
-        dataStream.println(F("GPIBbus::readByte: IFC detected]"));
+        DB_PRINT(F("IFC detected]"),"");
 #endif
         stage = 1;
         break;    
@@ -1075,10 +1061,9 @@ uint8_t GPIBbus::readByte(uint8_t *db, bool readWithEoi, bool *eoi) {
   // Otherwise return stage
 #ifdef DEBUG_GPIBbus_RECEIVE
   if ( (stage==4) || (stage==8) ) {
-    debugStream.println(F("DAV timout!"));
+    DB_PRINT(F("DAV timout!"),"");
   }else{
-    debugStream.print(F("Error: "));
-    debugStream.println(stage);
+    DB_PRINT(F("Error: "), stage);
   }
 #endif
 
@@ -1101,7 +1086,7 @@ uint8_t GPIBbus::writeByte(uint8_t db, bool isLastByte) {
       if (isAsserted(IFC)) {
         setControls(DLAS);       
 #ifdef DEBUG_GPIBbus_SEND
-        debugStream.println(F("GPIBbus::writeByte: IFC detected!"));
+        DB_PRINT(F("IFC detected!"),"");
 #endif
         stage = 1;
         break;    
@@ -1111,7 +1096,7 @@ uint8_t GPIBbus::writeByte(uint8_t db, bool isLastByte) {
       if (isAsserted(ATN)) {
         setControls(DLAS);       
 #ifdef DEBUG_GPIBbus_SEND
-        debugStream.println(F("gpibBus::writeByte: ATN detected!"));
+        DB_PRINT(F("ATN detected!"),"");
 #endif
         stage = 2;
         break;
@@ -1134,7 +1119,7 @@ uint8_t GPIBbus::writeByte(uint8_t db, bool isLastByte) {
       if (cfg.eoi && isLastByte) {
         // If EOI enabled and this is the last byte then assert DAV and EOI
 #ifdef DEBUG_GPIBbus_SEND
-        debugStream.println(F("Asserting EOI..."));    
+        DB_PRINT(F("Asserting EOI..."),"");    
 #endif
         setGpibState(0b00000000, 0b00011000, 0);
       }else{
@@ -1180,20 +1165,19 @@ uint8_t GPIBbus::writeByte(uint8_t db, bool isLastByte) {
 #ifdef DEBUG_GPIBbus_SEND
   switch (stage) {
     case 4:
-      debugStream.print("NDAC timeout!");
+      DB_PRINT(F("NDAC timeout!"),"");
       break;
     case 5:
-      debugStream.print("NRFD timout!");
+      DB_PRINT(F("NRFD timout!"),"");
       break;
     case 7:
-      debugStream.print("NRFD timout!");
+      DB_PRINT(F("NRFD timout!"),"");
       break;
     case 8:
-      debugStream.print("NDAC timout!");
+      DB_PRINT(F("NDAC timout!"),"");
       break;
     default:
-      debugStream.print(F("Error: "));
-      debugStream.println(stage);
+      DB_PRINT(F("Error: "), stage);
   }
 #endif
 
@@ -1216,31 +1200,6 @@ uint8_t GPIBbus::writeByte(uint8_t db, bool isLastByte) {
 
 /********** PRIVATE FUNCTIONS **********/
 
-
-
-
-/***** Wait for "pin" to reach a specific state *****/
-/*
- * Returns false on success, true on timeout.
- * Pin MUST be set as INPUT_PULLUP otherwise it will not change and simply time out!
- */
-/*
-boolean GPIBbus::waitOnPinState(uint8_t state, uint8_t pin, int interval) {
-
-  unsigned long timeout = millis() + interval;
-  bool atnStat = (isAsserted(ATN));
-  while (digitalRead(pin) != state) {
-    // Check timer
-    if (millis() >= timeout) {
-      return true;
-    }
-    // ATN status was asserted but now unasserted so abort
-    if (atnStat && !isAsserted(ATN)) return true;
-    delayMicroseconds(100);
-  }
-  return false;        // = no timeout therefore succeeded!
-}
-*/
 
 /***** Check for terminator *****/
 bool GPIBbus::isTerminatorDetected(uint8_t bytes[3], uint8_t eorSequence){

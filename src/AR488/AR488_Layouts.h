@@ -9,7 +9,7 @@
   extern Stream& debugStream;
 #endif
 
-/***** AR488_Hardware.h, ver. 0.51.07, 05/05/2022 *****/
+/***** AR488_Hardware.h, ver. 0.51.09, 20/06/2022 *****/
 /*
  * Hardware pin layout definitions
  */

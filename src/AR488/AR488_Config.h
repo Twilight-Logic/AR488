@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.51.07, 05/05/2022"
+#define FWVER "AR488 GPIB controller, ver. 0.51.09, 20/06/2022"
 
 
 
@@ -44,16 +44,12 @@
   /* Board/layout selection */
   #define AR488_UNO
   //#define AR488_NANO
-  /* Default serial port type */
-  #define AR_SERIAL_TYPE_HW
 
 /*** MEGA 32U4 based boards (Micro, Leonardo) ***/
 #elif __AVR_ATmega32U4__
   /*** Board/layout selection ***/
-  #define AR488_MEGA32U4_MICRO  // Artag's design for Micro board
-  //#define AR488_MEGA32U4_LR3  // Leonardo R3 (same pin layout as Uno)
-  /* Default serial port type */
-  #define AR_SERIAL_TYPE_CDC
+  //#define AR488_MEGA32U4_MICRO  // Artag's design for Micro board
+  #define AR488_MEGA32U4_LR3  // Leonardo R3 (same pin layout as Uno)
   
 /*** MEGA 2560 board ***/
 #elif __AVR_ATmega2560__
@@ -63,16 +59,13 @@
   //#define AR488_MEGA2560_E2
 //  #define AR488_MCP23S17
   //#define AR488_MCP23017
-  /* Default serial port type */
-  #define AR_SERIAL_TYPE_HW
 
 /***** Panduino Mega 644 or Mega 1284 board *****/
 #elif defined(__AVR_ATmega644P__) || defined(__AVR_ATmega1284P__)
   /* Board/layout selection */
   #define AR488_MEGA644P_MCGRAW
-  /* Default serial port type */
-  #define AR_SERIAL_TYPE_HW
-  #define SAY_HELLO
+  /* Signal serial port that device is alive */
+  //#define SAY_HELLO
   
 #endif  // Board/layout selection
 
@@ -80,36 +73,39 @@
 
 /***** SERIAL PORT CONFIGURATION *****/
 /*
- * Serial type should be one of:
- * AR_SERIAL_TYPE_HW
- * AR_SERIAL_TYPE_CDC
- * AR_SERIAL_TYPE_SW
- * Note1: The default port type on 32u4 boards (Micro Pro, Leonardo) is AR_SERIAL_TYPE_CDC
- *        For other boards use type AR_SERIAL_TYPE_HW or optionally AR_SERIAL_TYPE_SW if required
- * Note2: On most boards the serial device is named Serial. Boards that have a secondary
- *        UART port this is named Serial1. Mega2560 also supports Serial3 and Serial4
+ * Note: On most boards the primary serial device is named Serial. On boards that have a secondary
+ *       UART port this is named Serial1. The Mega2560 also supports Serial2, Serial3 and Serial4.
+ *       When using layout AR488_MEGA2560_D, Serial2 pins are assigned as GPIO pins for the GPIB bus
+ *       so Serial2 is not available.
  */
 /***** Communication port *****/
-#define AR_SERIAL_ENABLE
-#ifdef AR_SERIAL_ENABLE
+#define DATAPORT_ENABLE
+#ifdef DATAPORT_ENABLE
+//#define AR_SERIAL_ENABLE
+//#ifdef AR_SERIAL_ENABLE
   // Serial port device
   #define AR_SERIAL_PORT Serial
-  // Select port type
-  /* Defining type here will override automatic selection */
-//  #define AR_SERIAL_TYPE_HW
+  // #define AR_SERIAL_SWPORT
   // Set port operating speed
   #define AR_SERIAL_SPEED 115200
+  // Enable Bluetooth (HC05) module?
+  //#define AR_SERIAL_BT_ENABLE 12        // HC05 enable pin
+  //#define AR_SERIAL_BT_NAME "AR488-BT"  // Bluetooth device name
+  //#define AR_SERIAL_BT_CODE "488488"    // Bluetooth pairing code
 #endif
+
 /***** Debug port *****/
-#define DB_SERIAL_ENABLE
-#ifdef DB_SERIAL_ENABLE
+//#define DEBUG_ENABLE
+#ifdef DEBUG_ENABLE
+//#define DB_SERIAL_ENABLE
+//#ifdef DB_SERIAL_ENABLE
   // Serial port device
   #define DB_SERIAL_PORT Serial
-  // Select port type
-  #define DB_SERIAL_TYPE_HW
+  // #define DB_SERIAL_SWPORT
   // Set port operating speed
   #define DB_SERIAL_SPEED 115200
 #endif
+
 /***** Configure SoftwareSerial Port *****/
 /*
  * Configure the SoftwareSerial TX/RX pins and baud rate here
@@ -123,7 +119,6 @@
 /*
  * Note: SoftwareSerial reliable only up to a MAX of 57600 baud only
  */
-
 
 
 /***** Pin State Detection *****/
@@ -200,18 +195,6 @@
 #endif
 
 
-/***** Bluetooth (HC05) support *****/
-/*
- * Uses built-in LED on GPIO pin 13 to signal status
- */
-//#define AR_BT_EN 12             // Bluetooth enable and control pin
-#ifdef AR_BT_EN
-  #define AR_BT_SPEED 115200    // Bluetooth module preferred baud rate
-  #define AR_BT_NAME "AR488-BT" // Bluetooth device name
-  #define AR_BT_CODE "488488"   // Bluetooth pairing code
-#endif
-
-
 /***** Local/remote signal (LED) *****/
 //#define REMOTE_SIGNAL_PIN 7
 
@@ -235,21 +218,8 @@
 //#define SAY_HELLO
 
 
-/***** Debug options *****/
-/*
-// Uncomment to send debug messages to another port
-//#define DB_SERIAL_PORT Serial1
-// Configure alternative port for debug messages
-#define DB_SERIAL_BAUD 115200
-#define DB_HW_SERIAL
-#ifdef DB_SW_SERIAL
-  #define DB_SW_SERIAL_RX 53
-  #define DB_SW_SERIAL_TX 51
-#endif
-*/
-
-/***** Configure debug levels *****/
-#ifdef DB_SERIAL_ENABLE
+/***** Configure debug level options *****/
+#ifdef DEBUG_ENABLE
   // Main module
   //#define DEBUG_SERIAL_INPUT    // serialIn_h(), parseInput_h()
   //#define DEBUG_CMD_PARSER      // getCmd()
@@ -259,12 +229,13 @@
   //#define DEBUG_IDFUNC          // ID command
 
   // AR488_GPIBbus module
-  //#define DEBUG_GPIBbus_RECEIVE // GPIBbus::receiveData()
+  //#define DEBUG_GPIBbus_RECEIVE // GPIBbus::receiveData(), GPIBbus::readByte()
   //#define DEBUG_GPIBbus_SEND    // GPIBbus::sendData()
-  //#define DEBUG_GPIBbus_CONTROL // GPIBbus::setControls()
-  //#define DEBUG_GPIB_COMMANDS   // GPIBbus::sendCDC(), GPIBbus::sendLLO(), GPIBbus::sendLOC(), GPIBbus::sendGTL()
-  //#define DEBUG_GPIBbus_UNLUNT  // Untalk/unlisten
-
+  //#define DEBUG_GPIBbus_CONTROL // GPIBbus::setControls() 
+  //#define DEBUG_GPIB_COMMANDS   // GPIBbus::sendCDC(), GPIBbus::sendLLO(), GPIBbus::sendLOC(), GPIBbus::sendGTL(), GPIBbus::sendMSA() 
+  //#define DEBUG_GPIB_ADDRESSING // GPIBbus::sendMA(), GPIBbus::sendMLA(), GPIBbus::sendUNT(), GPIBbus::sendUNL() 
+  //#define DEBUG_GPIB_DEVICE     // GPIBbus::unAddressDevice(), GPIBbus::addressDevice
+  
   // GPIB layout module
   //#define DEBUG_LAYOUTS
 

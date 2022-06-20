@@ -4,6 +4,7 @@
 //#include <SD.h>
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
+#include "AR488_ComPorts.h"
 
 #ifdef EN_STORAGE
   #ifdef EN_TEK_4924
@@ -11,7 +12,7 @@
   #endif
 #endif
 
-/***** AR488_GPIBbus.cpp, ver. 0.51.07, 05/05/2022 *****/
+/***** AR488_GPIBbus.cpp, ver. 0.51.08, 20/06/2022 *****/
 
 
 /*********************************************/

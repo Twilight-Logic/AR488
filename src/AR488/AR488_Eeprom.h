@@ -13,8 +13,8 @@
 #define EESTART 2    // EEPROM start of data - min 4 for CRC32, min 2 for CRC16
 #define UPCASE true
 
-  extern Stream& dataStream;
-  extern Stream& debugStream;
+//  extern Stream& dataStream;
+//  extern Stream& debugStream;
 
 //void epViewData();
 
