@@ -60,7 +60,7 @@ https://www.eevblog.com/forum/projects/ar488-arduino-based-gpib-adapter/
 <tr><td>Luke Mester</td><td>Testing of original Uno/Nano verions against Prologix</td></tr>
 <tr><td>Artag</td><td>Porting to the Arduino Micro (32u4) board</td></tr>
 <tr><td>Tom DG8SAQ</td><td>Plotting and printing</td></tr>
-<tr><td>douradda</td><td>Support with project maintenance, addition of ++help command, ESP32 port</td></tr>
+<tr><td>douardda</td><td>Support with project maintenance, addition of ++help command, ESP32 port</td></tr>
 <tr><td>Monty McGraw</td><td>Testing of MicroCore ATMega644 and ATMega1024 boards</td></tr>
 <tr><td>justjason</td><td>Testing of Logic Green LG8FX board</td></tr>
 </table>
