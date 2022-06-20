@@ -211,6 +211,61 @@ uint8_t pbPtr = 0;
 /*******************************/
 
 
+/**************************/
+/***** HELP MESASAGES *****/
+/****** vvvvvvvvvvvvv *****/
+
+static const char cmdHelp[] PROGMEM = {
+  "addr:P Display/set device address\n"
+  "auto:P Automatically request talk and read response\n"
+  "clr:P Send Selected Device Clear to current GPIB address\n"
+  "eoi:P Enable/disable assertion of EOI signal\n"
+  "eor:P Show or set end of receive character(s)\n"
+  "eos:P Specify GPIB termination character\n"
+  "eot_char:P Set character to append to USB output when EOT enabled\n"
+  "eot_enable:P Enable/Disable appending user specified character to USB output on EOI detection\n"
+  "help:P This message\n"
+  "ifc:P Assert IFC signal for 150 miscoseconds - make AR488 controller in charge\n"
+  "llo:P Local lockout - disable front panel operation on instrument\n"
+  "loc:P Enable front panel operation on instrument\n"
+  "lon:P Put controller in listen-only mode (listen to all traffic)\n"
+  "mode:P Set the interface mode (0=controller/1=device)\n"
+  "read:P Read data from instrument\n"
+  "read_tmo_ms:P Read timeout specified between 1 - 3000 milliseconds\n"
+  "rst:P Reset the controller\n"
+  "savecfg:P Save configration\n"
+  "spoll:P Serial poll the addressed host or all instruments\n"
+  "srq:P Return status of srq signal (1-srq asserted/0-srq not asserted)\n"
+  "status:P Set the status byte to be returned on being polled (bit 6 = RQS, i.e SRQ asserted)\n"
+  "trg:P Send trigger to selected devices (up to 15 addresses)\n"
+  "ver:P Display firmware version\n"
+  "aspoll:C Serial poll all instruments (alias: ++spoll all)\n"
+  "dcl:C Send unaddressed (all) device clear  [power on reset] (is the rst?)\n"
+  "default:C Set configuration to controller default settings\n"
+  "id:C Show interface ID information - see also: 'id name'; 'id serial'; 'id verstr'\n"
+  "id name:C Show/Set the name of the interface\n"
+  "id serial:C Show/Set the serial number of the interface\n"
+  "id verstr:C Show/Set the version string sent in reply to ++ver e.g. \"GPIB-USB\"). Max 47 chars, excess truncated.\n"
+  "idn:C Enable/Disable reply to *idn? (disabled by default)\n"
+  "macro:C Run a macro (if macro support is compiled)\n"
+  "ppoll:C Conduct a parallel poll\n"
+  "ren:C Assert or Unassert the REN signal\n"
+  "repeat:C Repeat a given command and return result\n"
+  "setvstr:C DEPRECATED - see id verstr\n"
+  "srqauto:C Automatically condiuct serial poll when SRQ is asserted\n"
+  "ton:C Put controller in talk-only mode (send data only)\n"
+  "verbose:C Verbose (human readable) mode\n"
+  "tmbus:C Timing parameters (see the doc)\n"
+  "xdiag:C Bus diagnostics (see the doc)\n"
+};
+
+/***** ^^^^^^^^^^^^^ *****/
+/***** HELP MESSAGES *****/
+/*************************/
+
+
+
+
 
 /************************************/
 /***** COMMON VARIABLES SECTION *****/
@@ -893,6 +948,7 @@ static cmdRec cmdHidx [] = {
   { "eos",         3, eos_h       },
   { "eot_char",    3, eot_char_h  },
   { "eot_enable",  3, eot_en_h    },
+  { "help",        3, help_h      },
   { "ifc",         2, (void(*)(char*)) ifc_h     },
   { "id",          3, id_h        },
   { "idn",         3, idn_h       },
@@ -1747,6 +1803,47 @@ void lon_h(char *params) {
     dataPort.println(isRO);
   }
 }
+
+
+/***** Show help message *****/
+void help_h(char *params) {
+  char c, t;
+  char token[20];
+  uint8_t i;
+
+  i = 0;
+  for (size_t k = 0; k < strlen_P(cmdHelp); k++) {
+    c = pgm_read_byte_near(cmdHelp + k);
+    if (i < 20) {
+      if(c == ':') {
+        token[i] = 0;
+        if((params == NULL) || (strcmp(token, params) == 0)) {
+          dataPort.print(F("++"));
+          dataPort.print(token);
+          dataPort.print(c);
+          k++;
+          t = pgm_read_byte_near(cmdHelp + k);
+          dataPort.print(F(" ["));
+          dataPort.print(t);
+          dataPort.print(F("]"));
+          i = 255; // means we need to print until \n
+        }
+        
+      } else {
+        token[i] = c;
+        i++;
+      }
+    }
+    else if (i == 255) {
+      dataPort.print(c);
+    }
+    if (c == '\n') {
+      i = 0;
+    }
+  }
+}
+
+
 
 
 /***********************************/
