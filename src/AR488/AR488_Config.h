@@ -81,8 +81,6 @@
 /***** Communication port *****/
 #define DATAPORT_ENABLE
 #ifdef DATAPORT_ENABLE
-//#define AR_SERIAL_ENABLE
-//#ifdef AR_SERIAL_ENABLE
   // Serial port device
   #define AR_SERIAL_PORT Serial
   // #define AR_SERIAL_SWPORT
@@ -97,8 +95,6 @@
 /***** Debug port *****/
 //#define DEBUG_ENABLE
 #ifdef DEBUG_ENABLE
-//#define DB_SERIAL_ENABLE
-//#ifdef DB_SERIAL_ENABLE
   // Serial port device
   #define DB_SERIAL_PORT Serial
   // #define DB_SERIAL_SWPORT
@@ -112,7 +108,7 @@
  * Note: SoftwareSerial support conflicts with PCINT support
  * When using SoftwareSerial, disable USE_INTERRUPTS.
  */
-#if defined(AR_SERIAL_TYPE_SW) || defined(DB_SERIAL_TYPE_SW)
+#if defined(AR_SERIAL_SWPORT) || defined(DB_SERIAL_SWPORT)
   #define SW_SERIAL_RX_PIN 11
   #define SW_SERIAL_TX_PIN 12
 #endif
