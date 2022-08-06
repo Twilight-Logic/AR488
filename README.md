@@ -33,6 +33,17 @@ Commands generally adhere closely to the Prologix syntax, however there are some
 
 Once uploaded, the firmware should respond to the ++ver command with its version information.
 
+<b><i>DEVNULL Library</i><b>
+
+The project requires the DEVNULL library to be installed in the Arduino IDE. To install this library, please follow these steps:
+
+1. within the IDE go to Tools -> Manage Libraries... After a second or two, this should display a list of available libraries. In version 2.0rc9.x, the list ,may not appear the first time around. In that case, just go to Tools->Manage Libraries... again.
+
+2. in the search box type 'DEVNULL'. This should filter the list of libraries leaving only the DEVNULL library by Rob Tillaart listed. 
+
+3. click the 'Install' button. This will install the latest version of the DEVNULL library.
+
+
 <b><i>Wireless Communication:</i></b>
 
 The 32u4 and mega 2560 boards have additional serial ports which can be used to connect the ESP8266 WiFi add-on or the HC05 bluetooth module. The firmware sketch supports auto-configuration of the Bluetooth HC05 module, the details of which can be found in the <a href="https://github.com/Twilight-Logic/AR488/blob/master/AR488-Bluetooth.pdf">AR488 Bluetooth Support</a> supplement. It is also possible to use a HC06 module, but since this module is capable of operating in slave mode only, automatic configuration is not possible. It will therefore need to be configured manually.
