@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.51.09, 20/06/2022 *****/
+/***** AR488_Hardware.cpp, ver. 0.51.10, 06/09/2022 *****/
 /*
  * Hardware layout function definitions
  */
@@ -975,13 +975,7 @@ void interruptsEn(){
 // MCP23S17 hardware config
 const uint8_t chipSelect = MCP_SELECTPIN;
 const uint8_t mcpAddr = MCP_ADDRESS;      // Must be between 0 and 7
-
-
-/***** Arduino interrput handler *****/
-/*
- * Signals that IntA was asserted on the MCP chip
- */
-bool mcpIntA = false;
+uint8_t mcpIntAReg = 0;
 
 
 /***** Set the GPIB data bus to input pullup *****/
@@ -1066,8 +1060,14 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
  * Interrput pin on Arduino configure with attachInterrupt
  */
 void mcpIntHandler() {
-  mcpIntA = true;
+//  mcpIntA = true;
 //  Serial.println(F("MCP Interrupt triggered"));
+  mcpIntAReg = mcpByteRead(MCPINTCAPA);
+}
+
+
+uint8_t getMcpIntAReg(){
+  return mcpIntAReg;
 }
 
 
@@ -1077,22 +1077,34 @@ void mcpIntHandler() {
  */
 uint8_t mcpByteRead(uint8_t reg){
   uint8_t db;
+//Serial.print(F("Rx addr: "));
+//Serial.print(mcpAddr);
   digitalWrite(chipSelect, LOW);            // Enable MCP communication
   SPI.transfer(MCPREAD | (mcpAddr << 1));   // Write opcode + chip address + write bit
   SPI.transfer(reg);                        // Write the register we want to read
   db = SPI.transfer(0x00);                  // Send any byte. Function returns low byte (port A value) which is ignored
   digitalWrite(chipSelect, HIGH);           // Enable MCP communication
+//uint8_t dbinv = ~db;
+//Serial.print(F("\tRCV: "));
+//Serial.println(dbinv, HEX);
   return db;
 }
 
 
 /***** Write to the MCP23S17 *****/
 void mcpByteWrite(uint8_t reg, uint8_t db){
+//Serial.print(F("Tx addr: "));
+//Serial.print(mcpAddr);
   digitalWrite(chipSelect, LOW);            // Enable MCP communication
   SPI.transfer(MCPWRITE | (mcpAddr << 1));  // Write opcode (with write bit set) + chip address
   SPI.transfer(reg);                        // Write register we want to change
   SPI.transfer(db);                         // Write data byte
   digitalWrite(chipSelect, HIGH);           // Stop MCP communication
+//Serial.print(F("\tWRT: "));
+//Serial.print(db, HEX);
+//uint8_t dbinv = ~db;
+//Serial.print(F("\tWRTinv: "));
+//Serial.println(dbinv, HEX);
 }
 
 
@@ -1116,12 +1128,6 @@ uint8_t getGpibPinState(uint8_t pin){
 }
 
 
-/***** Get the status of the MCP interrupt A pin *****/
-uint8_t getMcpIntAPinState(){
-  return mcpByteRead(MCPINTCAPA);
-}
-
-
 /***** Configure pins that will generate an interrupt *****/
 void mcpInterruptsEn(){
   // Set to interrupt mode for compare to previous
@@ -1142,7 +1148,9 @@ void mcpInterruptsEn(){
 /***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
 #ifdef AR488_MCP23017
 
-uint8_t mcpPinAssertedReg = 0;
+//uint8_t mcpPinAssertedReg = 0;
+uint8_t mcpIntAReg = 0;
+
 
 // MCP23017 hardware config
 //const uint8_t chipSelect = MCP_SELECTPIN;
@@ -1238,9 +1246,15 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
  * Interrput pin on Arduino configure with attachInterrupt
  */
 void mcpIntHandler() {
-  mcpIntA = true;
-  mcpPinAssertedReg = 0;
+//  mcpIntA = true;
+//  mcpPinAssertedReg = 0;
 //  Serial.println(F("MCP Interrupt triggered"));
+  mcpIntAReg = mcpByteRead(MCPINTCAPA);
+}
+
+
+uint8_t getMcpIntAReg(){
+  return mcpIntAReg;
 }
 
 
@@ -1268,24 +1282,35 @@ static inline uint8_t wirerecv(TwoWire *theWire) {
  * reg : register we want to read , e.g. MCPPORTA or MCPPORTB
  */
 uint8_t mcpByteRead(uint8_t reg){
+  uint8_t db = 0;
   Wire.beginTransmission(mcpI2Caddr);
-//Serial.print(F("Tx to addr: "));
-//Serial.println(mcpI2Caddr);
+Serial.print(F("Rx addr: "));
+Serial.print(mcpI2Caddr, HEX);
   wiresend(reg, &Wire);
   Wire.endTransmission();
   Wire.requestFrom(mcpI2Caddr, (uint8_t)1);
-  return wirerecv(&Wire);
+  db = wirerecv(&Wire);
+uint8_t dbinv = ~db;
+Serial.print(F("\tRCV: "));
+Serial.println(dbinv, HEX);
+//  return wirerecv(&Wire);
+  return db;
 }
 
 
 /***** Write to the MCP23017 *****/
 void mcpByteWrite(uint8_t reg, uint8_t db){
+Serial.print(F("Tx addr: "));
+Serial.print(mcpI2Caddr, HEX);
   Wire.beginTransmission(mcpI2Caddr);
-//Serial.print(F("Tx to addr: "));
-//Serial.println(mcpI2Caddr);
   wiresend(reg, &Wire);
   wiresend(db, &Wire);
   Wire.endTransmission();
+Serial.print(F("\tWRT: "));
+Serial.print(db, HEX);
+uint8_t dbinv = ~db;
+Serial.print(F("\tWRTinv: "));
+Serial.println(dbinv, HEX);
 }
 
 
@@ -1305,6 +1330,7 @@ uint8_t mcpDigitalRead(uint8_t pin) {
 
 /***** Get the status of an MCP23017 pin) *****/
 uint8_t getGpibPinState(uint8_t pin){
+/*  
   if (mcpIntA) {
     if (pin==ATN || pin==SRQ || pin==EOI){
       // Update status of register
@@ -1315,6 +1341,7 @@ uint8_t getGpibPinState(uint8_t pin){
       return (mcpPinAssertedReg & (1<<pin));
     }
   }
+*/
   return mcpDigitalRead(pin);
 }
 
@@ -1330,6 +1357,13 @@ uint8_t getMcpIntAPinState(){
 }
 */
 
+
+/***** Get the status of the MCP interrupt A pin *****/
+/*
+uint8_t getMcpIntAPinState(){
+  return mcpByteRead(MCPINTCAPA);
+}
+*/
 
 /***** Configure pins that will generate an interrupt *****/
 void mcpInterruptsEn(){

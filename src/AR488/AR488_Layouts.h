@@ -338,8 +338,7 @@ void mcpByteWrite(uint8_t reg, uint8_t db);
 uint8_t mcpDigitalRead(uint8_t pin);
 void mcpInterruptsEn();
 void mcpIntHandler();
-uint8_t getMcpIntAPinState();
-
+uint8_t getMcpIntAReg();
 
 #endif // AR488_MCP23S17
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
@@ -355,7 +354,7 @@ uint8_t getMcpIntAPinState();
 
 #include <Wire.h>
 
-/***** NOTE: MCP23S17 pinout last updated 03/05/2021 *****/
+/***** NOTE: MCP23017 pinout last updated 03/05/2021 *****/
 #define IFC    0  /* GPIB 9  : PORTA bit 0 */
 #define NDAC   1  /* GPIB 8  : PORTA bit 1 */
 #define NRFD   2  /* GPIB 7  : PORTA bit 2 */
@@ -386,7 +385,7 @@ uint8_t getMcpIntAPinState();
 #define MCPINTCONA 0x08   // Configure interrupt: 0 = compare against previous; 1 = compare against DEFVAL
 #define MCPINTFA 0x0E     // Flag that interrupt ocurred on pin (read-only)
 #define MCPINTCAPA 0x10   // Read the status of the pin (read-only)
-#define MCPINTPINA 2      // Pin assigned to catch MCP23S17 INTA on the Arduino controller
+//#define MCPINTPINA 2      // Pin assigned to catch MCP23S17 INTA on the Arduino controller
 
 // MCP opcodes
 #define MCPWRITE 0b01000000
@@ -406,7 +405,7 @@ void mcpByteWrite(uint8_t reg, uint8_t db);
 uint8_t mcpDigitalRead(uint8_t pin);
 void mcpInterruptsEn();
 void mcpIntHandler();
-//uint8_t getMcpIntAPinState();
+uint8_t getMcpIntAReg();
 
 
 #endif // AR488_MCP23017

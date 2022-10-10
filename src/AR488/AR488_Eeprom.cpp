@@ -19,7 +19,7 @@ unsigned long int getCRC32(uint8_t bytes[], uint16_t bsize);
 /********************************/
 #ifdef __AVR__
 
-/***** Show all 512 bytes of EEPROM data *****/
+/***** Show all bytes of EEPROM data *****/
 
 void epViewData(Stream& outputStream) {
   uint16_t addr = 0;
@@ -29,7 +29,7 @@ void epViewData(Stream& outputStream) {
 
   // Read data
   memset(dbuf, 0x00, 16);
-  for (addr=0; addr<512; addr=addr+16){
+  for (addr=0; addr<EESIZE; addr=addr+16){
     sprintf(cnt, "%03d", addr);
     outputStream.print(cnt);
     outputStream.print(":");

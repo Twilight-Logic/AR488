@@ -12,7 +12,7 @@
   #endif
 #endif
 
-/***** AR488_GPIBbus.cpp, ver. 0.51.08, 20/06/2022 *****/
+/***** AR488_GPIBbus.cpp, ver. 0.51.13, 10/10/2022 *****/
 
 
 /*********************************************/
@@ -105,7 +105,6 @@ class GPIBbus {
         int rtmo;         // Read timout (read_tmo_ms) in milliseconds - 0-3000 - value depends on instrument
         char eot_ch;      // EOT character to append to USB output when EOI signal detected
         char vstr[48];    // Custom version string
-//        uint16_t tmbus;   // Delay to allow the bus control/data lines to settle (1-30,000 microseconds)
         uint8_t eor;      // EOR (end of receive from GPIB instrument) characters [0=CRLF, 1=CR, 2=LF, 3=None, 4=LFCR, 5=ETX, 6=CRLF+ETX, 7=SPACE]
         char sname[16];   // Interface short name
         uint32_t serial;  // Serial number
@@ -181,6 +180,13 @@ class GPIBbus {
     bool isTerminatorDetected(uint8_t bytes[3], uint8_t eorSequence);
     void setSrqSig();
     void clrSrqSig();
+
+    // Interrupt flag for MCP23S17
+#if defined(AR488_MCP23S17) || defined(AR488_MCP23017)
+//    extern volatile bool mcpIntA;  // MCP23x17 interrupt handler
+//    uint8_t mcpPinAssertedReg = 0;
+#endif
+    
 };
 
 

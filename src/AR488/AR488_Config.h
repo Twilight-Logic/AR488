@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.51.09, 20/06/2022"
+#define FWVER "AR488 GPIB controller, ver. 0.51.13, 10/10/2022"
 
 
 
@@ -42,8 +42,9 @@
 /*** UNO and NANO boards ***/
 #elif __AVR_ATmega328P__
   /* Board/layout selection */
-  #define AR488_UNO
+  //#define AR488_UNO
   //#define AR488_NANO
+  #define AR488_MCP23017
 
 /*** MEGA 32U4 based boards (Micro, Leonardo) ***/
 #elif __AVR_ATmega32U4__
@@ -64,8 +65,6 @@
 #elif defined(__AVR_ATmega644P__) || defined(__AVR_ATmega1284P__)
   /* Board/layout selection */
   #define AR488_MEGA644P_MCGRAW
-  /* Signal serial port that device is alive */
-  //#define SAY_HELLO
   
 #endif  // Board/layout selection
 
@@ -117,6 +116,59 @@
  */
 
 
+
+/***** SUPPORT FOR PERIPHERAL CHIPS *****/
+/*
+ * This sections priovides configuration to enable/disable support
+ * for SN7516x, MCP23S17 and MCP23017 chips.
+ */
+
+
+/***** Enable MCP23S17 chip *****/
+/*
+ * This version uses the SPI interface with speeds up to 10MHz max
+ */
+//#define AR488_MCP23S17
+#ifdef AR488_MCP23S17
+  #define MCP_ADDRESS   0
+  #define MCP_SELECTPIN 10
+  #define MCP_INTERRUPT 2
+#endif
+
+
+/***** Enable MCP23017 chip *****/
+/*
+ * This version uses the I2C interface with speeds of 100kHz, 400kHz and 1,7MHz
+ * Pull up resistors (4.7k) are required on the SDA and SCL pins
+ */
+#ifdef AR488_MCP23017
+  #define MCP_ADDRESS   1
+  #define MCP_INTERRUPT 3
+#endif
+
+
+/***** Enable SN7516x chips *****/
+/*
+ * Uncomment to enable the use of SN7516x GPIB tranceiver ICs.
+ * This will require the use of an additional GPIO pin to control
+ * the read and write modes of the ICs.
+ */
+//#define SN7516X
+#ifdef SN7516X
+  #define SN7516X_TE 6
+//  #define SN7516X_DC 13
+//  #define SN7516X_SC 12
+#endif
+
+
+
+
+/***** MISCELLANEOUS OPTIONS *****/
+/*
+ * Miscellaneous options
+ */
+
+
 /***** Pin State Detection *****/
 /*
  * With UNO. NANO and MEGA boards with pre-defined layouts,
@@ -138,57 +190,6 @@
   #endif
 #endif
 */
-
-
-/***** Enable Macros *****/
-/*
- * Uncomment to enable macro support. The Startup macro allows the
- * interface to be configured at startup. Macros 1 - 9 can be
- * used to execute a sequence of commands with a single command
- * i.e, ++macro n, where n is the number of the macro
- * 
- * USE_MACROS must be enabled to enable the macro feature including 
- * MACRO_0 (the startup macro). RUN_STARTUP must be uncommented to 
- * run the startup macro when the interface boots up
- */
-//#define USE_MACROS    // Enable the macro feature
-//#define RUN_STARTUP   // Run MACRO_0 (the startup macro)
-
-
-/***** Enable MCP23S17 chip *****/
-/*
- * 
- */
-//#define AR488_MCP23S17
-#ifdef AR488_MCP23S17
-  #define MCP_ADDRESS   0
-  #define MCP_SELECTPIN 8
-  #define MCP_INTERRUPT 2
-#endif
-
-
-/***** Enable MCP23S17 chip *****/
-/*
- * 
- */
-#ifdef AR488_MCP23017
-  #define MCP_ADDRESS   1
-  #define MCP_INTERRUPT 2
-#endif
-
-
-/***** Enable SN7516x chips *****/
-/*
- * Uncomment to enable the use of SN7516x GPIB tranceiver ICs.
- * This will require the use of an additional GPIO pin to control
- * the read and write modes of the ICs.
- */
-//#define SN7516X
-#ifdef SN7516X
-  #define SN7516X_TE 6
-//  #define SN7516X_DC 13
-//  #define SN7516X_SC 12
-#endif
 
 
 /***** Local/remote signal (LED) *****/
@@ -214,7 +215,13 @@
 //#define SAY_HELLO
 
 
-/***** Configure debug level options *****/
+
+
+/***** DEBUG LEVEL OPTIONS *****/
+/*
+ * Configure debug level options
+ */
+
 #ifdef DEBUG_ENABLE
   // Main module
   //#define DEBUG_SERIAL_INPUT    // serialIn_h(), parseInput_h()
@@ -282,9 +289,25 @@
 /********************************/
 /***** AR488 MACROS SECTION *****/
 /***** vvvvvvvvvvvvvvvvvvvv *****/
+
 /*
  * (See the AR488 user manual for details)
  */
+
+/***** Enable Macros *****/
+/*
+ * Uncomment to enable macro support. The Startup macro allows the
+ * interface to be configured at startup. Macros 1 - 9 can be
+ * used to execute a sequence of commands with a single command
+ * i.e, ++macro n, where n is the number of the macro
+ * 
+ * USE_MACROS must be enabled to enable the macro feature including 
+ * MACRO_0 (the startup macro). RUN_STARTUP must be uncommented to 
+ * run the startup macro when the interface boots up
+ */
+//#define USE_MACROS    // Enable the macro feature
+//#define RUN_STARTUP   // Run MACRO_0 (the startup macro)
+
 #ifdef USE_MACROS
 
 /***** Startup Macro *****/

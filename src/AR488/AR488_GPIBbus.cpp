@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_GPIBbus.h"
 
-/***** AR488_GPIB.cpp, ver. 0.51.09, 20/06/2022 *****/
+/***** AR488_GPIB.cpp, ver. 0.51.13, 10/10/2022 *****/
 
 
 /****** Process status values *****/
@@ -120,6 +120,29 @@ bool GPIBbus::isController(){
 
 /***** Detect selected pin state *****/
 bool GPIBbus::isAsserted(uint8_t gpibsig){
+#if defined(AR488_MCP23S17) || defined(AR488_MCP23017)
+  uint8_t mcpPinAssertedReg = 0;
+  // Use MCP function to get MCP23S17 or MCP23017 pin state.
+  // If interrupt flagged then update mcpPinAssertedReg register
+//  if (isMcpIntFlagSet()){
+//dataPort.println(F("Interrupt flagged - pin state checked"));
+    // Clear mcpIntA flag
+//    clearMcpIntFlag();
+    // Get inverse of pin status at interrupt (0 = true [asserted]; 1 = false [unasserted])
+    // Calling getMcpIntAPinState clears the interrupt 
+//    mcpPinAssertedReg = ~getMcpIntAPinState();
+    mcpPinAssertedReg = ~getMcpIntAReg();
+//dataPort.print(F("mcpPinAssertedReg: "));
+//dataPort.println(mcpPinAssertedReg, BIN);
+//  }
+  return (mcpPinAssertedReg & (1<<gpibsig));
+#else
+  // Use digitalRead function to get current Arduino pin state
+  return (digitalRead(gpibsig) == LOW) ? true : false;
+#endif
+
+
+  
   if (getGpibPinState(gpibsig) == LOW) return true;
   return false;
 }
@@ -478,11 +501,12 @@ bool GPIBbus::receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte
     if (txBreak) break;
 
     // ATN asserted
-//    if (isAsserted(ATN)) break; // Breaks LON mode (gets into an ATN asserted loop)
-//    note: not needed since we check prior to reading in readByte
+    if (isAsserted(ATN)) break;
 
     // Read the next character on the GPIB bus
     r = readByte(&bytes[0], readWithEoi, &eoiDetected);
+
+    if (isAsserted(ATN)) r = 2;
 
     // If IFC or ATN asserted then break here
     if ( (r==1) || (r==2) ) break;
@@ -867,9 +891,6 @@ void GPIBbus::setControls(uint8_t state) {
   // Save state
   cstate = state;
 
-  // GPIB bus delay (to allow state to settle)
-//  delayMicroseconds(AR488.tmbus);
-
 }
 
 
@@ -988,7 +1009,7 @@ uint8_t GPIBbus::readByte(uint8_t *db, bool readWithEoi, bool *eoi) {
   const unsigned long timeval = cfg.rtmo;
   uint8_t stage = 4;
 
-  bool atnStat = isAsserted(ATN);
+  bool atnStat = isAsserted(ATN); // Capture state of ATN
   *eoi = false;
 
   // Wait for interval to expire
@@ -1020,7 +1041,8 @@ uint8_t GPIBbus::readByte(uint8_t *db, bool readWithEoi, bool *eoi) {
 
     if (stage == 6) {
       // Wait for DAV to go LOW indicating talker has finished setting data lines..
-      if (digitalRead(DAV) == LOW) {
+//      if (digitalRead(DAV) == LOW) {
+      if (getGpibPinState(DAV) == LOW) {
         // Assert NRFD (Busy reading data)
         setGpibState(0b00000000, 0b00000100, 0);
         stage = 7;
@@ -1039,7 +1061,8 @@ uint8_t GPIBbus::readByte(uint8_t *db, bool readWithEoi, bool *eoi) {
 
     if (stage == 8) {
       // Wait for DAV to go HIGH indicating data no longer valid (i.e. transfer complete)
-      if (digitalRead(DAV) == HIGH) {
+//      if (digitalRead(DAV) == HIGH) {
+      if (getGpibPinState(DAV) == HIGH) {
         // Re-assert NDAC - handshake complete, ready to accept data again
         setGpibState(0b00000000, 0b00000010, 0);
         stage = 9;
@@ -1105,12 +1128,14 @@ uint8_t GPIBbus::writeByte(uint8_t db, bool isLastByte) {
 
     // Wait for NDAC to go LOW (indicating that devices (stage==4) || (stage==8) ) are at attention)
     if (stage == 4) {
-      if (digitalRead(NDAC) == LOW) stage = 5;
+//      if (digitalRead(NDAC) == LOW) stage = 5;
+      if (getGpibPinState(NDAC) == LOW) stage = 5;
     }
 
     // Wait for NRFD to go HIGH (indicating that receiver is ready)
     if (stage == 5) {
-      if (digitalRead(NRFD) == HIGH) stage = 6;
+//      if (digitalRead(NRFD) == HIGH) stage = 6;
+      if (getGpibPinState(NRFD) == HIGH) stage = 6;
     }
 
     if (stage == 6){
@@ -1131,12 +1156,14 @@ uint8_t GPIBbus::writeByte(uint8_t db, bool isLastByte) {
 
     if (stage == 7) {
       // Wait for NRFD to go LOW (receiver accepting data)
-      if (digitalRead(NRFD) == LOW) stage = 8;
+//      if (digitalRead(NRFD) == LOW) stage = 8;
+      if (getGpibPinState(NRFD) == LOW) stage = 8;
     }
 
     if (stage == 8) {
       // Wait for NDAC to go HIGH (data accepted)
-      if (digitalRead(NDAC) == HIGH) {
+//      if (digitalRead(NDAC) == HIGH) {
+      if (getGpibPinState(NDAC) == HIGH) {
         stage = 9;
         break;
       }

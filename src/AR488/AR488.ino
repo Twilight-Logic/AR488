@@ -23,7 +23,7 @@
 */
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.51.09, 20/06/2022" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.51.13, 10/10/2022" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -255,7 +255,6 @@ static const char cmdHelp[] PROGMEM = {
   "srqauto:C Automatically condiuct serial poll when SRQ is asserted\n"
   "ton:C Put controller in talk-only mode (send data only)\n"
   "verbose:C Verbose (human readable) mode\n"
-  "tmbus:C Timing parameters (see the doc)\n"
   "xdiag:C Bus diagnostics (see the doc)\n"
 };
 
@@ -323,12 +322,6 @@ bool aTl = false;
 // Data send mode flags
 bool dataBufferFull = false;    // Flag when parse buffer is full
 
-// Interrupt flag for MCP23S17
-//#if defined(AR488_MCP23S17) || defined(AR488_MCP23017)
-//extern volatile bool mcpIntA;  // MCP23S17 interrupt handler
-//uint8_t mcpPinAssertedReg = 0;
-//#endif
-
 // State flags set by interrupt being triggered
 //extern volatile bool isATN;  // has ATN been asserted?
 //extern volatile bool isSRQ;  // has SRQ been asserted?
@@ -380,41 +373,6 @@ void setup() {
 #endif
 
 
-  // Using MCP23S17 (SPI) expander chip
-#ifdef AR488_MCP23S17
-  // Enable SPI
-  SPI.begin();
-  // Optional: Clock divider (slow down the bus speed [optional])
-  SPI.setClockDivider(SPI_CLOCK_DIV8);
-  // Ensure the MCP select pin is set as an OUPTPUT and is HIGH
-  pinMode(MCP_SELECTPIN, OUTPUT);
-  digitalWrite(MCP_SELECTPIN, HIGH);
-  // Enable the hardware address pins (A0-A2) on the MCP23S17
-  mcpByteWrite(MCPCON, 0b00001000);
-  // Enable MCP23S17 interrupts
-  mcpInterruptsEn();
-  // Attach interrupt handler to Arduino board pin for MCP23S17 to signal interrupt has occurred
-//  attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
-#endif
-
-
-  // Using MCP23017 (I2C) expander chip
-#ifdef AR488_MCP23017
-  // Start I2C
-  Wire.begin();
-  // OPtional: Set the I2C bus clock frequency in Hertz (optional - 10000 [slow], 100000 [standard], 400000 [fast], 3400000 [fast plus])
-  // Check processor documentation for which modes are supported
-//  Wire.setClock(100000);
-//  digitalWrite(MCP_SELECTPIN, HIGH);
-  // Enable the hardware address pins (A0-A2) on the MCP23017
-  mcpByteWrite(MCPCON, 0b00001000);
-  // Enable MCP23017 interrupts
-  mcpInterruptsEn();
-  // Attach interrupt handler to Arduino board pin for MCP23S17 to signal interrupt has occurred
-//  attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
-#endif
-  
-  
   // Using AVR board with PCINT interrupts
 /*
 #ifdef USE_INTERRUPTS
@@ -445,6 +403,48 @@ void setup() {
 #endif
 
 
+  // Using MCP23S17 (SPI) expander chip
+#ifdef AR488_MCP23S17
+//Serial.println(F("Starting SPI..."));
+  // Enable SPI
+  SPI.begin();
+  // Optional: Clock divider (slow down the bus speed [optional])
+  SPI.setClockDivider(SPI_CLOCK_DIV8);
+  // Ensure the MCP select pin is set as an OUPTPUT and is HIGH
+  pinMode(MCP_SELECTPIN, OUTPUT);
+  digitalWrite(MCP_SELECTPIN, HIGH);
+  // Set expander configuration register
+  // (Bit 1=0 sets active low for Int A)
+  // (Bit 3=1 enables hardware address pins (MCP23S17 only)
+  // (Bit 7=0 sets registers to be in same bank)
+  mcpByteWrite(MCPCON, 0b00001000);
+  // Enable MCP23S17 interrupts
+  mcpInterruptsEn();
+    // Attach interrupt handler to Arduino board pin for MCP23S17 to signal interrupt has occurred
+    attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
+//Serial.println(F("SPI started."));
+#endif
+
+
+  // Using MCP23017 (I2C) expander chip
+#ifdef AR488_MCP23017
+  // Start I2C
+  Wire.begin();
+  // OPtional: Set the I2C bus clock frequency in Hertz (optional - 10000 [slow], 100000 [standard], 400000 [fast], 3400000 [fast plus])
+  // Check processor documentation for which modes are supported
+//  Wire.setClock(100000);
+
+  // Set expander configuration register
+  // (Bit 1=0 sets active low for Int A)
+  // (Bit 3 is not relevant for the 23017)
+  // (Bit 7=0 sets registers to be in same bank)
+  mcpByteWrite(MCPCON, 0b00000000);
+
+  // Enable MCP23017 interrupts
+  mcpInterruptsEn();
+  // Attach interrupt handler to Arduino board pin for MCP23S17 to signal interrupt has occurred
+  attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
+#endif
 
 
 // Un-comment for diagnostic purposes
@@ -717,37 +717,6 @@ uint8_t serialIn_h() {
 }
 
 
-/***** Detect pin state *****/
-/*
- * When interrupts are being used the pin state is automatically flagged 
- * when an interrupt is triggered. Where interrupts cannot be used, the
- * state of the pin is read.
- * 
- * Read pin state using digitalRead for Arduino pins or getGpibPinState
- * for MCP23S17 pins.
- */
-/* 
-bool isAsserted(uint8_t gpibsig) {
-#if defined(AR488_MCP23S17) || defined(AR488_MCP23017)
-  // Use MCP function to get MCP23S17 or MCP23017 pin state.
-  // If interrupt flagged then update mcpPinAssertedReg register
-  if (mcpIntA){
-//dataPort.println(F("Interrupt flagged - pin state checked"));
-    // Clear mcpIntA flag
-    mcpIntA = false;
-    // Get inverse of pin status at interrupt (0 = true [asserted]; 1 = false [unasserted])
-    mcpPinAssertedReg = ~getMcpIntAPinState();
-//dataPort.print(F("mcpPinAssertedReg: "));
-//dataPort.println(mcpPinAssertedReg, BIN);
-  }
-  return (mcpPinAssertedReg & (1<<gpibsig));
-#else
-  // Use digitalRead function to get current Arduino pin state
-  return (digitalRead(gpibsig) == LOW) ? true : false;
-#endif
-}
-*/
-
 /*************************************/
 /***** Device operation routines *****/
 /*************************************/
@@ -978,7 +947,6 @@ static cmdRec cmdHidx [] = {
   { "unt",         2, (void(*)(char*)) untalk_h    },
   { "ver",         3, ver_h       },
   { "verbose",     3, (void(*)(char*)) verb_h    },
-//  { "tmbus",       3, tmbus_h     },
   { "xdiag",       3, xdiag_h     }
 //  { "xonxoff",     3, xonxoff_h   }
 };
@@ -2106,11 +2074,13 @@ void macro_h(char *params) {
  * mode: 0=data bus; 1=control bus
  * byte: byte to write on the bus
  * Note: values to switch individual bits = 1,2,4,8,10,20,40,80
+ * States revert to controller or device mode after 10 seconds
+ * Databus reverts to 0 (all HIGH) after 10 seconds
  */
 void xdiag_h(char *params){
   char *param;
   uint8_t mode = 0;
-  uint8_t val = 0;
+  uint8_t byteval = 0;
   
   // Get first parameter (mode = 0 or 1)
   param = strtok(params, " \t");
@@ -2127,21 +2097,21 @@ void xdiag_h(char *params){
   param = strtok(NULL, " \t");
   if (param != NULL) {
     if (strlen(param)<4){
-      val = atoi(param);
+      byteval = atoi(param);
     }
 
     switch (mode) {
       case 0:
           // Set to required value
-          gpibBus.setDataVal(val);
+          gpibBus.setDataVal(byteval);
           // Reset after 10 seconds
           delay(10000);
           gpibBus.setDataVal(0);
           break;
       case 1:
           // Set to required state
-          gpibBus.setControlVal(0xFF, 0xFF, 1);  // Set direction
-          gpibBus.setControlVal(~val, 0xFF, 0);  // Set state (low=asserted so must be inverse of value)
+          gpibBus.setControlVal(0xFF, 0xFF, 1);  // Set direction (all pins as outputs)
+          gpibBus.setControlVal(~byteval, 0xFF, 0);  // Set state (asserted=LOW so must invert value)
           // Reset after 10 seconds
           delay(10000);
           if (gpibBus.cfg.cmode==2) {
@@ -2150,21 +2120,8 @@ void xdiag_h(char *params){
             gpibBus.setControls(DINI);
           }
           break;
-#ifdef AR488_MCP23S17
-      case 2:
-        // MCP23S17 direction
-        mcpByteWrite(MCPDIRA, 0b00000000);  // Port direction: 0 = output; 1 = input;
-        mcpByteWrite(MCPPORTA, val);
-        break;
-#endif
     }
-/*
-    if (mode) {   // Control bus
 
-    }else{        // Data bus
-
-    }
-*/
   }
 
 }
@@ -2187,23 +2144,6 @@ void xonxoff_h(char *params){
 }
 */
 
-
-/****** Timing parameters ******/
-/*
-void tmbus_h(char *params) {
-  uint16_t val;
-  if (params != NULL) {
-    if (notInRange(params, 0, 30000, val)) return;
-    AR488.tmbus = val;
-    if (isVerb) {
-      dataPort.print(F("TmBus set to: "));
-      dataPort.println(val);
-    };
-  } else {
-    dataPort.println(AR488.tmbus, DEC);
-  }
-}
-*/
 
 /***** Set device ID *****/
 /*
@@ -2720,7 +2660,9 @@ void device_gtl_h(){
 
 void lonMode(){
 
-  gpibBus.receiveData(dataPort, false, false, 0);
+  if (!gpibBus.isAsserted(ATN)) {
+    gpibBus.receiveData(dataPort, false, false, 0);
+  }
 
   // Clear the buffer to prevent it getting blocked
   if (lnRdy==2) flushPbuf();
