@@ -12,7 +12,7 @@
   #endif
 #endif
 
-/***** AR488_GPIBbus.cpp, ver. 0.51.13, 10/10/2022 *****/
+/***** AR488_GPIBbus.cpp, ver. 0.51.14, 11/10/2022 *****/
 
 
 /*********************************************/
@@ -151,7 +151,7 @@ class GPIBbus {
 
     void setStatus(uint8_t statusByte);
     bool sendCmd(uint8_t cmdByte);
-    uint8_t readByte(uint8_t *db, bool readWithEoi, bool *eoi);  
+    uint8_t readByte(uint8_t *db, bool readWithEoi, bool *eoi);
     uint8_t writeByte(uint8_t db, bool isLastByte);
     bool receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte, uint8_t endByte);
     void sendData(char *data, uint8_t dsize);
@@ -173,7 +173,7 @@ class GPIBbus {
   private:
 
     bool deviceAddressed;
-    uint8_t deviceAddressedState;
+//    uint8_t deviceAddressedState;
     
 //    bool writeByteHandshake(uint8_t db);
 //    boolean waitOnPinState(uint8_t state, uint8_t pin, int interval);

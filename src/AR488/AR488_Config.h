@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.51.13, 10/10/2022"
+#define FWVER "AR488 GPIB controller, ver. 0.51.14, 11/10/2022"
 
 
 
@@ -42,9 +42,10 @@
 /*** UNO and NANO boards ***/
 #elif __AVR_ATmega328P__
   /* Board/layout selection */
-  //#define AR488_UNO
+  #define AR488_UNO
   //#define AR488_NANO
-  #define AR488_MCP23017
+  //#define AR488_MCP23S17
+  //#define AR488_MCP23017
 
 /*** MEGA 32U4 based boards (Micro, Leonardo) ***/
 #elif __AVR_ATmega32U4__
@@ -92,7 +93,7 @@
 #endif
 
 /***** Debug port *****/
-//#define DEBUG_ENABLE
+#define DEBUG_ENABLE
 #ifdef DEBUG_ENABLE
   // Serial port device
   #define DB_SERIAL_PORT Serial
@@ -127,8 +128,8 @@
 /***** Enable MCP23S17 chip *****/
 /*
  * This version uses the SPI interface with speeds up to 10MHz max
+ * Note: Use #define MCP23S17 as the layout definition
  */
-//#define AR488_MCP23S17
 #ifdef AR488_MCP23S17
   #define MCP_ADDRESS   0
   #define MCP_SELECTPIN 10
@@ -140,6 +141,7 @@
 /*
  * This version uses the I2C interface with speeds of 100kHz, 400kHz and 1,7MHz
  * Pull up resistors (4.7k) are required on the SDA and SCL pins
+ * Note: Use #define MCP23017 as the layout definition
  */
 #ifdef AR488_MCP23017
   #define MCP_ADDRESS   1
@@ -155,9 +157,12 @@
  */
 //#define SN7516X
 #ifdef SN7516X
-  #define SN7516X_TE 6
+//  #define SN7516X_TE 6
 //  #define SN7516X_DC 13
 //  #define SN7516X_SC 12
+  // ONLYA board
+  #define SN7516X_TE 13
+  #define SN7516X_DC 5
 #endif
 
 
@@ -228,7 +233,7 @@
   //#define DEBUG_CMD_PARSER      // getCmd()
   //#define DEBUG_SEND_TO_INSTR   // sendToInstrument();
   //#define DEBUG_SPOLL           // spoll_h()
-  //#define DEBUG_DEVICE_ATN      // attnRequired()
+  #define DEBUG_DEVICE_ATN      // attnRequired()
   //#define DEBUG_IDFUNC          // ID command
 
   // AR488_GPIBbus module

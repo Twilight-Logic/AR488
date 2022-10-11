@@ -23,7 +23,7 @@
 */
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.51.13, 10/10/2022" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.51.14, 11/10/2022" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -302,9 +302,6 @@ bool isQuery = false;               // Direct instrument command is a query
 uint8_t tranBrk = 0;                // Transmission break on 1=++, 2=EOI, 3=ATN 4=UNL
 uint8_t endByte = 0;                // Termination character
 
-// Device mode - send data
-//bool snd = false;
-
 // Escaped character flag
 bool isEsc = false;           // Charcter escaped
 bool isPlusEscaped = false;   // Plus escaped
@@ -313,11 +310,10 @@ bool isPlusEscaped = false;   // Plus escaped
 bool isRO = false;
 
 // Talk only mode flag
-bool isTO = false;
+uint8_t isTO = 0;
 
-// GPIB command parser
-bool aTt = false;
-bool aTl = false;
+bool isProm = false;
+
 
 // Data send mode flags
 bool dataBufferFull = false;    // Flag when parse buffer is full
@@ -597,15 +593,7 @@ if (lnRdy>0){
       }
     }
 
-    // Check status of SRQ and SPOLL if asserted
-//    if (isSRQ && isSrqa) {
-/*
-    if (gpibBus.isAsserted(SRQ) && isSrqa) {
-      spoll_h(NULL);
-//      isSRQ = false;
-    }
-*/
-    // Automatic serial poll?
+    // Automatic serial poll (check status of SRQ and SPOLL if asserted)?
     if (isSrqa) {
       if (gpibBus.isAsserted(SRQ)) spoll_h(NULL);
     }
@@ -634,8 +622,9 @@ if (lnRdy>0){
 
   // Device mode:
   if (gpibBus.isController()==false) {
-    if (isTO) {
-      if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
+    if (isTO>0) {
+//      if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
+      tonMode();
     }else if (isRO) {
       lonMode();
     }else if (gpibBus.isAsserted(ATN)) {
@@ -643,6 +632,12 @@ if (lnRdy>0){
       attnRequired();
 //      dataPort.println(F("ATN loop finished"));
     }
+
+    // Can't send in LON mode so just clear the buffer
+    if (isProm) {
+      if (lnRdy == 2) flushPbuf();
+    }
+      
 /*    
     else{
       if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
@@ -930,6 +925,7 @@ static cmdRec cmdHidx [] = {
   { "msa",         2, sendmsa_h   },
   { "mta",         2, (void(*)(char*)) sendmta_h },
   { "ppoll",       2, (void(*)(char*)) ppoll_h   },
+  { "prom",        1, prom_h      },
   { "read",        2, read_h      },
   { "read_tmo_ms", 2, rtmo_h      },
   { "ren",         2, ren_h       },
@@ -1560,7 +1556,7 @@ void spoll_h(char *params) {
   uint8_t r;
   //  uint8_t i = 0;
   uint8_t j = 0;
-  uint16_t val = 0;
+  uint16_t addrval = 0;
   bool all = false;
   bool eoiDetected = false;
 
@@ -1582,22 +1578,27 @@ void spoll_h(char *params) {
       } else {
         param = strtok(NULL, " \t");
       }
+      // No further parameters so exit 
+      if (!param) break;
+      
       // The 'all' parameter given?
       if (strncmp(param, "all", 3) == 0) {
         all = true;
         j = 30;
         if (isVerb) dataPort.println(F("Serial poll of all devices requested..."));
         break;
-        // Read all address parameters
-      } else if (strlen(params) < 3) { // No more than 2 characters
-        if (notInRange(param, 1, 30, val)) return;
-        addrs[j] = (uint8_t)val;
+      // Valid GPIB address parameter ?
+      } else if (strlen(param) < 3) { // No more than 2 characters
+        if (notInRange(param, 1, 30, addrval)) return;
+        addrs[j] = (uint8_t)addrval;
         j++;
+      // Other condition
       } else {
         errBadCmd();
         if (isVerb) dataPort.println(F("Invalid parameter"));
         return;
       }
+
     }
   }
 
@@ -1630,16 +1631,16 @@ void spoll_h(char *params) {
 
     // Set GPIB address in val
     if (all) {
-      val = i;
+      addrval = i;
     } else {
-      val = addrs[i];
+      addrval = addrs[i];
     }
 
     // Don't need to poll own address
-    if (val != gpibBus.cfg.caddr) {
+    if (addrval != gpibBus.cfg.caddr) {
 
       // Address a device to talk
-      if ( gpibBus.sendCmd(GC_TAD + val) )  {
+      if ( gpibBus.sendCmd(GC_TAD + addrval) )  {
 
 #ifdef DEBUG_SPOLL
         DB_PRINT(F("failed to send TAD"),"");
@@ -1655,11 +1656,12 @@ void spoll_h(char *params) {
 
       // If we successfully read a byte
       if (!r) {
-        if (j > 1) {
+        if (j == 30) {
           // If all, return specially formatted response: SRQ:addr,status
           // but only when RQS bit set
           if (sb & 0x40) {
             dataPort.print(F("SRQ:")); dataPort.print(i); dataPort.print(F(",")); dataPort.println(sb, DEC);
+            // Exit on first device to respond
             i = j;
           }
         } else {
@@ -1669,8 +1671,9 @@ void spoll_h(char *params) {
             dataPort.print(F("Received status byte ["));
             dataPort.print(sb);
             dataPort.print(F("] from device at address: "));
-            dataPort.println(val);
+            dataPort.println(addrval);
           }
+          // Exit on first device to respond
           i = j;
         }
       } else {
@@ -1758,14 +1761,17 @@ void save_h() {
 
 /***** Show state or enable/disable listen only mode *****/
 void lon_h(char *params) {
-  uint16_t val;
+  uint16_t lval;
   if (params != NULL) {
-    if (notInRange(params, 0, 1, val)) return;
-    isRO = val ? true : false;
-    if (isTO) isTO = false; // Talk-only mode must be disabled!
+    if (notInRange(params, 0, 1, lval)) return;
+    isRO = lval ? true : false;
+    if (isRO) {
+      isTO = 0;       // Talk-only mode must be disabled!
+      isProm = false; // Promiscuous mode must be disabled!
+    }
     if (isVerb) {
       dataPort.print(F("LON: "));
-      dataPort.println(val ? "ON" : "OFF") ;
+      dataPort.println(lval ? "ON" : "OFF") ;
     }
   } else {
     dataPort.println(isRO);
@@ -1954,18 +1960,52 @@ void setvstr_h(char *params) {
 }
 
 
-/***** Talk only mode *****/
-void ton_h(char *params) {
-  uint16_t val;
+/***** Show state or enable/disable promiscuous mode *****/
+void prom_h(char *params) {
+  uint16_t pval;
   if (params != NULL) {
-    if (notInRange(params, 0, 1, val)) return;
-    isTO = val ? true : false;
-    if (isTO) isRO = false; // Read-only mode must be disabled in TO mode!
+    if (notInRange(params, 0, 1, pval)) return;
+    isProm = pval ? true : false;
+    if (isProm) {
+      isTO = 0;     // Talk-only mode must be disabled!
+      isRO = false; // Listen-only mode must be disabled!
+    }
     if (isVerb) {
-      dataPort.print(F("TON: "));
-      dataPort.println(val ? "ON" : "OFF") ;
+      dataPort.print(F("PROM: "));
+      dataPort.println(pval ? "ON" : "OFF") ;
     }
   } else {
+    dataPort.println(isProm);
+  }
+}
+
+
+
+/***** Talk only mode *****/
+void ton_h(char *params) {
+  uint16_t toval;
+  if (params != NULL) {
+    if (notInRange(params, 0, 2, toval)) return;
+//    isTO = val ? true : false;
+    isTO = (uint8_t)toval;
+    if (isTO>0) {
+      isRO = false;   // Read-only mode must be disabled in TO mode!
+      isProm = false; // Promiscuous mode must be disabled in TO mode!
+    }
+  }else{
+    if (isVerb) {
+      dataPort.print(F("TON: "));
+      switch (isTO) {
+        case 1:
+          dataPort.println(F("ON unbuffered"));
+          break;
+        case 2:
+          dataPort.println(F("ON buffered"));
+          break;
+        default:
+          dataPort.println(F("OFF"));
+      }
+    }
     dataPort.println(isTO);
   }
 }
@@ -2385,7 +2425,11 @@ void attnRequired() {
 
   /***** Command process loop *****/
 
-  if (bytecnt>0) {  // Some command tokens to process
+  if (isProm) {
+    
+    device_listen_h();
+    
+  }else if (bytecnt>0) {  // Some command tokens to process
 
     // Process received command tokens
     for (uint8_t i=0; i<bytecnt; i++) { 
@@ -2453,26 +2497,31 @@ void attnRequired() {
     }
 #endif
 
-    /***** Otherwise perform controller mode read or write *****/
-    if (gpibBus.cfg.cmode == 2) { 
-
+    /***** Otherwise perform device mode read or write *****/
+    if (gpibBus.cfg.cmode == 1) { 
+/*
       // Listen for data
       if (gpibBus.isDeviceAddressedToListen()) {
         device_listen_h();
         atnstat |= 0x80;
       }
-
+*/
       // Talk (send data)
       if (gpibBus.isDeviceAddressedToTalk()) {
         device_talk_h();
         atnstat |= 0x80;
-          
+      // Listen
+      }else{
+        device_listen_h();
+        atnstat |= 0x80;        
       }
+
+
 
     }  // End mode = 2
 
 #ifdef DEBUG_DEVICE_ATN
-  }else{
+  }else{   
     DB_PRINT(F("No command to process!"),"");
 #endif
   }
@@ -2505,10 +2554,10 @@ void showATNStatus(uint8_t atnstat, uint8_t ustat, uint8_t atnbytes[], size_t bc
     debugStream.println(atnbytes[i], HEX);
   }
 */
-  DB_HEXA_PRINT(F("commands received"), atnbytes, bcnt);
+  DB_HEXA_PRINT(F("commands received: "), atnbytes, bcnt);
 
   DB_PRINT(F("ATN loop end."),"");
-  DB_PRINT(bcnt,F("bytes read."));
+  DB_PRINT(bcnt,F(" bytes read."));
   DB_PRINT(F("Status: "),stat);
 
 }
@@ -2579,7 +2628,6 @@ void device_sdc_h() {
   if (isVerb) dataPort.println(F("Resetting..."));
 #ifdef DEBUG_DEVICE_ATN
   DB_PRINT(F("Reset adressed to me: "),"");
-//  debugStream.println(aTl);
 #endif
   rst_h();
   if (isVerb) dataPort.println(F("Reset failed."));
@@ -2660,10 +2708,78 @@ void device_gtl_h(){
 
 void lonMode(){
 
-  if (!gpibBus.isAsserted(ATN)) {
-    gpibBus.receiveData(dataPort, false, false, 0);
+  uint8_t db = 0;
+  uint8_t r = 0;
+  bool eoiDetected = false;
+
+  // Set bus for device read mode
+  gpibBus.setControls(DLAS);
+
+  while (isRO) {
+
+    r = gpibBus.readByte(&db, false, &eoiDetected);
+    if (r == 0) dataPort.write(db);
+
+    // Check whether there are charaters waiting in the serial input buffer and call handler
+    if (dataPort.available()) {
+
+      lnRdy = serialIn_h();
+
+      // We have a command return to main loop and execute it
+      if (lnRdy==1) break;
+
+      // Clear the buffer to prevent it getting blocked
+      if (lnRdy==2) flushPbuf();
+
+    }
+
   }
 
-  // Clear the buffer to prevent it getting blocked
-  if (lnRdy==2) flushPbuf();
+  // Set bus to idle
+  gpibBus.setControls(DIDS);
+
+}
+
+
+/***** Talk only mpode *****/
+void tonMode(){
+
+  // Set bus for device read mode
+  gpibBus.setControls(DTAS);
+
+  while (isTO>0) {
+
+    // Check whether there are charaters waiting in the serial input buffer and call handler
+    if (dataPort.available()) {
+
+      if (isTO == 1) {
+        // Unbuffered version
+        gpibBus.writeByte(dataPort.read(), false);
+      }
+
+      if (isTO == 2) {
+        
+        // Buffered version
+        lnRdy = serialIn_h();
+
+        // We have a command return to main loop and execute it
+        if (lnRdy==1) break;
+
+        // Otherwise send the buffered data
+        if (lnRdy==2) {
+          for (uint8_t i=0; i<pbPtr; i++){
+            gpibBus.writeByte(pBuf[i], false);  // False = No EOI
+          }
+          flushPbuf();
+        }
+        
+      }
+
+    }
+
+  }
+
+  // Set bus to idle
+  gpibBus.setControls(DIDS);
+
 }
