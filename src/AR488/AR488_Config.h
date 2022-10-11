@@ -93,7 +93,7 @@
 #endif
 
 /***** Debug port *****/
-#define DEBUG_ENABLE
+//#define DEBUG_ENABLE
 #ifdef DEBUG_ENABLE
   // Serial port device
   #define DB_SERIAL_PORT Serial
@@ -233,7 +233,7 @@
   //#define DEBUG_CMD_PARSER      // getCmd()
   //#define DEBUG_SEND_TO_INSTR   // sendToInstrument();
   //#define DEBUG_SPOLL           // spoll_h()
-  #define DEBUG_DEVICE_ATN      // attnRequired()
+  //#define DEBUG_DEVICE_ATN      // attnRequired()
   //#define DEBUG_IDFUNC          // ID command
 
   // AR488_GPIBbus module
