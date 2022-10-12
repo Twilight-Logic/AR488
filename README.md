@@ -33,7 +33,7 @@ Commands generally adhere closely to the Prologix syntax, however there are some
 
 Once uploaded, the firmware should respond to the ++ver command with its version information.
 
-<b><i>DEVNULL Library</i><b>
+<b><i>DEVNULL Library</i></b>
 
 The project requires the DEVNULL library to be installed in the Arduino IDE. To install this library, please follow these steps:
 
