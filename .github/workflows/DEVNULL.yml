@@ -1,0 +1,48 @@
+name: Get latest DEVNULL libraries
+
+on:
+  workflow_dispatch:
+  push:
+  # schedule:
+  #   - cron: '11 11 * * * '    
+  
+jobs:
+  Get-latest-DEVNULL: 
+    if: github.repository == ‘Twilight-Logic/AR488’
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: './'
+      - run: |      
+          # Get latest DEVNULL release
+                    
+          if [ ! -d ./AR488/src/libraries/DEVNULL ] ; then
+            mkdir -p ./AR488/src/libraries/DEVNULL
+          fi
+          
+          mkdir temp
+          cd temp/
+          ver=$(curl -sL https://api.github.com/repos/RobTillaart/DEVNULL/releases | jq -r .[].tag_name | grep '^[0-9]\.[0-9]*\.[0-9]*$' | sort -nr | head -n1)
+          echo ${ver}
+          wget -q https://github.com/RobTillaart/DEVNULL/archive/refs/tags/${ver}.zip  
+
+          # Unpack and cleanup
+
+          unzip -q *.zip
+          cd DEVNULL-${ver}
+          rm -r .github test
+          rm .arduino-ci.yml
+          cd ..
+          cd ..
+          cp -r -T temp/DEVNULL-${ver} AR488/src/libraries/DEVNULL
+          rm -r temp/
+          
+          ls -l AR488/src/libraries/DEVNULL/
+          
+      - uses: EndBug/add-and-commit@v9
+        with:
+          message: 'Add DEVNULL library'
+          default_author: github_actions
+          add: 'AR488/src/libraries/ --all --force'
+          cwd: './'
