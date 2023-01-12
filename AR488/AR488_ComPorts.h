@@ -2,7 +2,7 @@
 #define AR488_COMPORTS_H
 
 #include <Arduino.h>
-#include <DEVNULL.h>
+#include "src/libraries/DEVNULL/DEVNULL.h"
 #include "AR488_Config.h"
 
 /***** AR488_ComPorts.cpp, ver. 0.51.09, 20/06/2022 *****/
