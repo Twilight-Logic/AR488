@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.51.10, 06/09/2022 *****/
+/***** AR488_Hardware.cpp, ver. 0.51.18, 26/02/2023 *****/
 /*
  * Hardware layout function definitions
  */
@@ -94,57 +94,6 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
   }
 }
 
-
-/***** Enable interrupts *****/
-/*
-#ifdef USE_INTERRUPTS
-
-volatile uint8_t atnPinMem = ATNPREG;
-volatile uint8_t srqPinMem = SRQPREG;
-static const uint8_t ATNint = 0b10000000;
-static const uint8_t SRQint = 0b00000100;
-
-
-void interruptsEn(){
-  cli();
-  PCICR |= 0b00000100;  // PORTD
-  PCMSK2 |= (SRQint^ATNint);
-  sei();
-}
-
-#pragma GCC diagnostic error "-Wmisspelled-isr"
-*/
-
-/***** Interrupt handler *****/
-/*
-ISR(PCINT2_vect) {
-
-  // Has PCINT23 fired (ATN asserted)?
-  if ((PIND ^ atnPinMem) & ATNint) {
-    isATN = (ATNPREG & ATNint) == 0;
-  }
-
-  // Has PCINT19 fired (SRQ asserted)?
-  if ((PIND ^ srqPinMem) & SRQint) {
-    isSRQ = (SRQPREG & SRQint) == 0;
-  }
-
-  // Save current state of PORTD register
-  atnPinMem = ATNPREG;
-  srqPinMem = SRQPREG;
-}
-*/
-
-/***** Catchall interrupt vector *****/
-/*
-  ISR(BADISR_vect) {
-  // ISR to catch ISR firing without handler
-  isBAD = true;
-  }
-*/
-//#endif //USE_INTERRUPTS
-
-
 #endif //AR488UNO/AR488_NANO
 /***** ^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** UNO/NANO BOARD LAYOUT *****/
@@ -180,18 +129,9 @@ uint8_t readGpibDbus() {
 /***** Set the GPIB data bus to output and with the requested byte *****/
 void setGpibDbus(uint8_t db) {
   // Set data pins as outputs
-//  DDRD |= 0b00110000;
-//  DDRC |= 0b00111111;
-
   DDRF |= 0b11111111;
 
-  // GPIB states are inverted
-//  db = ~db;
-
   // Set data bus
-//  PORTC = (PORTC & ~0b00111111) | (db & 0b00111111);
-//  PORTD = (PORTD & ~0b00110000) | ((db & 0b11000000) >> 2);
-
   PORTF = ~db;
 }
 
@@ -218,9 +158,6 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
   // PORT H - keep bits 5-0. Move bits 5-2 left 1 position to set bits 6-3 and 1-0 on port
   uint8_t portHb = ((bits & 0x3C) << 1) + (bits & 0x03);
   uint8_t portHm = ((mask & 0x3C) << 1) + (mask & 0x03);
-  // PORT D - keep bit 7, rotate bit 6 right 4 positions to set bit 2 on register
-//  uint8_t portDb = (bits & 0x80) + ((bits & 0x40) >> 4) + ((bits & 0x20) >> 2);
-//  uint8_t portDm = (mask & 0x80) + ((mask & 0x40) >> 4) + ((mask & 0x20) >> 2);
 
   // PORT B - keep bits 7 and 6, but rotate right 2 postions to set bits 5 and 4 on port 
   uint8_t portBb = ((bits & 0xC0) >> 2);
@@ -243,48 +180,6 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
   }
 }
 
-
-/***** Enable interrupts *****/
-/*
-#ifdef USE_INTERRUPTS
-
-volatile uint8_t atnPinMem = ATNPREG;
-volatile uint8_t srqPinMem = SRQPREG;
-static const uint8_t ATNint = 0b00100000;
-static const uint8_t SRQint = 0b00010000;
-
-
-void interruptsEn(){
-  cli();
-  PCICR |= 0b00000001;  // PORTB
-  PCMSK0 |= (SRQint^ATNint);
-  sei();
-}
-
-
-#pragma GCC diagnostic error "-Wmisspelled-isr"
-*/
-/***** Interrupt handler *****/
-/*
-ISR(PCINT0_vect) {
-
-  // Has PCINT5 fired (ATN asserted)?
-  if ((ATNPREG ^ atnPinMem) & ATNint) {
-    isATN = (ATNPREG & ATNint) == 0;
-  }
-
-  // Has PCINT4 fired (SRQ asserted)?
-  if ((SRQPREG ^ srqPinMem) & SRQint) {
-    isSRQ = (SRQPREG & SRQint) == 0;
-  }
-
-  // Save current state of PORTD register
-  atnPinMem = ATNPREG;
-  srqPinMem = SRQPREG;
-}
-
-#endif //USE_INTERRUPTS
-*/
 #endif //MEGA2560
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MEGA2560 BOARD LAYOUT (Default) *****/
@@ -419,47 +314,6 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
   }
 }
 
-
-/***** Enable interrupts *****/
-/*
-#ifdef USE_INTERRUPTS
-
-volatile uint8_t atnPinMem = ATNPREG;
-volatile uint8_t srqPinMem = SRQPREG;
-static const uint8_t ATNint = 0b00000010;
-static const uint8_t SRQint = 0b00001000;
-
-
-void interruptsEn(){
-  cli();
-  PCICR |= 0b00000001;  // PORTB
-  PCMSK0 |= (SRQint^ATNint);
-  sei();
-}
-
-#pragma GCC diagnostic error "-Wmisspelled-isr"
-*/
-/***** Interrupt handler *****/
-/*
-ISR(PCINT0_vect) {
-
-  // Has PCINT1 fired (ATN asserted)?
-  if ((ATNPREG ^ atnPinMem) & ATNint) {
-    isATN = (ATNPREG & ATNint) == 0;
-  }
-
-  // Has PCINT3 fired (SRQ asserted)?
-  if ((SRQPREG ^ srqPinMem) & SRQint) {
-    isSRQ = (SRQPREG & SRQint) == 0;
-  }
-
-  // Save current state of PORTD register
-  atnPinMem = ATNPREG;
-  srqPinMem = SRQPREG;
-}
-
-#endif //USE_INTERRUPTS
-*/
 #endif //MEGA2560
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MEGA2560 BOARD LAYOUT E1 *****/
@@ -588,48 +442,6 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
   }
 }
 
-
-/***** Enable interrupts *****/
-/*
-#ifdef USE_INTERRUPTS
-
-volatile uint8_t atnPinMem = ATNPREG;
-volatile uint8_t srqPinMem = SRQPREG;
-static const uint8_t ATNint = 0b00000001;
-static const uint8_t SRQint = 0b00000100;
-
-
-void interruptsEn(){
-  cli();
-  PCICR |= 0b00000001;  // PORTB
-  PCMSK0 |= (SRQint^ATNint);
-  sei();
-}
-
-
-#pragma GCC diagnostic error "-Wmisspelled-isr"
-*/
-/***** Interrupt handler *****/
-/*
-ISR(PCINT0_vect) {
-
-  // Has PCINT0 fired (ATN asserted)?
-  if ((ATNPREG ^ atnPinMem) & ATNint) {
-    isATN = (ATNPREG & ATNint) == 0;
-  }
-
-  // Has PCINT2 fired (SRQ asserted)?
-  if ((SRQPREG ^ srqPinMem) & SRQint) {
-    isSRQ = (SRQPREG & SRQint) == 0;
-  }
-
-  // Save current state of PORTD register
-  atnPinMem = ATNPREG;
-  srqPinMem = SRQPREG;
-}
-
-#endif //USE_INTERRUPTS
-*/
 #endif //MEGA2560
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
@@ -653,19 +465,6 @@ void readyGpibDbus() {
 
   // Read the byte of data on the bus
   // DIO8 -> PORTD bit 7, DIO7 -> PORTE bit 5, DIO6-DIO1 -> PORTB bit 451326
-
-/*
-#ifdef MICRODEBUG
-  Serial.print("B ");
-  Serial.print(PINB & 0x7e, HEX);
-  Serial.print(", D ");
-  Serial.print(PIND & 0x81, HEX);
-
-  uint8_t x = ~((PIND & 0b10000001) | (PINB & 0b01111110)) ;
-  Serial.print(" value ");
-  Serial.println(x);
-#endif
-*/
 }
 
 
@@ -691,15 +490,6 @@ void setGpibDbus(uint8_t db) {
   // Set data bus
   PORTB = (PORTB & ~0b01111110) | (db & 0b01111110) ;
   PORTD = (PORTD & ~0b10000001) | (db & 0b10000001);
-
-/*
-#ifdef MICRODEBUG
-  Serial.print("bits B ");
-  Serial.print(db & 0b01111110, HEX);
-  Serial.print(", bits D ");
-  Serial.println(db & 0b10000001, HEX);
-#endif
-*/
 }
 
 
@@ -748,8 +538,6 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
     }
   }
 
-  // slow due to messy port layout but infrequently needed
-
   if (mask & 0b11100001) {
 
     // PORTC - REN bit 5 rotated into bit 6
@@ -782,44 +570,6 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
   }
 }
 
-
-/***** Enable interrupts *****/
-/*
-#ifdef USE_INTERRUPTS
-
-volatile uint8_t atnPinMem = ATNPREG;
-volatile uint8_t srqPinMem = SRQPREG;
-static const uint8_t ATNint = 0b00000010;
-static const uint8_t SRQint = 0b01000000;
-
-void pin_change_interrupt(void) {
-
-  // Has the status of the ATN pin interrupt changed?
-  if ((ATNPREG ^ atnPinMem) & ATNint) {
-    // Set the current status of ATN
-    isATN = (ATNPREG & ATNint) == 0;
-  }
-
-  // Has the status of the SRQ pin interrupt changed?
-  if ((SRQPREG ^ srqPinMem) & SRQint) {
-    // Set the current status of SRQ
-    isSRQ = (SRQPREG & SRQint) == 0;
-  }
-
-  // Save current state of the interrupt registers
-  atnPinMem = ATNPREG;
-  srqPinMem = SRQPREG;
-}
-
-void interruptsEn(){
-  cli();
-  attachInterrupt(digitalPinToInterrupt(ATN), pin_change_interrupt, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(SRQ), pin_change_interrupt, CHANGE);
-  sei();  sei();
-}
-
-#endif  // USE_INTERRUPTS
-*/
 #endif  // AR488_MEGA32U4_MICRO
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MICRO PRO (32u4) BOARD LAYOUT for MICRO (Artag) *****/
@@ -933,32 +683,6 @@ uint8_t reverseBits(uint8_t dbyte) {
    return dbyte;
 }
 
-
-/***** Enable interrupts *****/
-/*
-#ifdef USE_INTERRUPTS
-
-//volatile uint8_t atnPinMem = ATNPREG;
-//volatile uint8_t srqPinMem = SRQPREG;
-//static const uint8_t ATNint = 0b10000000;
-//static const uint8_t SRQint = 0b00000100;
-
-void atnISR() {
-  isATN = (digitalRead(ATN) ? false : true);  
-}
-
-void srqISR() {
-  isSRQ = (digitalRead(SRQ) ? false : true);  
-}
-
-void interruptsEn(){
-  attachInterrupt(digitalPinToInterrupt(ATN), atnISR, CHANGE)
-  attachInterrupt(digitalPinToInterrupt(SRQ), srqISR, CHANGE)
-}
-
-#endif //USE_INTERRUPTS
-*/
-
 #endif //AR488_MEGA32U4_LR3
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** LEONARDO R3 BOARD LAYOUT *****/
@@ -976,6 +700,22 @@ void interruptsEn(){
 const uint8_t chipSelect = MCP_SELECTPIN;
 const uint8_t mcpAddr = MCP_ADDRESS;      // Must be between 0 and 7
 uint8_t mcpIntAReg = 0;
+
+
+/***** Ready the SPI bus *****/
+void mcpInit(){
+  SPI.begin();
+  // Optional: Clock divider (slow down the bus speed [optional])
+  SPI.setClockDivider(SPI_CLOCK_DIV8);
+  // Set expander configuration register
+  // (Bit 1=0 sets active low for Int A)
+  // (Bit 3=1 enables hardware address pins (MCP23S17 only)
+  // (Bit 7=0 sets registers to be in same bank)
+  mcpByteWrite(MCPCON, 0b00001000);
+  // Enable MCP23S17 interrupts
+  mcpInterruptsEn();
+}
+
 
 
 /***** Set the GPIB data bus to input pullup *****/
@@ -1330,40 +1070,9 @@ uint8_t mcpDigitalRead(uint8_t pin) {
 
 /***** Get the status of an MCP23017 pin) *****/
 uint8_t getGpibPinState(uint8_t pin){
-/*  
-  if (mcpIntA) {
-    if (pin==ATN || pin==SRQ || pin==EOI){
-      // Update status of register
-      mcpPinAssertedReg = mcpByteRead(MCPINTCAPA);
-      // Reset interrupt flag
-      mcpIntA = false;
-      // Return status of selected pin
-      return (mcpPinAssertedReg & (1<<pin));
-    }
-  }
-*/
   return mcpDigitalRead(pin);
 }
 
-
-/***** Get the status of the MCP interrupt A pin *****/
-/*
-uint8_t getMcpIntAPinState(){
-  if (mcpIntA) {
-//    mcpPinAssertedReg = ~getMcpIntAPinState();
-    mcpPinAssertedReg = ~(mcpByteRead(MCPINTCAPA));
-  }
-  return (mcpPinAssertedReg & (1<<gpibsig));
-}
-*/
-
-
-/***** Get the status of the MCP interrupt A pin *****/
-/*
-uint8_t getMcpIntAPinState(){
-  return mcpByteRead(MCPINTCAPA);
-}
-*/
 
 /***** Configure pins that will generate an interrupt *****/
 void mcpInterruptsEn(){

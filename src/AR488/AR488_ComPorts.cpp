@@ -1,15 +1,70 @@
 #include <Arduino.h>
 #include "AR488_ComPorts.h"
 
-/***** AR488_ComPorts.cpp, ver. 0.51.09, 20/06/2022 *****/
-/*
- * Serial Port implementation
+/***** AR488_ComPorts.cpp, ver. 0.51.18, 26/02/2023 *****/
+
+
+/***** DEVNULL Library *****
+ *  AUTHOR: Rob Tillaart
+ *  VERSION: 0.1.5
+ *  PURPOSE: Arduino library for a /dev/null stream - useful for testing
+ *  URL: https://github.com/RobTillaart/DEVNULL
  */
 
+DEVNULL::DEVNULL()
+{
+  setTimeout(0);        //  no timeout.
+  _bottomLessPit = -1;  //  nothing in the pit
+}
 
-/*****************************/ 
-/*****  DATA SERIAL PORT *****/
-/*****************************/
+int  DEVNULL::available()
+{
+  return 0;
+};
+
+int  DEVNULL::peek()
+{
+  return EOF;
+};
+
+int  DEVNULL::read()
+{
+  return EOF;
+};
+
+//  placeholder to keep CI happy
+void DEVNULL::flush()
+{
+  return;
+};
+
+size_t DEVNULL::write(const uint8_t data)
+{
+  _bottomLessPit = data;
+  return 1;
+}
+
+size_t DEVNULL::write( const uint8_t *buffer, size_t size)
+{
+  if (size > 0) _bottomLessPit = buffer[size - 1];
+  return size;
+}
+
+int DEVNULL::lastByte()
+{
+  return _bottomLessPit;
+}
+
+
+
+/***************************************/
+/***** Serial Port implementations *****/
+/***************************************/
+
+
+/****************************/ 
+/***** DATA SERIAL PORT *****/
+/****************************/
 
 #ifdef DATAPORT_ENABLE
   #ifdef AR_SERIAL_SWPORT
@@ -92,9 +147,9 @@
 
 
 
-/*****************************/ 
-/***** BLUETOOTH SUPPORT *****/
-/*****************************/
+/**************************/ 
+/***** BLUETOOTH PORT *****/
+/**************************/
 
 #ifdef AR_SERIAL_BT_NAME
 

@@ -15,7 +15,7 @@ To build an interface, at least one Arduino board will be required to act as the
 <tr><td>32u4</td><td>Micro</td><td>USB/CDC+1 UART</td><td>Compact layout by Artag, designed for his back-of-IEEE488-plug adapter board</td></tr>
 <tr><td>32u4</td><td>Leonardo R3</td><td>USB/CDC+1 UART</td><td>Identical to UNO</td></tr>
 <tr><td>644</td><td>MicroCore ATMega644</td><td>USB/Single UART</td><td>Increased memory and GPIO pins over UNO</td></tr>
-<tr><td>1024</td><td>MicroCore ATMega1024</td><td>USB/Single UART</td><td>Increased memory and GPIO pins over UNO</td></tr>
+<tr><td>1284</td><td>MicroCore ATMega1284</td><td>USB/Single UART</td><td>Increased memory and GPIO pins over UNO</td></tr>
 <tr><td>2560</td><td>Mega 2560</td><td>4 x UART, Serial0 shared with USB</td><td>D - (default) using pins on either side of board<br>E1 - using the first row of end connector<br>E2 - using the second row of end connector</td></tr>
 </table>
 

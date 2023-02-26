@@ -9,7 +9,7 @@
   extern Stream& debugStream;
 #endif
 
-/***** AR488_Hardware.h, ver. 0.51.09, 20/06/2022 *****/
+/***** AR488_Hardware.h, ver. 0.51.18, 26/02/2023 *****/
 /*
  * Hardware pin layout definitions
  */
@@ -61,15 +61,7 @@
 #define REN    3  /* GPIB 17 : PORTD bit 3 */
 #define ATN    7  /* GPIB 11 : PORTD bit 7 */
 
-/***** PIN interrupts ******/
-/*
-// Interrupt registers
-#ifdef USE_INTERRUPTS
-  #define ATNPREG PIND
-  #define SRQPREG PIND
-  void interruptsEn();
-#endif
-*/
+
 #endif
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** UNO/NANO LAYOUT DEFINITION *****/
@@ -102,14 +94,6 @@
 #define SRQ   10  /* GPIB 10 : PORTB bit 4 */
 #define ATN   11  /* GPIB 11 : PORTB bit 5 */
 
-/*
-// PCINT registers
-#ifdef USE_INTERRUPTS
-  #define ATNPREG PINB
-  #define SRQPREG PINB
-  void interruptsEn();
-#endif  // USE_INTERRUPTS
-*/
 #endif  // AR488_MEGA2560_D
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MEGA2560 LAYOUT DEFINITION (Default) *****/
@@ -142,14 +126,6 @@
 #define SRQ   50  /* GPIB 10 : PORTB bit 1 */
 #define ATN   52  /* GPIB 11 : PORTB bit 3 */
 
-/*
-// PCINT registers
-#ifdef USE_INTERRUPTS
-  #define ATNPREG PINB
-  #define SRQPREG PINB
-  void interruptsEn();
-#endif  // USE_INTERRUPTS
-*/
 #endif  // AR488_MEGA2560_E1
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MEGA2560 LAYOUT DEFINITION E1 *****/
@@ -182,14 +158,6 @@
 #define SRQ   51  /* GPIB 10 : PORTB bit 0 */
 #define ATN   53  /* GPIB 11 : PORTB bit 2 */
 
-/*
-// PCINT registers
-#ifdef USE_INTERRUPTS
-  #define ATNPREG PINB
-  #define SRQPREG PINB
-  void interruptsEn();
-#endif  // USE_INTERRUPTS
-*/
 #endif  // AR488_MEGA2560_E2
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MEGA2560 LAYOUT DEFINITION E2 *****/
@@ -220,13 +188,6 @@
 #define SRQ   7   /* GPIB 10 : PORTE bit 6 */
 #define ATN   2   /* GPIB 11 : PORTD bit 1 */
 
-/*
-#ifdef USE_INTERRUPTS
-  #define ATNPREG PIND
-  #define SRQPREG PINE
-  void interruptsEn();
-#endif  // USE_INTERRUPTS
-*/
 #endif  // AR488_MEGA32U4_MICRO
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MICRO PRO (32u4) LAYOUT DEFINITION for MICRO (Artag) *****/
@@ -259,19 +220,7 @@
 #define REN    3  /* GPIB 17 : PORTD bit 0 */
 #define ATN    7  /* GPIB 11 : PORTE bit 6 */
 
-/***** PIN interrupts ******/
-/*
-// Interrupt registers
-#ifdef USE_INTERRUPTS
-//  #define ATNPREG PIND
-//  #define SRQPREG PIND
-  void atnISR();
-  void srqISR();
-  void interruptsEn();
-#endif
-*/
 uint8_t reverseBits(uint8_t dbyte);
-
 
 #endif // AR488_MEGA32U4_LR3
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
@@ -324,15 +273,7 @@ uint8_t reverseBits(uint8_t dbyte);
 #define MCPWRITE 0b01000000
 #define MCPREAD  0b01000001
 
-
-/***** PIN interrupts ******/
-/*
-// We cannot use interrupt registers
-#ifdef USE_INTERRUPTS
-  #undef USE_INTERRUPTS
-#endif
-*/
-
+void mcpInit();
 uint8_t mcpByteRead(uint8_t reg);
 void mcpByteWrite(uint8_t reg, uint8_t db);
 uint8_t mcpDigitalRead(uint8_t pin);
@@ -391,22 +332,12 @@ uint8_t getMcpIntAReg();
 #define MCPWRITE 0b01000000
 #define MCPREAD  0b01000001
 
-
-/***** PIN interrupts ******/
-/*
-// We cannot use interrupt registers
-#ifdef USE_INTERRUPTS
-  #undef USE_INTERRUPTS
-#endif
-*/
-
 uint8_t mcpByteRead(uint8_t reg);
 void mcpByteWrite(uint8_t reg, uint8_t db);
 uint8_t mcpDigitalRead(uint8_t pin);
 void mcpInterruptsEn();
 void mcpIntHandler();
 uint8_t getMcpIntAReg();
-
 
 #endif // AR488_MCP23017
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/

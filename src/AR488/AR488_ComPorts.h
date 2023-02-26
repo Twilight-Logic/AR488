@@ -2,10 +2,38 @@
 #define AR488_COMPORTS_H
 
 #include <Arduino.h>
-#include <DEVNULL.h>
 #include "AR488_Config.h"
 
-/***** AR488_ComPorts.cpp, ver. 0.51.09, 20/06/2022 *****/
+/***** AR488_ComPorts.cpp, ver. 0.51.18, 26/02/2023 *****/
+
+
+/***** DEVNULL Library *****
+ *  AUTHOR: Rob Tillaart
+ *  VERSION: 0.1.5
+ *  PURPOSE: Arduino library for a /dev/null stream - useful for testing
+ *  URL: https://github.com/RobTillaart/DEVNULL
+ */
+
+class DEVNULL : public Stream
+{
+public:
+  DEVNULL();
+
+  int    available();
+  int    peek();
+  int    read();
+  void   flush();  //  placeholder to keep CI happy
+
+  size_t write(const uint8_t data);
+  size_t write( const uint8_t *buffer, size_t size);
+
+  int    lastByte();
+
+private:
+  uint8_t  _bottomLessPit;
+};
+
+
 /*
  * Serial Port definition
  */

@@ -7,13 +7,13 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.51.15, 12/10/2022"
+#define FWVER "AR488 GPIB controller, ver. 0.51.18, 26/02/2023"
 
 
 
 /***** BOARD CONFIGURATION *****/
 /*
- * Platform will be selected automatically based on
+ * Platform will be selected automatically based on 
  * Arduino definition.
  * Only ONE board/layout should be selected per platform
  * Only ONE Serial port can be used to receive output
@@ -43,15 +43,15 @@
 #elif __AVR_ATmega328P__
   /* Board/layout selection */
   #define AR488_UNO
-  //#define AR488_NANO
+  #define AR488_NANO
   //#define AR488_MCP23S17
   //#define AR488_MCP23017
 
 /*** MEGA 32U4 based boards (Micro, Leonardo) ***/
 #elif __AVR_ATmega32U4__
   /*** Board/layout selection ***/
-  //#define AR488_MEGA32U4_MICRO  // Artag's design for Micro board
-  #define AR488_MEGA32U4_LR3  // Leonardo R3 (same pin layout as Uno)
+  #define AR488_MEGA32U4_MICRO  // Artag's design for Micro board
+  //#define AR488_MEGA32U4_LR3  // Leonardo R3 (same pin layout as Uno)
   
 /*** MEGA 2560 board ***/
 #elif __AVR_ATmega2560__

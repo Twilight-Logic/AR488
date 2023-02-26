@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_GPIBbus.h"
 
-/***** AR488_GPIB.cpp, ver. 0.51.15, 12/10/2022 *****/
+/***** AR488_GPIB.cpp, ver. 0.51.17, 24/12/2022 *****/
 
 
 /****** Process status values *****/
@@ -608,34 +608,13 @@ void GPIBbus::sendData(char *data, uint8_t dsize) {
 
   bool err = false;
 
-/* Shouldn't get gere!
-  // If lon is turned on we cannot send data so exit
-  if (isRO) return;
-*/
-
-  // Controler can unlisten bus and address devices
+  // Set control pins for writing data (ATN unasserted)
   if (cfg.cmode == 2) {
-/*
-    if (!addressingSuppressed) {
-      // Address device to listen
-      if (addressDevice(cfg.paddr, 0)) {
-#ifdef DEBUG_GPIBbus_SEND
-        DB_PRINT(F("failed to address device to listen: "), cfg.paddr);
-#endif
-        return;
-      }
-    }
-
-#ifdef DEBUG_GPIBbus_SEND
-    DB_PTINT(F("device addressed."),"");
-#endif
-*/
-    // Set control lines to write data (ATN unasserted)
     setControls(CTAS);
-
   } else {
     setControls(DTAS);
   }
+  
 #ifdef DEBUG_GPIBbus_SEND
   DB_PRINT(F("write data mode is set."),"");
   DB_PRINT(F("begin send loop->"),"");
@@ -649,11 +628,13 @@ void GPIBbus::sendData(char *data, uint8_t dsize) {
       err = writeByte(data[i], NO_EOI);
     } else {
       // Otherwise ignore non-escaped CR, LF and ESC
-      if ((data[i] != CR) || (data[i] != LF) || (data[i] != ESC)) err = writeByte(data[i], NO_EOI);
+      if ((data[i] != CR) && (data[i] != LF) && (data[i] != ESC)) err = writeByte(data[i], NO_EOI);
     }
+    
 #ifdef DEBUG_GPIBbus_SEND
     DB_RAW_PRINT(data[i]);
 #endif
+
     if (err) break;
   }
 

@@ -14,16 +14,7 @@
 #include "AR488_Eeprom.h"
 
 
-/*
-#ifdef USE_INTERRUPTS
-  #ifdef __AVR__
-    #include <avr/interrupt.h>
-  #endif
-#endif
-*/
-
-
-/***** FWVER "AR488 GPIB controller, ver. 0.51.15, 12/10/2022" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.51.18, 26/02/2023" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
@@ -59,57 +50,12 @@
    - When set to INPUT_PULLUP, a 10k pull-up (to VCC) resistor is applied to the input
 */
 
-/*
-static const char helpText[] PROGMEM = R"EOF(
-Standard commands
-
-   ++addr         - display/set device address
-   ++auto         - automatically request talk and read response
-   ++clr          - send Selected Device Clear to current GPIB address
-   ++eoi          - enable/disable assertion of EOI signal
-   ++eos          - specify GPIB termination character
-   ++eot_enable   - enable/disable appending user specified character to USB
-                    output on EOI detection
-   ++eot_char     - set character to append to USB output when EOT enabled
-   ++ifc          - assert IFC signal for 150 miscoseconds - make AR488
-                    controller in charge
-   ++llo          - local lockout - disable front panel operation on instrument
-   ++loc          - enable front panel operation on instrument
-   ++lon          - put controller in listen-only mode (listen to all traffic)
-   ++mode         - set the interface mode (0=controller/1=device)
-   ++read         - read data from instrument
-   ++read_tmo_ms  - read timeout specified between 1 - 3000 milliseconds
-   ++rst          - reset the controller
-   ++savecfg      - save configration
-   ++spoll        - serial poll the addressed host or all instruments
-   ++srq          - return status of srq signal (1-asserted/0-not asserted)
-   ++status       - set the status byte to be returned on being polled (bit 6 = RQS, i.e SRQ asserted)
-   ++trg          - send trigger to selected devices (up to 15 addresses)
-   ++ver          - display firmware version
-
-Proprietry commands:
-
-   ++aspoll       - serial poll all instruments (alias: ++spoll all)
-   ++default      - set configuration to controller default settings
-   ++dcl          - send unaddressed (all) device clear  [power on reset] (is the rst?)
-   ++id name      - show/set the name of the interface
-   ++id serial    - show/set the serial number of the interface
-   ++id verstr    - show/set the version string (replaces setvstr)
-   ++idn          - enable/disable reply to *idn? (disabled by default)
-   ++ren          - assert or unassert the REN signal
-   ++ppoll        - conduct a parallel poll
-   ++setvstr      - set custom version string (to identify controller, e.g. "GPIB-USB"). Max 47 chars, excess truncated.
-   ++srqauto      - automatically condiuct serial poll when SRQ is asserted
-   ++ton          - put controller in talk-only mode (send data only)
-   ++verbose      - verbose (human readable) mode
-   ++xonxoff
-)EOF";
-*/
 
 /*
    NOT YET IMPLEMENTED
    ++myaddr   - set the controller address
 */
+
 
 /*
    For information regarding the GPIB firmware by Emanualle Girlando see:
@@ -128,24 +74,6 @@ Proprietry commands:
    functionality will need the remaining two pins to be connected.
    For further information about the AR488 see the AR488 Manual. 
 */
-
-
-/*********************************/
-/***** CONFIGURATION SECTION *****/
-/***** vvvvvvvvvvvvvvvvvvvvv *****/
-// SEE >>>>> Config.h <<<<<
-/***** ^^^^^^^^^^^^^^^^^^^^^ *****/
-/***** CONFIGURATION SECTION *****/
-/*********************************/
-
-
-/***************************************/
-/***** MACRO CONFIGURATION SECTION *****/
-/***** vvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
-// SEE >>>>> Config.h <<<<<
-/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
-/***** MACRO CONFIGURATION SECTION *****/
-/***************************************/
 
 
 /*************************************/
@@ -229,7 +157,7 @@ static const char cmdHelp[] PROGMEM = {
   "llo:P Local lockout - disable front panel operation on instrument\n"
   "loc:P Enable front panel operation on instrument\n"
   "lon:P Put controller in listen-only mode (listen to all traffic)\n"
-  "mode:P Set the interface mode (0=controller/1=device)\n"
+  "mode:P Set the interface mode (1=controller/0=device)\n"
   "read:P Read data from instrument\n"
   "read_tmo_ms:P Read timeout specified between 1 - 3000 milliseconds\n"
   "rst:P Reset the controller\n"
@@ -252,7 +180,7 @@ static const char cmdHelp[] PROGMEM = {
   "ren:C Assert or Unassert the REN signal\n"
   "repeat:C Repeat a given command and return result\n"
   "setvstr:C DEPRECATED - see id verstr\n"
-  "srqauto:C Automatically condiuct serial poll when SRQ is asserted\n"
+  "srqauto:C Automatically conduct serial poll when SRQ is asserted\n"
   "ton:C Put controller in talk-only mode (send data only)\n"
   "verbose:C Verbose (human readable) mode\n"
   "xdiag:C Bus diagnostics (see the doc)\n"
@@ -261,8 +189,6 @@ static const char cmdHelp[] PROGMEM = {
 /***** ^^^^^^^^^^^^^ *****/
 /***** HELP MESSAGES *****/
 /*************************/
-
-
 
 
 
@@ -401,23 +327,14 @@ void setup() {
 
   // Using MCP23S17 (SPI) expander chip
 #ifdef AR488_MCP23S17
-//Serial.println(F("Starting SPI..."));
-  // Enable SPI
-  SPI.begin();
-  // Optional: Clock divider (slow down the bus speed [optional])
-  SPI.setClockDivider(SPI_CLOCK_DIV8);
-  // Ensure the MCP select pin is set as an OUPTPUT and is HIGH
+  // Ensure the Arduino MCP select pin is set as an OUPTPUT and is HIGH
   pinMode(MCP_SELECTPIN, OUTPUT);
   digitalWrite(MCP_SELECTPIN, HIGH);
-  // Set expander configuration register
-  // (Bit 1=0 sets active low for Int A)
-  // (Bit 3=1 enables hardware address pins (MCP23S17 only)
-  // (Bit 7=0 sets registers to be in same bank)
-  mcpByteWrite(MCPCON, 0b00001000);
-  // Enable MCP23S17 interrupts
-  mcpInterruptsEn();
-    // Attach interrupt handler to Arduino board pin for MCP23S17 to signal interrupt has occurred
-    attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
+  // Enable SPI and initialise the MCP chip
+//Serial.println(F("Starting SPI..."));
+  mcpInit();
+  // Attach interrupt handler to Arduino board pin to receive MCP23S17 interrupt
+  attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
 //Serial.println(F("SPI started."));
 #endif
 
@@ -594,9 +511,9 @@ if (lnRdy>0){
     }
 
     // Automatic serial poll (check status of SRQ and SPOLL if asserted)?
-    if (isSrqa) {
-      if (gpibBus.isAsserted(SRQ)) spoll_h(NULL);
-    }
+//    if (isSrqa) {
+//      if (gpibBus.isAsserted(SRQ)) spoll_h(NULL);
+//    }
 
     // Continuous auto-receive data from GPIB bus
     if ((gpibBus.cfg.amode==3) && autoRead) {
@@ -1004,34 +921,47 @@ void sendToInstrument(char *buffr, uint8_t dsize) {
 
 /***** Execute a command *****/
 void execCmd(char *buffr, uint8_t dsize) {
-  char line[PBSIZE];
+//char line[PBSIZE];
 
   // Copy collected chars to line buffer
-  memcpy(line, buffr, dsize);
+//  memcpy(line, buffr, dsize);
 
   // Flush the parse buffer
-  flushPbuf();
-  lnRdy = 0;
+//  flushPbuf();
+//  lnRdy = 0;
 
 #ifdef DEBUG_CMD_PARSER
 //  DB_PRINT(F("command received: "),"");
-  DB_HEXB_PRINT(F("command received: "), line, dsize);
+//  DB_HEXB_PRINT(F("command received: "), line, dsize);
+  DB_HEXB_PRINT(F("command received: "), buffr, dsize);
 #endif
 
   // Its a ++command so shift everything two bytes left (ignore ++) and parse
   for (int i = 0; i < dsize-2; i++) {
-    line[i] = line[i + 2];
+//    line[i] = line[i + 2];
+    buffr[i] = buffr[i + 2];
   }
+  
   // Replace last two bytes with a null (\0) character
-  line[dsize - 2] = '\0';
-  line[dsize - 1] = '\0';
+//  line[dsize - 2] = '\0';
+//  line[dsize - 1] = '\0';
+  buffr[dsize - 2] = '\0';
+  buffr[dsize - 1] = '\0';
+
 #ifdef DEBUG_CMD_PARSER
 //  DB_PRINT(F("execCmd: sent to command processor: "),"");
-  DB_HEXB_PRINT(F("sent to command processor: "), line, dsize-2);
+//  DB_HEXB_PRINT(F("sent to command processor: "), line, dsize-2);
+  DB_HEXB_PRINT(F("sent to command processor: "), buffr, dsize-2);
 #endif
+
   // Execute the command
   if (isVerb) dataPort.println(); // Shift output to next line
-  getCmd(line);
+//  getCmd(line);
+  getCmd(buffr);
+
+  // Flush the parse buffer and clear ready flag
+  flushPbuf();
+  lnRdy = 0;
 
   // Show a prompt on completion?
   if (isVerb) showPrompt();
@@ -1795,6 +1725,8 @@ void help_h(char *params) {
   i = 0;
   for (size_t k = 0; k < strlen_P(cmdHelp); k++) {
     c = pgm_read_byte_near(cmdHelp + k);
+
+
     if (i < 20) {
       if(c == ':') {
         token[i] = 0;
@@ -1814,8 +1746,7 @@ void help_h(char *params) {
         token[i] = c;
         i++;
       }
-    }
-    else if (i == 255) {
+    } else if (i == 255) {
       dataPort.print(c);
     }
     if (c == '\n') {
@@ -1823,6 +1754,7 @@ void help_h(char *params) {
     }
   }
 }
+
 
 
 
