@@ -313,14 +313,11 @@ bool GPIBbus::sendGET(uint8_t addr){
 
 /***** Send request to clear to all devices to local *****/
 void GPIBbus::sendAllClear(){
-  // Un-assert REN
-  setControlVal(0b00100000, 0b00100000, 0);
+  clearCtrl(REN_BIT);
   delay(40);
-  // Simultaneously assert ATN and REN
-  setControlVal(0b00000000, 0b10100000, 0);
+  assertCtrl(ATN_BIT | REN_BIT);
   delay(40);
-  // Unassert ATN
-  setControlVal(0b10000000, 0b10000000, 0);
+  clearCtrl(ATN_BIT);
 }
 
 
@@ -376,7 +373,7 @@ bool GPIBbus::sendMSA(uint8_t addr) {
     return ERR;
   }
   // Unassert ATN
-  setControlVal(0b10000000, 0b10000000, 0);
+  clearCtrl(ATN_BIT);
   return OK;
 }
 
@@ -907,12 +904,6 @@ void GPIBbus::setControls(uint8_t state) {
   // Save state
   cstate = state;
 
-}
-
-
-/***** Set GPI control state using numeric input (xdiag_h) *****/
-void GPIBbus::setControlVal(uint8_t value, uint8_t mask, uint8_t mode){
-  setGpibState(value, mask, mode);
 }
 
 

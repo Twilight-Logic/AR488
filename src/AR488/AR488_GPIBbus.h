@@ -165,7 +165,6 @@ class GPIBbus {
     bool receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte, uint8_t endByte);
     void sendData(char *data, uint8_t dsize);
     void clearDataBus();
-    void setControlVal(uint8_t value, uint8_t mask, uint8_t mode);
     void setDataVal(uint8_t);
 
 //    void setDeviceAddressedState(uint8_t stat);
