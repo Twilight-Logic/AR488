@@ -61,9 +61,8 @@ void GPIBbus::stop(){
   cstate = 0;
   // Set control bus to idle state (all lines input_pullup)
   // Input_pullup
-  setGpibState(0b00000000, 0b11111111, 1);
-  // All lines HIGH
-  setGpibState(0b11111111, 0b11111111, 0);
+  inputCtrl(ALL_BITS);
+  clearCtrl(ALL_BITS); // HIGH
   // Set data bus to default state (all lines input_pullup)
   readyGpibDbus();
 }
@@ -177,10 +176,10 @@ void GPIBbus::setStatus(uint8_t statusByte){
 /***** Send IFC *****/
 void GPIBbus::sendIFC(){
   // Assert IFC
-  setGpibState(0b00000000, 0b00000001, 0);
+  assertCtrl(IFC_BIT);
   delayMicroseconds(150);
   // De-assert IFC
-  setGpibState(0b00000001, 0b00000001, 0);
+  clearCtrl(IFC_BIT);
 }
 
 
@@ -663,10 +662,10 @@ void GPIBbus::sendData(char *data, uint8_t dsize) {
   // If EOI enabled and no more data to follow then assert EOI
 //  if (cfg.eoi && !dataContinuity) {
   if (cfg.eoi) {
-    setGpibState(0b00010000, 0b00010000, 1);
-    setGpibState(0b00000000, 0b00010000, 0);
+    outputCtrl(EOI_BIT);
+    assertCtrl(EOI_BIT);
     delayMicroseconds(40);
-    setGpibState(0b00010000, 0b00010000, 0);
+    clearCtrl(EOI_BIT);
 #ifdef DEBUG_GPIBbus_SEND
     DB_PRINT(F("Asserted EOI"),"");
 #endif
@@ -741,9 +740,13 @@ void GPIBbus::setControls(uint8_t state) {
     // Controller states
     case CINI:  // Initialisation
       // Set pin direction
-      setGpibState(0b10111000, 0b11111111, 1);
+      // if SN7516X and ATN are correct, then SRQ, NRFD, NDAC should be outputs and EOI, DAV should be inputs
+      inputCtrl(SRQ_BIT | NRFD_BIT | NDAC_BIT | IFC_BIT);
+      outputCtrl(ATN_BIT | REN_BIT | EOI_BIT | DAV_BIT);
       // Set pin state
-      setGpibState(0b11011111, 0b11111111, 0);
+      clearCtrl(ATN_BIT | EOI_BIT | DAV_BIT);
+      assertCtrl(REN_BIT);
+      // setGpibState(0b11011111, 0b11111111, 0); WHUT? SETS STATE ON INPUT BITS
 #ifdef SN7516X
       digitalWrite(SN7516X_TE,LOW);
   #ifdef SN7516X_DC
@@ -759,8 +762,12 @@ void GPIBbus::setControls(uint8_t state) {
       break;
 
     case CIDS:  // Controller idle state
-      setGpibState(0b10111000, 0b10011110, 1);
-      setGpibState(0b11011111, 0b10011110, 0);
+      // if SN7516X_TE (DC is low in Controller mode) and ATN are correct, then REN, IFC, NDAC and NRFD should be outputs and SRQ, EOI and DAV should be input
+      inputCtrl(SRQ_BIT | NRFD_BIT | NDAC_BIT);
+      outputCtrl(ATN_BIT | EOI_BIT | DAV_BIT);
+      // setGpibState(0b10111000, 0b10011110, 1); WHUT? TRIES TO SET DIRECTION EXCLUDED BY MASK
+      clearCtrl(ATN_BIT | EOI_BIT | DAV_BIT);
+      // setGpibState(0b11011111, 0b10011110, 0); WHUT? TRIES TO SET BITS NOT IN MASK, SET STATE ON INPUT BITS
 #ifdef SN7516X
       digitalWrite(SN7516X_TE,LOW);
 #endif
@@ -770,8 +777,13 @@ void GPIBbus::setControls(uint8_t state) {
       break;
 
     case CCMS:  // Controller active - send commands
-      setGpibState(0b10111001, 0b10011111, 1);
-      setGpibState(0b01011111, 0b10011111, 0);
+      // if SN75161_TE is correct, REN should be an output, SRQ should be an input
+      inputCtrl(NRFD_BIT | NDAC_BIT);
+      outputCtrl(ATN_BIT | EOI_BIT | DAV_BIT | IFC_BIT);
+      // setGpibState(0b10111001, 0b10011111, 1); WHUT? TRIES TO SET REN_BIT NOT IN MASK
+      assertCtrl(ATN_BIT);
+      clearCtrl(EOI_BIT | DAV_BIT | NRFD_BIT | NDAC_BIT | IFC_BIT);
+      // setGpibState(0b01011111, 0b10011111, 0); WHUT? TRIED TO CLEAR SRQ_BIT NOT IN MASK; SET STATE ON INPUT BITS NRFD and NDAC
 #ifdef SN7516X
       digitalWrite(SN7516X_TE,HIGH);
 #endif
@@ -782,8 +794,13 @@ void GPIBbus::setControls(uint8_t state) {
 
     case CLAS:  // Controller - read data bus
       // Set state for receiving data
-      setGpibState(0b10100110, 0b10011110, 1);
-      setGpibState(0b11011000, 0b10011110, 0);
+      // if SN7516X_TE and ATN are correct, then REN and IFC are outputs, and SRQ is an input
+      inputCtrl(EOI_BIT | DAV_BIT);
+      outputCtrl(ATN_BIT | NRFD_BIT | NDAC_BIT);
+      // setGpibState(0b10100110, 0b10011110, 1); WHUT? TRIES TO SET DIRECTION ON REN_BIT NOT IN MASK
+      assertCtrl(EOI_BIT | DAV_BIT);
+      clearCtrl(ATN_BIT | NRFD_BIT | NDAC_BIT);
+      // setGpibState(0b11011000, 0b10011110, 0); WHUT? TRIES TO CLEAR SRQ_BIT NOT IN MASK; SET STATE ON INPUT BITS EOI and DAV
 #ifdef SN7516X
       digitalWrite(SN7516X_TE,LOW);
 #endif
@@ -793,8 +810,12 @@ void GPIBbus::setControls(uint8_t state) {
       break;
 
     case CTAS:  // Controller - write data bus
-      setGpibState(0b10111001, 0b10011110, 1);
-      setGpibState(0b11011111, 0b10011110, 0);
+      // if SN7516X_TE is correct, then REN and IFC are outputs, SRQ is an input
+      inputCtrl(NRFD_BIT | NDAC_BIT);
+      outputCtrl(ATN_BIT | EOI_BIT | DAV_BIT);
+      // setGpibState(0b10111001, 0b10011110, 1); WHUT? TRIES TO SET DIRECTION ON REN_BIT AND IFC_BIT NOT IN MASK
+      clearCtrl(ATN_BIT | EOI_BIT | DAV_BIT | NRFD_BIT | NDAC_BIT);
+      // setGpibState(0b11011111, 0b10011110, 0); WHUT? TRIES TO CLEAR SRQ_BIT AND IFC_BIT NOT IN MASK
 #ifdef SN7516X
       digitalWrite(SN7516X_TE,HIGH);
 #endif
@@ -815,9 +836,12 @@ void GPIBbus::setControls(uint8_t state) {
   #ifdef SN7516X_SC
       digitalWrite(SN7516X_SC,LOW);
   #endif
-#endif      
-      setGpibState(0b00000000, 0b11111111, 1);
-      setGpibState(0b11111111, 0b11111111, 0);
+#endif
+      // if SN7516X_TE and _DC are high, SRQ and DAV should be outputs, ATN is high so EOI should also be output
+      inputCtrl(ALL_BITS);
+      // setGpibState(0b00000000, 0b11111111, 1);
+      clearCtrl(ALL_BITS);
+      // setGpibState(0b11111111, 0b11111111, 0); WHUT? TRIES TO SET STATE ON ALL INPUTS!
       // Set data bus to idle state
       readyGpibDbus();
 #ifdef DEBUG_GPIBbus_CONTROL
@@ -828,9 +852,12 @@ void GPIBbus::setControls(uint8_t state) {
     case DIDS:  // Device idle state
 #ifdef SN7516X
       digitalWrite(SN7516X_TE,HIGH);
-#endif      
-      setGpibState(0b00000000, 0b00001110, 1);
-      setGpibState(0b11111111, 0b00001110, 0);
+#endif
+      // if SN7516X_TE and _DC are high, SRQ and DAV should be outputs, ATN is high so EOI should also be output 
+      inputCtrl(DAV_BIT | NRFD_BIT | NDAC_BIT);
+      // setGpibState(0b00000000, 0b00001110, 1);
+      clearCtrl(DAV_BIT | NRFD_BIT | NDAC_BIT);
+      // setGpibState(0b11111111, 0b00001110, 0); WHUT? TRIES TO SET STATE ON BITS NOT IN MASK
       // Set data bus to idle state
       readyGpibDbus();
 #ifdef DEBUG_GPIBbus_CONTROL
@@ -841,9 +868,14 @@ void GPIBbus::setControls(uint8_t state) {
     case DLAS:  // Device listner active (actively listening - can handshake)
 #ifdef SN7516X
       digitalWrite(SN7516X_TE,LOW);
-#endif      
-      setGpibState(0b00000110, 0b00011110, 1);
-      setGpibState(0b11111001, 0b00011110, 0);
+#endif
+      // if SN7616X_TE is low and _DC is high, then SRQ should be output
+      inputCtrl(EOI_BIT | DAV_BIT);
+      outputCtrl(NRFD_BIT | NDAC_BIT);
+      // setGpibState(0b00000110, 0b00011110, 1);
+      assertCtrl(NRFD_BIT | NDAC_BIT);
+      clearCtrl(EOI_BIT | DAV_BIT);
+      // setGpibState(0b11111001, 0b00011110, 0); WHUT? TRIES TO SET STATE ON BITS NOT IN MASK, SET STATE ON INPUT BITS EOI AND DAV
 #ifdef DEBUG_GPIBbus_CONTROL
       DB_PRINT(F("Set GPIB lines to idle state"),"");
 #endif
@@ -852,9 +884,14 @@ void GPIBbus::setControls(uint8_t state) {
     case DTAS:  // Device talker active (sending data)
 #ifdef SN7516X
       digitalWrite(SN7516X_TE,HIGH);
-#endif      
-      setGpibState(0b00011000, 0b00011110, 1);
-      setGpibState(0b11111001, 0b00011110, 0);
+#endif
+      // if SN7516X_TE and _DC are high, SRQ should be an output, and ATN, REN, IFC should be inputs
+      inputCtrl(NRFD_BIT | NDAC_BIT);
+      outputCtrl(EOI_BIT | DAV_BIT);
+      // setGpibState(0b00011000, 0b00011110, 1);
+      assertCtrl(NRFD_BIT | NDAC_BIT);
+      clearCtrl(EOI_BIT | DAV_BIT);
+      // setGpibState(0b11111001, 0b00011110, 0); WHUT? TRIES TO SET STATE ON BITS NOT IN MASK, SET STATE ON INPUT BITS NRFD AND NDAC
 #ifdef DEBUG_GPIBbus_CONTROL
       DB_PRINT(F("Set GPIB lines for listening as addresed device"),"");
 #endif
@@ -1016,7 +1053,8 @@ uint8_t GPIBbus::readByte(uint8_t *db, bool readWithEoi, bool *eoi) {
 
     if (stage == 4) {
       // Unassert NRFD (we are ready for more data)
-      setGpibState(0b00000100, 0b00000100, 0);
+      clearCtrl(NRFD_BIT);
+      // setGpibState(0b00000100, 0b00000100, 0);
       stage = 6;
     }
 
@@ -1025,7 +1063,8 @@ uint8_t GPIBbus::readByte(uint8_t *db, bool readWithEoi, bool *eoi) {
 //      if (digitalRead(DAV) == LOW) {
       if (getGpibPinState(DAV) == LOW) {
         // Assert NRFD (Busy reading data)
-        setGpibState(0b00000000, 0b00000100, 0);
+	assertCtrl(NRFD_BIT);
+        // setGpibState(0b00000000, 0b00000100, 0);
         stage = 7;
       }
     }
@@ -1036,7 +1075,8 @@ uint8_t GPIBbus::readByte(uint8_t *db, bool readWithEoi, bool *eoi) {
       // read from DIO
       *db = readGpibDbus();
       // Unassert NDAC signalling data accepted
-      setGpibState(0b00000010, 0b00000010, 0);
+      clearCtrl(NDAC_BIT);
+      // setGpibState(0b00000010, 0b00000010, 0);
       stage = 8;
     }
 
@@ -1045,7 +1085,8 @@ uint8_t GPIBbus::readByte(uint8_t *db, bool readWithEoi, bool *eoi) {
 //      if (digitalRead(DAV) == HIGH) {
       if (getGpibPinState(DAV) == HIGH) {
         // Re-assert NDAC - handshake complete, ready to accept data again
-        setGpibState(0b00000000, 0b00000010, 0);
+	assertCtrl(NDAC_BIT);
+        // setGpibState(0b00000000, 0b00000010, 0);
         stage = 9;
         break;
       }
@@ -1127,10 +1168,12 @@ uint8_t GPIBbus::writeByte(uint8_t db, bool isLastByte) {
 #ifdef DEBUG_GPIBbus_SEND
         DB_PRINT(F("Asserting EOI..."),"");
 #endif
-        setGpibState(0b00000000, 0b00011000, 0);
+	assertCtrl(EOI_BIT | DAV_BIT);
+        // setGpibState(0b00000000, 0b00011000, 0);
       }else{
         // Assert DAV (data is valid - ready to collect)
-        setGpibState(0b00000000, 0b00001000, 0);
+	assertCtrl(DAV_BIT);
+        // setGpibState(0b00000000, 0b00001000, 0);
       }
       stage = 7;
     }
@@ -1159,10 +1202,13 @@ uint8_t GPIBbus::writeByte(uint8_t db, bool isLastByte) {
   if (stage == 9) {
     if (cfg.eoi && isLastByte) {
       // If EOI enabled and this is the last byte then un-assert both DAV and EOI
-      if (cfg.eoi && isLastByte) setGpibState(0b00011000, 0b00011000, 0);
+      if (cfg.eoi && isLastByte)
+	clearCtrl(EOI_BIT | DAV_BIT);
+        // setGpibState(0b00011000, 0b00011000, 0);
     }else{
       // Unassert DAV
-      setGpibState(0b00001000, 0b00001000, 0);
+      clearCtrl(DAV_BIT);
+      // setGpibState(0b00001000, 0b00001000, 0);
     }
     // Reset the data bus
     setGpibDbus(0);

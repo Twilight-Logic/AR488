@@ -80,6 +80,15 @@
 /***** GPIB COMMAND & STATUS DEFINITIONS *****/
 /*********************************************/
 
+#define IFC_BIT   (1 << 0)
+#define NDAC_BIT  (1 << 1)
+#define NRFD_BIT  (1 << 2)
+#define DAV_BIT   (1 << 3)
+#define EOI_BIT   (1 << 4)
+#define REN_BIT   (1 << 5)
+#define SRQ_BIT   (1 << 6)
+#define ATN_BIT   (1 << 7)
+#define ALL_BITS  (0xff)
 
 /****************************************/
 /***** GPIB CLASS OBJECT DEFINITION *****/
