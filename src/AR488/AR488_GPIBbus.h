@@ -186,8 +186,6 @@ class GPIBbus {
 //    bool writeByteHandshake(uint8_t db);
 //    boolean waitOnPinState(uint8_t state, uint8_t pin, int interval);
     bool isTerminatorDetected(uint8_t bytes[3], uint8_t eorSequence);
-    void setSrqSig();
-    void clrSrqSig();
 
     // Interrupt flag for MCP23S17
 #if defined(AR488_MCP23S17) || defined(AR488_MCP23017)

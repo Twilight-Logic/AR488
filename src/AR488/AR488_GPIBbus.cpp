@@ -154,9 +154,10 @@ void GPIBbus::sendStatus() {
   writeByte(cfg.stat, NO_EOI);
   setControls(DIDS);
   // Clear the SRQ bit
-  cfg.stat = cfg.stat & ~0x40;
+  cfg.stat = cfg.stat & ~(SRQ_BIT);
   // De-assert the SRQ signal
-  clrSrqSig();
+  inputCtrl(SRQ_BIT);
+  clearCtrl(SRQ_BIT);
 }
 
 
@@ -165,10 +166,12 @@ void GPIBbus::setStatus(uint8_t statusByte){
   cfg.stat = statusByte;
   if (statusByte & 0x40) {
     // If SRQ bit is set then assert the SRQ signal
-    setSrqSig();
+    outputCtrl(SRQ_BIT);
+    assertCtrl(SRQ_BIT);
   } else {
     // If SRQ bit is NOT set then de-assert the SRQ signal
-    clrSrqSig();
+    inputCtrl(SRQ_BIT);
+    clearCtrl(SRQ_BIT);
   }
 }
 
@@ -1285,21 +1288,6 @@ bool GPIBbus::isTerminatorDetected(uint8_t bytes[3], uint8_t eorSequence){
   return false;
 }
 
-
-/***** Set the SRQ signal *****/
-void GPIBbus::setSrqSig() {
-  // Set SRQ line to OUTPUT HIGH (asserted)
-  setGpibState(0b01000000, 0b01000000, 1);
-  setGpibState(0b00000000, 0b01000000, 0);
-}
-
-
-/***** Clear the SRQ signal *****/
-void GPIBbus::clrSrqSig() {
-  // Set SRQ line to INPUT_PULLUP (un-asserted)
-  setGpibState(0b00000000, 0b01000000, 1);
-  setGpibState(0b01000000, 0b01000000, 0);
-}
 
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
