@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include "AR488_Config.h"
+#include "AR488_GPIBbus.h"
 #include "AR488_Layouts.h"
 
 /***** AR488_Hardware.cpp, ver. 0.51.18, 26/02/2023 *****/
@@ -12,6 +13,23 @@
 volatile bool isATN = false;  // has ATN been asserted?
 volatile bool isSRQ = false;  // has SRQ been asserted?
 */
+
+void inputCtrl(uint8_t mask) {
+  setGpibState(0,mask,1);
+}
+
+void outputCtrl(uint8_t mask) {
+  setGpibState(ALL_BITS,mask,1);
+}
+
+void assertCtrl(uint8_t mask) {
+  setGpibState(0,mask,0);
+}
+
+void clearCtrl(uint8_t mask) {
+  setGpibState(ALL_BITS,mask,0);
+}
+
 
 /*********************************/
 /***** UNO/NANO BOARD LAYOUT *****/
