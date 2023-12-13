@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_GPIBbus.h"
 
-/***** AR488_GPIB.cpp, ver. 0.51.17, 24/12/2022 *****/
+/***** AR488_GPIB.cpp, ver. 0.51.21, 14/03/2023 *****/
 
 
 /****** Process status values *****/
@@ -43,6 +43,21 @@ GPIBbus::GPIBbus(){
 //  dataContinuity = false;
   deviceAddressed = false;
 //  deviceAddressedState = DIDS;
+
+
+#ifdef AR488_MCP23S17
+  // Ensure the Arduino MCP select pin is set as an OUPTPUT and is HIGH
+  pinMode(MCP_SELECTPIN, OUTPUT);
+  digitalWrite(MCP_SELECTPIN, HIGH);
+  // Enable SPI and initialise the MCP chip
+  Serial.println(F("Starting SPI..."));
+  mcpInit();
+  // Attach interrupt handler to Arduino board pin to receive MCP23S17 interrupt
+  //attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
+  Serial.println(F("SPI started."));
+#endif
+
+
 }
 
 
@@ -120,30 +135,13 @@ bool GPIBbus::isController(){
 
 /***** Detect selected pin state *****/
 bool GPIBbus::isAsserted(uint8_t gpibsig){
-#if defined(AR488_MCP23S17) || defined(AR488_MCP23017)
-  uint8_t mcpPinAssertedReg = 0;
-  // Use MCP function to get MCP23S17 or MCP23017 pin state.
-  // If interrupt flagged then update mcpPinAssertedReg register
-//  if (isMcpIntFlagSet()){
-//dataPort.println(F("Interrupt flagged - pin state checked"));
-    // Clear mcpIntA flag
-//    clearMcpIntFlag();
-    // Get inverse of pin status at interrupt (0 = true [asserted]; 1 = false [unasserted])
-    // Calling getMcpIntAPinState clears the interrupt 
-//    mcpPinAssertedReg = ~getMcpIntAPinState();
-    mcpPinAssertedReg = ~getMcpIntAReg();
-//dataPort.print(F("mcpPinAssertedReg: "));
-//dataPort.println(mcpPinAssertedReg, BIN);
-//  }
+#ifdef AR488_MCP23S17
+  uint8_t mcpPinAssertedReg = ~getMcpIntAReg();
   return (mcpPinAssertedReg & (1<<gpibsig));
 #else
   // Use digitalRead function to get current Arduino pin state
   return (digitalRead(gpibsig) == LOW) ? true : false;
 #endif
-
-
-  
-  if (getGpibPinState(gpibsig) == LOW) return true;
   return false;
 }
 

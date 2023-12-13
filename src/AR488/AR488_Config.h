@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.51.18, 26/02/2023"
+#define FWVER "AR488 GPIB controller, ver. 0.51.23, 05/09/2023"
 
 
 
@@ -42,10 +42,9 @@
 /*** UNO and NANO boards ***/
 #elif __AVR_ATmega328P__
   /* Board/layout selection */
-  #define AR488_UNO
-  #define AR488_NANO
-  //#define AR488_MCP23S17
-  //#define AR488_MCP23017
+  //#define AR488_UNO
+  //#define AR488_NANO
+  #define AR488_MCP23S17
 
 /*** MEGA 32U4 based boards (Micro, Leonardo) ***/
 #elif __AVR_ATmega32U4__
@@ -125,27 +124,16 @@
  */
 
 
-/***** Enable MCP23S17 chip *****/
+/***** Enable MCP23S17 GPIO extender chip *****/
 /*
  * This version uses the SPI interface with speeds up to 10MHz max
  * Note: Use #define MCP23S17 as the layout definition
  */
 #ifdef AR488_MCP23S17
   #define MCP_ADDRESS   0
-  #define MCP_SELECTPIN 10
+  #define MCP_SELECTPIN 8
   #define MCP_INTERRUPT 2
-#endif
-
-
-/***** Enable MCP23017 chip *****/
-/*
- * This version uses the I2C interface with speeds of 100kHz, 400kHz and 1,7MHz
- * Pull up resistors (4.7k) are required on the SDA and SCL pins
- * Note: Use #define MCP23017 as the layout definition
- */
-#ifdef AR488_MCP23017
-  #define MCP_ADDRESS   1
-  #define MCP_INTERRUPT 3
+  #define MCP_CLOCKDIV SPI_CLOCK_DIV8
 #endif
 
 
@@ -201,25 +189,8 @@
 //#define REMOTE_SIGNAL_PIN 7
 
 
-/***** 8-way address DIP switch *****/
-#define DIP_SWITCH
-#ifdef DIP_SWITCH
-#define DIP_SW_1  A0
-#define DIP_SW_2  A1
-#define DIP_SW_3  A2
-#define DIP_SW_4  A3
-#define DIP_SW_5  A4
-#define DIP_SW_6  A5
-#define DIP_SW_7  A6
-#define DIP_SW_8  A7
-
-#endif
-
-
 /***** Acknowledge interface is ready *****/
 //#define SAY_HELLO
-
-
 
 
 /***** DEBUG LEVEL OPTIONS *****/
