@@ -1399,9 +1399,11 @@ void loc_h(char *params) {
  */
 void ifc_h() {
   if (gpibBus.cfg.cmode==2) {
-    assertCtrl(IFC_BIT);
+    // Assert IFC
+    gpibBus.setControlVal(0b00000000, 0b00000001, 0);
     delayMicroseconds(150);
-    clearCtrl(IFC_BIT);
+    // De-assert IFC
+    gpibBus.setControlVal(0b00000001, 0b00000001, 0);
     if (isVerb) dataPort.println(F("IFC signal asserted for 150 microseconds"));
   }
 }
@@ -1822,7 +1824,8 @@ void ppoll_h() {
   gpibBus.setControls(CIDS);
   delayMicroseconds(20);
   // Assert ATN and EOI
-  assertCtrl(ATN_BIT | EOI_BIT);
+  gpibBus.setControlVal(0b00000000, 0b10010000, 0);
+  //  setGpibState(0b10010000, 0b00000000, 0b10010000);
   delayMicroseconds(20);
   // Read data byte from GPIB bus without handshake
   sb = readGpibDbus();
@@ -2086,8 +2089,8 @@ void xdiag_h(char *params){
           break;
       case 1:
           // Set to required state
-	  outputCtrl(ALL_BITS);
-	  assertCtrl(ALL_BITS);
+          gpibBus.setControlVal(0xFF, 0xFF, 1);  // Set direction (all pins as outputs)
+          gpibBus.setControlVal(~byteval, 0xFF, 0);  // Set state (asserted=LOW so must invert value)
           // Reset after 10 seconds
           delay(10000);
           if (gpibBus.cfg.cmode==2) {

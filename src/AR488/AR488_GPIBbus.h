@@ -80,15 +80,6 @@
 /***** GPIB COMMAND & STATUS DEFINITIONS *****/
 /*********************************************/
 
-#define IFC_BIT   (1 << 0)
-#define NDAC_BIT  (1 << 1)
-#define NRFD_BIT  (1 << 2)
-#define DAV_BIT   (1 << 3)
-#define EOI_BIT   (1 << 4)
-#define REN_BIT   (1 << 5)
-#define SRQ_BIT   (1 << 6)
-#define ATN_BIT   (1 << 7)
-#define ALL_BITS  (0xff)
 
 /****************************************/
 /***** GPIB CLASS OBJECT DEFINITION *****/
@@ -165,6 +156,7 @@ class GPIBbus {
     bool receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte, uint8_t endByte);
     void sendData(char *data, uint8_t dsize);
     void clearDataBus();
+    void setControlVal(uint8_t value, uint8_t mask, uint8_t mode);
     void setDataVal(uint8_t);
 
 //    void setDeviceAddressedState(uint8_t stat);
@@ -186,6 +178,8 @@ class GPIBbus {
 //    bool writeByteHandshake(uint8_t db);
 //    boolean waitOnPinState(uint8_t state, uint8_t pin, int interval);
     bool isTerminatorDetected(uint8_t bytes[3], uint8_t eorSequence);
+    void setSrqSig();
+    void clrSrqSig();
 
     // Interrupt flag for MCP23S17
 #if defined(AR488_MCP23S17) || defined(AR488_MCP23017)
