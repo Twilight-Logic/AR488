@@ -386,10 +386,6 @@ uint8_t readGpibDbus();
 void setGpibDbus(uint8_t db);
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode);
 uint8_t getGpibPinState(uint8_t pin);
-void inputCtrl(uint8_t mask);
-void outputCtrl(uint8_t mask);
-void assertCtrl(uint8_t mask);
-void clearCtrl(uint8_t mask);
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** GLOBAL DEFINITIONS SECTION *****/
