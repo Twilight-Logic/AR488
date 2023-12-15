@@ -43,7 +43,7 @@
 #elif __AVR_ATmega328P__
   /* Board/layout selection */
   #define AR488_UNO
-  #define AR488_NANO
+  //#define AR488_NANO
   //#define AR488_MCP23S17
   //#define AR488_MCP23017
 
