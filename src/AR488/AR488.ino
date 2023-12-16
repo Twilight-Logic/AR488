@@ -14,14 +14,15 @@
 #include "AR488_Eeprom.h"
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.51.23, 05/09/2023" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.51.20, 16/12/2023" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
   Inspired by the original work of Emanuele Girlando, licensed under a Creative
   Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
   Any code in common with the original work is reproduced here with the explicit
-  permission of Emanuele Girlando, who has kindly reviewed and tested this code.
+  permission of Emanuele Girlando, who has kindly reviewed and tested the
+  initial version of this project code.
 
   Thanks also to Luke Mester for comparison testing against the Prologix interface.
   AR488 is Licenced under the GNU Public licence.
@@ -324,7 +325,7 @@ void setup() {
   btInit();
 #endif
 
-/*
+
   // Using MCP23S17 (SPI) expander chip
 #ifdef AR488_MCP23S17
   // Ensure the Arduino MCP select pin is set as an OUPTPUT and is HIGH
@@ -337,9 +338,8 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
 //Serial.println(F("SPI started."));
 #endif
-*/
 
-/*
+
   // Using MCP23017 (I2C) expander chip
 #ifdef AR488_MCP23017
   // Start I2C
@@ -359,7 +359,7 @@ void setup() {
   // Attach interrupt handler to Arduino board pin for MCP23S17 to signal interrupt has occurred
   attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT), mcpIntHandler, FALLING);
 #endif
-*/
+
 
 // Un-comment for diagnostic purposes
 /* 
@@ -511,7 +511,7 @@ if (lnRdy>0){
       }
     }
 
-    // Automatic serial poll (check status of SRQ and do SPOLL if asserted)?
+    // Automatic serial poll (check status of SRQ and SPOLL if asserted)?
 //    if (isSrqa) {
 //      if (gpibBus.isAsserted(SRQ)) spoll_h(NULL);
 //    }
@@ -2340,6 +2340,17 @@ void attnRequired() {
     // Read the next byte from the bus, no EOI detection
     if (gpibBus.readByte(&db, false, &eoiDetected) > 0 ) break;
     // Untalk or unlisten
+/*    
+
+    if ( (db == 0x5F) || (db == 0x3F) ) {
+    
+      if (db == 0x3F) {
+        if (device_unl_h()) ustat |= 0x01;
+      }
+      if (db == 0x5F) {
+        if (device_unt_h()) ustat |= 0x02; 
+      }
+*/
     switch (db) {
       case 0x3F:  
         ustat |= 0x01;
@@ -2371,12 +2382,12 @@ void attnRequired() {
 
   /***** Try to unlisten bus *****/
   if (ustat & 0x01) {
-    if (!device_unl_h()) ustat &= ~0x01; // Clears bit if UNL was not required
+    if (!device_unl_h()) ustat &= 0x01; // Clears bit if UNL was not required
   }
 
   /***** Try to untalk bus *****/
-  if (ustat & 0x02) {
-    if (!device_unt_h()) ustat &= ~0x02; // Clears bit if UNT was not required
+  if (ustat & 0x01) {
+    if (!device_unt_h()) ustat &= 0x02; // Clears bit if UNT was not required
   }
 
   /***** Command process loop *****/

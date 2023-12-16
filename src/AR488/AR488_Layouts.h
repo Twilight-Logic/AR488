@@ -51,15 +51,16 @@
 #define DIO7   4  /* GPIB 15 : PORTD bit 4 */
 #define DIO8   5  /* GPIB 16 : PORTD bit 5 */
 
-#define SRQ    2  /* GPIB 10 : PORTD bit 2 */
-#define REN    3  /* GPIB 17 : PORTD bit 3 */
-#define ATN    7  /* GPIB 11 : PORTD bit 7 */
-
 #define IFC    8  /* GPIB 9  : PORTB bit 0 */
 #define NDAC   9  /* GPIB 8  : PORTB bit 1 */
 #define NRFD  10  /* GPIB 7  : PORTB bit 2 */
 #define DAV   11  /* GPIB 6  : PORTB bit 3 */
 #define EOI   12  /* GPIB 5  : PORTB bit 4 */
+
+#define SRQ    2  /* GPIB 10 : PORTD bit 2 */
+#define REN    3  /* GPIB 17 : PORTD bit 3 */
+#define ATN    7  /* GPIB 11 : PORTD bit 7 */
+
 
 #endif
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
@@ -209,15 +210,15 @@
 #define DIO7   4  /* GPIB 15 : PORTD bit 4 */
 #define DIO8   5  /* GPIB 16 : PORTC bit 6 */
 
-#define SRQ    2  /* GPIB 10 : PORTD bit 1 */
-#define REN    3  /* GPIB 17 : PORTD bit 0 */
-#define ATN    7  /* GPIB 11 : PORTE bit 6 */
-
 #define IFC    8  /* GPIB 9  : PORTB bit 4 */
 #define NDAC   9  /* GPIB 8  : PORTB bit 5 */
 #define NRFD  10  /* GPIB 7  : PORTB bit 6 */
 #define DAV   11  /* GPIB 6  : PORTD bit 6 */
 #define EOI   12  /* GPIB 5  : PORTC bit 7 */
+
+#define SRQ    2  /* GPIB 10 : PORTD bit 1 */
+#define REN    3  /* GPIB 17 : PORTD bit 0 */
+#define ATN    7  /* GPIB 11 : PORTE bit 6 */
 
 uint8_t reverseBits(uint8_t dbyte);
 
@@ -284,6 +285,64 @@ uint8_t getMcpIntAReg();
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MCP23S17 IC (SPI) IC LAYOUT DEFINITION *****/
 /**************************************************/
+
+
+
+/***********************************************/
+/***** MCP23017 IC (I2C) LAYOUT DEFINITION *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef AR488_MCP23017
+
+#include <Wire.h>
+
+/***** NOTE: MCP23017 pinout last updated 03/05/2021 *****/
+#define IFC    0  /* GPIB 9  : PORTA bit 0 */
+#define NDAC   1  /* GPIB 8  : PORTA bit 1 */
+#define NRFD   2  /* GPIB 7  : PORTA bit 2 */
+#define DAV    3  /* GPIB 6  : PORTA bit 3 */
+#define EOI    4  /* GPIB 5  : PORTA bit 4 */
+#define REN    5  /* GPIB 17 : PORTA bit 5 */
+#define SRQ    6  /* GPIB 10 : PORTA bit 6 */
+#define ATN    7  /* GPIB 11 : PORTA bit 7 */
+
+/***** MCP23S17 defines *****/
+// Direction registers
+#define MCPDIRA  0x00
+#define MCPDIRB  0x01
+
+// Configuration register
+#define MCPCON (0x0A)
+
+// Pullup state register
+#define MCPPUA 0x0C
+#define MCPPUB 0x0D
+
+// Port Register
+#define MCPPORTA 0x12
+#define MCPPORTB 0x13
+
+// Interrupt registers
+#define MCPINTENA 0x04    // Enable pin for interrupt on change (GPINTEN)
+#define MCPINTCONA 0x08   // Configure interrupt: 0 = compare against previous; 1 = compare against DEFVAL
+#define MCPINTFA 0x0E     // Flag that interrupt ocurred on pin (read-only)
+#define MCPINTCAPA 0x10   // Read the status of the pin (read-only)
+//#define MCPINTPINA 2      // Pin assigned to catch MCP23S17 INTA on the Arduino controller
+
+// MCP opcodes
+#define MCPWRITE 0b01000000
+#define MCPREAD  0b01000001
+
+uint8_t mcpByteRead(uint8_t reg);
+void mcpByteWrite(uint8_t reg, uint8_t db);
+uint8_t mcpDigitalRead(uint8_t pin);
+void mcpInterruptsEn();
+void mcpIntHandler();
+uint8_t getMcpIntAReg();
+
+#endif // AR488_MCP23017
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** MCP23017 IC (I2C) LAYOUT DEFINITION *****/
+/***********************************************/
 
 
 
