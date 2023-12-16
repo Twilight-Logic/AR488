@@ -12,7 +12,7 @@
   #endif
 #endif
 
-/***** AR488_GPIBbus.cpp, ver. 0.51.21, 14/03/2023 *****/
+/***** AR488_GPIBbus.cpp, ver. 0.51.20, 16/12/2023 *****/
 
 
 /*********************************************/
@@ -75,6 +75,27 @@
 /***** Lastbyte - send EOI *****/
 #define NO_EOI false
 #define WITH_EOI true
+
+
+
+/***** Handshake states *****/
+enum gpibHandshakeStates {
+  // Common
+  HANDSHAKE_START,
+  HANDSHAKE_COMPLETE,
+  IFC_ASSERTED,
+  ATN_ASSERTED,
+  // Read
+  WAIT_FOR_DATA,
+  READ_DATA,
+  DATA_ACCEPTED,
+  // Write
+  WAIT_FOR_RECEIVER_READY,
+  PLACE_DATA,
+  DATA_READY,
+  RECEIVER_ACCEPTING
+};
+
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** GPIB COMMAND & STATUS DEFINITIONS *****/
@@ -151,8 +172,8 @@ class GPIBbus {
 
     void setStatus(uint8_t statusByte);
     bool sendCmd(uint8_t cmdByte);
-    uint8_t readByte(uint8_t *db, bool readWithEoi, bool *eoi);
-    uint8_t writeByte(uint8_t db, bool isLastByte);
+    enum gpibHandshakeStates readByte(uint8_t *db, bool readWithEoi, bool *eoi);
+    enum gpibHandshakeStates writeByte(uint8_t db, bool isLastByte);
     bool receiveData(Stream& dataStream, bool detectEoi, bool detectEndByte, uint8_t endByte);
     void sendData(char *data, uint8_t dsize);
     void clearDataBus();
