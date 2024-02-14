@@ -3,14 +3,14 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.51.18, 26/02/2023 *****/
+/***** AR488_Hardware.cpp, ver. 0.51.26, 24/12/2023 *****/
 /*
  * Hardware layout function definitions
  */
 
 /*
-volatile bool isATN = false;  // has ATN been asserted?
-volatile bool isSRQ = false;  // has SRQ been asserted?
+volatile bool isATN_PIN = false;  // has ATN_PIN been asserted?
+volatile bool isSRQ_PIN = false;  // has SRQ_PIN been asserted?
 */
 
 /*********************************/
@@ -54,19 +54,19 @@ void setGpibDbus(uint8_t db) {
 
 /***** Set the direction and state of the GPIB control lines ****/
 /*
-   Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
     bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
     mask (mask)     : 0=unaffected, 1=enabled
     mode (mode)     : 0=set pin state, 1=set pin direction
    Arduino Uno/Nano pin to Port/bit to direction/state byte map:
-   IFC   8   PORTB bit 0 byte bit 0
-   NDAC  9   PORTB bit 1 byte bit 1
-   NRFD  10  PORTB bit 2 byte bit 2
-   DAV   11  PORTB bit 3 byte bit 3
-   EOI   12  PORTB bit 4 byte bit 4
-   SRQ   2   PORTD bit 2 byte bit 6
-   REN   3   PORTD bit 3 byte bit 5
-   ATN   7   PORTD bit 8 byte bit 7
+   IFC_PIN   8   PORTB bit 0 byte bit 0
+   NDAC_PIN  9   PORTB bit 1 byte bit 1
+   NRFD_PIN  10  PORTB bit 2 byte bit 2
+   DAV_PIN   11  PORTB bit 3 byte bit 3
+   EOI_PIN   12  PORTB bit 4 byte bit 4
+   SRQ_PIN   2   PORTD bit 2 byte bit 6
+   REN_PIN   3   PORTD bit 3 byte bit 5
+   ATN_PIN   7   PORTD bit 8 byte bit 7
 */
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
@@ -138,20 +138,20 @@ void setGpibDbus(uint8_t db) {
 
 /***** Set the direction and state of the GPIB control lines ****/
 /*
-   Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
     bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
     mask (mask)     : 0=unaffected, 1=enabled
     mode (mode)     : 0=set pin state, 1=set pin direction
    Arduino Mega 2560 Layout D pin to Port/bit to direction/state byte map:
-   IFC   17  PORTH bit 0 byte bit 0
-   NDAC  16  PORTH bit 1 byte bit 1
-   NRFD  6   PORTH bit 3 byte bit 2
-   DAV   7   PORTH bit 4 byte bit 3
-   EOI   8   PORTH bit 5 byte bit 4
-   REN   9   PORTH bit 6 byte bit 5
+   IFC_PIN   17  PORTH bit 0 byte bit 0
+   NDAC_PIN  16  PORTH bit 1 byte bit 1
+   NRFD_PIN  6   PORTH bit 3 byte bit 2
+   DAV_PIN   7   PORTH bit 4 byte bit 3
+   EOI_PIN   8   PORTH bit 5 byte bit 4
+   REN_PIN   9   PORTH bit 6 byte bit 5
    // These require pcint
-   SRQ   10  PORTB bit 4 byte bit 6
-   ATN   11  PORTB bit 5 byte bit 7
+   SRQ_PIN   10  PORTB bit 4 byte bit 6
+   ATN_PIN   11  PORTB bit 5 byte bit 7
 */
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
@@ -254,20 +254,20 @@ void setGpibDbus(uint8_t db) {
 
 /***** Set the direction and state of the GPIB control lines ****/
 /*
-   Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
     bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
     mask (mask)     : 0=unaffected, 1=enabled
     mode (mode)     : 0=set pin state, 1=set pin direction
    Arduino Mega 2560 Layout E1 pin to Port/bit to direction/state byte map:
-   IFC   48  PORTL bit 1 byte bit 0
-   NDAC  46  PORTL bit 3 byte bit 1
-   NRFD  44  PORTL bit 5 byte bit 2
-   DAV   42  PORTL bit 7 byte bit 3
-   EOI   40  PORTG bit 1 byte bit 4
-   REN   38  PORTD bit 7 byte bit 5
+   IFC_PIN   48  PORTL bit 1 byte bit 0
+   NDAC_PIN  46  PORTL bit 3 byte bit 1
+   NRFD_PIN  44  PORTL bit 5 byte bit 2
+   DAV_PIN   42  PORTL bit 7 byte bit 3
+   EOI_PIN   40  PORTG bit 1 byte bit 4
+   REN_PIN   38  PORTD bit 7 byte bit 5
    // These require pcint
-   SRQ   50  PORTB bit 3 byte bit 6
-   ATN   52  PORTB bit 1 byte bit 7
+   SRQ_PIN   50  PORTB bit 3 byte bit 6
+   ATN_PIN   52  PORTB bit 1 byte bit 7
 */
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
@@ -289,10 +289,10 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
   // Set PORTs using mask to avoid affecting bits that should not be affected
   // and calculated and masked port byte
-  // PORT B - bits 7 & 6 (ATN + SRQ)
-  // PORT D - bit 5 (REN)
-  // PORT G - bit 4 (EOI)
-  // PORT L - bits 1,3,5,7 (IFC, NDAC, NRFD, DAV)
+  // PORT B - bits 7 & 6 (ATN_PIN + SRQ_PIN)
+  // PORT D - bit 5 (REN_PIN)
+  // PORT G - bit 4 (EOI_PIN)
+  // PORT L - bits 1,3,5,7 (IFC_PIN, NDAC_PIN, NRFD_PIN, DAV_PIN)
   // Set registers: register = (register & ~bitmask) | (value & bitmask)
   // Mask: 0=unaffected; 1=to be changed
 
@@ -389,20 +389,20 @@ void setGpibDbus(uint8_t db) {
 
 /***** Set the direction and state of the GPIB control lines ****/
 /*
-   Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
     bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
     mask (mask)     : 0=unaffected, 1=enabled
     mode (mode)     : 0=set pin state, 1=set pin direction
    Arduino Mega 2560 Layout E2 pin to Port/bit to direction/state byte map:
-   IFC   48  PORTL bit 1 byte bit 0
-   NDAC  46  PORTL bit 3 byte bit 1
-   NRFD  44  PORTL bit 5 byte bit 2
-   DAV   42  PORTL bit 7 byte bit 3
-   EOI   40  PORTG bit 1 byte bit 4
-   REN   38  PORTD bit 7 byte bit 5
+   IFC_PIN   48  PORTL bit 1 byte bit 0
+   NDAC_PIN  46  PORTL bit 3 byte bit 1
+   NRFD_PIN  44  PORTL bit 5 byte bit 2
+   DAV_PIN   42  PORTL bit 7 byte bit 3
+   EOI_PIN   40  PORTG bit 1 byte bit 4
+   REN_PIN   38  PORTD bit 7 byte bit 5
    // These require pcint
-   SRQ   50  PORTB bit 3 byte bit 6
-   ATN   52  PORTB bit 1 byte bit 7
+   SRQ_PIN   50  PORTB bit 3 byte bit 6
+   ATN_PIN   52  PORTB bit 1 byte bit 7
 */
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
@@ -420,9 +420,9 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
   // Set PORTs using mask to avoid affecting bits that should not be affected
   // and calculated and masked port byte
-  // PORT B - bits 0 & 2 (ATN + SRQ)
-  // PORT G - bits 0 & 2 (EOI, REN)
-  // PORT L - bits 0,2,4,6 (IFC, NDAC, NRFD, DAV)
+  // PORT B - bits 0 & 2 (ATN_PIN + SRQ_PIN)
+  // PORT G - bits 0 & 2 (EOI_PIN, REN_PIN)
+  // PORT L - bits 0,2,4,6 (IFC_PIN, NDAC_PIN, NRFD_PIN, DAV_PIN)
   // Set registers: register = (register & ~bitmask) | (value & bitmask)
   // Mask: 0=unaffected; 1=to be changed
 
@@ -464,7 +464,7 @@ void readyGpibDbus() {
   PORTD |= 0b10000001; // PORTD bits 7,0 input_pullup
 
   // Read the byte of data on the bus
-  // DIO8 -> PORTD bit 7, DIO7 -> PORTE bit 5, DIO6-DIO1 -> PORTB bit 451326
+  // DIO8_PIN -> PORTD bit 7, DIO7_PIN -> PORTE bit 5, DIO6_PIN-DIO1_PIN -> PORTB bit 451326
 }
 
 
@@ -495,22 +495,22 @@ void setGpibDbus(uint8_t db) {
 
 /***** Set the direction and state of the GPIB control lines *****/
 /*
- * Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
+ * Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
     bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
     mask (mask)     : 0=unaffected, 1=enabled
     mode (mode)     : 0=set pin state, 1=set pin direction
  * Arduino Pro Micro pin to Port/bit to direction/state byte map:
- * IFC   4   PORTD bit 4   byte bit 0
- * NDAC  A3  PORTF bit 4   byte bit 1
- * NRFD  A2  PORTF bit 5   byte bit 2
- * DAV   A1  PORTF bit 6   byte bit 3
- * EOI   A0  PORTF bit 7   byte bit 4
- * REN   5   PORTC bit 6   byte bit 5
- * SRQ   7   PORTE bit 6   byte bit 6
- * ATN   2   PORTD bit 1   byte bit 7
+ * IFC_PIN   4   PORTD bit 4   byte bit 0
+ * NDAC_PIN  A3  PORTF bit 4   byte bit 1
+ * NRFD_PIN  A2  PORTF bit 5   byte bit 2
+ * DAV_PIN   A1  PORTF bit 6   byte bit 3
+ * EOI_PIN   A0  PORTF bit 7   byte bit 4
+ * REN_PIN   5   PORTC bit 6   byte bit 5
+ * SRQ_PIN   7   PORTE bit 6   byte bit 6
+ * ATN_PIN   2   PORTD bit 1   byte bit 7
  * 
  * It would be more efficient (and easier to read the code) if the bits in the above
- * control word were assigned by name to match suitable port bits : then NDAC,NRFD and DAV
+ * control word were assigned by name to match suitable port bits : then NDAC_PIN,NRFD_PIN and DAV_PIN
  * could be positioned at bits 4,5,6 to be placed in port F without shifting.
  */
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
@@ -519,7 +519,7 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
   if (mask & 0b00011110) {
 
-    // PORTF - NDAC, NRFD, DAV and EOI bits 1-4 rotated into bits 4-7
+    // PORTF - NDAC_PIN, NRFD_PIN, DAV_PIN and EOI_PIN bits 1-4 rotated into bits 4-7
     uint8_t portFb = (bits & 0x1e) << 3;
     uint8_t portFm = (mask & 0x1e) << 3;
 
@@ -540,13 +540,13 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
   if (mask & 0b11100001) {
 
-    // PORTC - REN bit 5 rotated into bit 6
+    // PORTC - REN_PIN bit 5 rotated into bit 6
     uint8_t portCb = (bits & 0x20) << 1;
     uint8_t portCm = (mask & 0x20) << 1;
-    // PORTD - IFC bit 0 rotated into bit 4 and ATN bit 7 rotated into 1
+    // PORTD - IFC_PIN bit 0 rotated into bit 4 and ATN_PIN bit 7 rotated into 1
     uint8_t portDb = ((bits & 0x01) << 4) | ((bits & 0x80) >> 6);
     uint8_t portDm = ((mask & 0x01) << 4) | ((mask & 0x80) >> 6);
-    // PORT E - SRQ bit 6  in bit 6
+    // PORT E - SRQ_PIN bit 6  in bit 6
     uint8_t portEb = (bits & 0x40);
     uint8_t portEm = (mask & 0x40);
 
@@ -628,31 +628,31 @@ void setGpibDbus(uint8_t db) {
 
 /***** Set the direction and state of the GPIB control lines ****/
 /*
-   Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
     bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
     mask (mask)     : 0=unaffected, 1=enabled
     mode (mode)     : 0=set pin state, 1=set pin direction
    Arduino Leonardo R3 pin to Port/bit to direction/state byte map:
-   IFC   8   PORTB bit 4 byte bit 0
-   NDAC  9   PORTB bit 5 byte bit 1
-   NRFD  10  PORTB bit 6 byte bit 2
-   DAV   11  PORTB bit 7 byte bit 3
-   EOI   12  PORTD bit 6 byte bit 4
-   SRQ   2   PORTD bit 1 byte bit 6
-   REN   3   PORTD bit 0 byte bit 5
-   ATN   7   PORTE bit 6 byte bit 7
+   IFC_PIN   8   PORTB bit 4 byte bit 0
+   NDAC_PIN  9   PORTB bit 5 byte bit 1
+   NRFD_PIN  10  PORTB bit 6 byte bit 2
+   DAV_PIN   11  PORTB bit 7 byte bit 3
+   EOI_PIN   12  PORTD bit 6 byte bit 4
+   SRQ_PIN   2   PORTD bit 1 byte bit 6
+   REN_PIN   3   PORTD bit 0 byte bit 5
+   ATN_PIN   7   PORTE bit 6 byte bit 7
 */
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
   // PORTB - use bits 0 to 3, rotate bits 4 positions left to set bits 4-7 on register (pins 8-12)
   uint8_t portBb = ((bits & 0x0F) << 4);
   uint8_t portBm = ((mask & 0x0F) << 4);
-  // PORTD - use bit 4, rotate left 2 positions to set bit 6 on register (EOI)
-  // PORTD - use bit 5, rotate right 5 positions to set bit 0 on register (REN)
-  // PORTD - use bit 6, rotate right 5 positions to set bit 1 on register (SRQ)
+  // PORTD - use bit 4, rotate left 2 positions to set bit 6 on register (EOI_PIN)
+  // PORTD - use bit 5, rotate right 5 positions to set bit 0 on register (REN_PIN)
+  // PORTD - use bit 6, rotate right 5 positions to set bit 1 on register (SRQ_PIN)
   uint8_t portDb = ((bits & 0x10) << 2) + ((bits & 0x20) >> 5) + ((bits & 0x40) >> 5);
   uint8_t portDm = ((mask & 0x10) << 2) + ((mask & 0x20) >> 5) + ((mask & 0x40) >> 5);
-  // PORTE - use bit 7, rotate left 1 position to set bit 6 on register (ATN)
+  // PORTE - use bit 7, rotate left 1 position to set bit 6 on register (ATN_PIN)
   uint8_t portEb = ((bits & 0x80) >> 1);
   uint8_t portEm = ((mask & 0x80) >> 1);
 
@@ -748,19 +748,19 @@ void setGpibDbus(uint8_t db) {
 
 /***** Set the direction and state of the GPIB control lines ****/
 /*
-   Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
     bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
     mask (mask)     : 0=unaffected, 1=enabled
     mode (mode)     : 0=set pin state, 1=set pin direction
    MCP23S17 pin to Port/bit to direction/state byte map:
-   IFC   0   PORTA bit 0 byte bit 0
-   NDAC  1   PORTA bit 1 byte bit 1
-   NRFD  2   PORTA bit 2 byte bit 2
-   DAV   3   PORTA bit 3 byte bit 3
-   EOI   4   PORTA bit 4 byte bit 4
-   REN   5   PORTA bit 5 byte bit 5
-   SRQ   6   PORTA bit 6 byte bit 6
-   ATN   7   PORTA bit 7 byte bit 7
+   IFC_PIN   0   PORTA bit 0 byte bit 0
+   NDAC_PIN  1   PORTA bit 1 byte bit 1
+   NRFD_PIN  2   PORTA bit 2 byte bit 2
+   DAV_PIN   3   PORTA bit 3 byte bit 3
+   EOI_PIN   4   PORTA bit 4 byte bit 4
+   REN_PIN   5   PORTA bit 5 byte bit 5
+   SRQ_PIN   6   PORTA bit 6 byte bit 6
+   ATN_PIN   7   PORTA bit 7 byte bit 7
 */
 
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
@@ -872,219 +872,13 @@ uint8_t getGpibPinState(uint8_t pin){
 void mcpInterruptsEn(){
   // Set to interrupt mode for compare to previous
   mcpByteWrite(MCPINTCONA, 0b00000000);
-  // Enable interrupt to detect pin state change on pins 4, 6 and 7 (EOI, SRQ and ATN)
+  // Enable interrupt to detect pin state change on pins 4, 6 and 7 (EOI_PIN, SRQ_PIN and ATN_PIN)
   mcpByteWrite(MCPINTENA, 0b11010000);
 }
 
 #endif //AR488_MCP23S17
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MCP23S17 EXPANDER (SPI) LAYOUT *****/
-/******************************************/
-
-
-
-/******************************************/
-/***** MCP23017 EXPANDER (I2C) LAYOUT *****/
-/***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
-#ifdef AR488_MCP23017
-
-//uint8_t mcpPinAssertedReg = 0;
-uint8_t mcpIntAReg = 0;
-
-
-// MCP23017 hardware config
-//const uint8_t chipSelect = MCP_SELECTPIN;
-const uint8_t mcpHwAddr = MCP_ADDRESS;        // MCP hardware address (must be between 0 and 7)
-const uint8_t mcpI2Caddr = 0x20 | mcpHwAddr;  // MCP I2C address
-
-
-/***** Arduino interrput handler *****/
-/*
- * Signals that IntA was asserted on the MCP chip
- */
-bool mcpIntA = false;
-
-
-/***** Set the GPIB data bus to input pullup *****/
-void readyGpibDbus() {
-  // Set data pins to input
-  mcpByteWrite(MCPDIRB, 0b11111111);  // Port direction: 0 = output; 1 = input;
-  mcpByteWrite(MCPPUB, 0b11111111);   // 1 = Pullup resistors enabled
-}
-
-
-/***** Read the GPIB data bus wires to collect the byte of data *****/
-uint8_t readGpibDbus() {
-  // Read the byte of data on the bus
-  return ~mcpByteRead(MCPPORTB);
-}
-
-
-/***** Set the GPIB data bus to output and with the requested byte *****/
-void setGpibDbus(uint8_t db) {
-  // Set data pins as outputs
-  mcpByteWrite(MCPDIRB, 0b00000000);  // Port direction: 0 = output; 1 = input;
-
-  // GPIB states are inverted
-  db = ~db;
-
-  // Set data bus
-  mcpByteWrite(MCPPORTB, db);
-}
-
-
-/***** Set the direction and state of the GPIB control lines ****/
-/*
-   Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
-    bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
-    mask (mask)     : 0=unaffected, 1=enabled
-    mode (mode)     : 0=set pin state, 1=set pin direction
-   MCP23S17 pin to Port/bit to direction/state byte map:
-   IFC   0   PORTA bit 0 byte bit 0
-   NDAC  1   PORTA bit 1 byte bit 1
-   NRFD  2   PORTA bit 2 byte bit 2
-   DAV   3   PORTA bit 3 byte bit 3
-   EOI   4   PORTA bit 4 byte bit 4
-   REN   5   PORTA bit 5 byte bit 5
-   SRQ   6   PORTA bit 6 byte bit 6
-   ATN   7   PORTA bit 7 byte bit 7
-*/
-
-void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
-
-  uint8_t portAb = bits;
-  uint8_t portAm = mask;
-
-  uint8_t regByte = 0;
-  uint8_t regMod = 0; 
-
-
-  // Set registers: register = (register & ~bitmask) | (value & bitmask)
-  // Mask: 0=unaffected; 1=to be changed
-
-  switch (mode) {
-    case 0:
-      // Set pin states using mask
-      regByte = mcpByteRead(MCPPORTA);
-      regMod = (regByte & ~portAm) | (portAb & portAm);
-      mcpByteWrite(MCPPORTA, regMod);
-      break;
-
-    case 1:
-      // Set pin direction registers using mask
-      regByte = ~mcpByteRead(MCPDIRA);   // Note: on MCP23S17 0 = output, 1 = input
-      regMod = (regByte & ~portAm) | (portAb & portAm);
-      mcpByteWrite(MCPDIRA, ~regMod);    // Note: on MCP23S17 0 = output, 1 = input
-      break;
-
-  }
-}
-
-
-/***** MCP23017 interrupt handler *****/
-/*
- * Interrput pin on Arduino configure with attachInterrupt
- */
-void mcpIntHandler() {
-//  mcpIntA = true;
-//  mcpPinAssertedReg = 0;
-//  Serial.println(F("MCP Interrupt triggered"));
-  mcpIntAReg = mcpByteRead(MCPINTCAPA);
-}
-
-
-uint8_t getMcpIntAReg(){
-  return mcpIntAReg;
-}
-
-
-/***** Arduino backward compatibility *****/
-static inline void wiresend(uint8_t db, TwoWire *theWire) {
-#if ARDUINO >= 100
-  theWire->write((uint8_t)db);
-#else
-  theWire->send(db);
-#endif
-}
-
-static inline uint8_t wirerecv(TwoWire *theWire) {
-#if ARDUINO >= 100
-  return theWire->read();
-#else
-  return theWire->receive();
-#endif
-}
-/***** Arduino backward compatibility *****/
-
-
-/***** Read from the MCP23017 *****/
-/*
- * reg : register we want to read , e.g. MCPPORTA or MCPPORTB
- */
-uint8_t mcpByteRead(uint8_t reg){
-  uint8_t db = 0;
-  Wire.beginTransmission(mcpI2Caddr);
-Serial.print(F("Rx addr: "));
-Serial.print(mcpI2Caddr, HEX);
-  wiresend(reg, &Wire);
-  Wire.endTransmission();
-  Wire.requestFrom(mcpI2Caddr, (uint8_t)1);
-  db = wirerecv(&Wire);
-uint8_t dbinv = ~db;
-Serial.print(F("\tRCV: "));
-Serial.println(dbinv, HEX);
-//  return wirerecv(&Wire);
-  return db;
-}
-
-
-/***** Write to the MCP23017 *****/
-void mcpByteWrite(uint8_t reg, uint8_t db){
-Serial.print(F("Tx addr: "));
-Serial.print(mcpI2Caddr, HEX);
-  Wire.beginTransmission(mcpI2Caddr);
-  wiresend(reg, &Wire);
-  wiresend(db, &Wire);
-  Wire.endTransmission();
-Serial.print(F("\tWRT: "));
-Serial.print(db, HEX);
-uint8_t dbinv = ~db;
-Serial.print(F("\tWRTinv: "));
-Serial.println(dbinv, HEX);
-}
-
-
-/***** Read status of control port pins *****/
-/*
- * Pin value between 0 and 7
- * Control bus = port A)
- */
-uint8_t mcpDigitalRead(uint8_t pin) {
-  // If the pin value is larger than 7 then do nothing and return
-  // Zero or larger value is implied by the variable type
-  if (pin > 7) return 0x0;
-  // Read the port A pin state, extract and return HIGH/LOW state for the requested pin
-  return mcpByteRead(MCPPORTA) & (1 << pin) ? HIGH : LOW;
-}
-
-
-/***** Get the status of an MCP23017 pin) *****/
-uint8_t getGpibPinState(uint8_t pin){
-  return mcpDigitalRead(pin);
-}
-
-
-/***** Configure pins that will generate an interrupt *****/
-void mcpInterruptsEn(){
-  // Set to interrupt mode for compare to previous
-  mcpByteWrite(MCPINTCONA, 0b00000000);
-  // Enable interrupt to detect pin state change on pins 4, 6 and 7 (EOI, SRQ and ATN)
-  mcpByteWrite(MCPINTENA, 0b11010000);
-}
-
-#endif //AR488_MCP23017
-/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
-/***** MCP23017 EXPANDER (I2C) LAYOUT *****/
 /******************************************/
 
 
@@ -1138,19 +932,19 @@ uint8_t reverseBits(uint8_t dbyte) {
 
 /***** Set the direction and state of the GPIB control lines ****/
 /*
-   Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
     bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
     mask (mask)     : 0=unaffected, 1=enabled
     mode (mode)     : 0=set pin state, 1=set pin direction
    Arduino Uno/Nano pin to Port/bit to direction/state byte map:
-   IFC   22  PORTC bit 6 byte bit 0
-   NDAC  21  PORTC bit 5 byte bit 1
-   NRFD  20  PORTC bit 4 byte bit 2
-   DAV   19  PORTC bit 3 byte bit 3
-   EOI   18  PORTC bit 2 byte bit 4
-   SRQ   23  PORTC bit 7 byte bit 6
-   REN   24  PORTA bit 0 byte bit 5
-   ATN   31  PORTA bit 7 byte bit 7
+   IFC_PIN   22  PORTC bit 6 byte bit 0
+   NDAC_PIN  21  PORTC bit 5 byte bit 1
+   NRFD_PIN  20  PORTC bit 4 byte bit 2
+   DAV_PIN   19  PORTC bit 3 byte bit 3
+   EOI_PIN   18  PORTC bit 2 byte bit 4
+   SRQ_PIN   23  PORTC bit 7 byte bit 6
+   REN_PIN   24  PORTA bit 0 byte bit 5
+   ATN_PIN   31  PORTA bit 7 byte bit 7
 */
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
@@ -1191,16 +985,15 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 /*************************************/
 /***** CUSTOM PIN LAYOUT SECTION *****/
 /***** vvvvvvvvvvvvvvvvvvvvvvvvv *****/
-#ifdef AR488_CUSTOM
+#if defined (AR488_CUSTOM) || defined (NON_ARDUINO)
 
-uint8_t databus[8] = { DIO1, DIO2, DIO3, DIO4, DIO5, DIO6, DIO7, DIO8 };
+uint8_t databus[8] = { DIO1_PIN, DIO2_PIN, DIO3_PIN, DIO4_PIN, DIO5_PIN, DIO6_PIN, DIO7_PIN, DIO8_PIN };
 
-uint8_t ctrlbus[8] = { IFC, NDAC, NRFD, DAV, EOI, REN, SRQ, ATN };
+uint8_t ctrlbus[8] = { IFC_PIN, NDAC_PIN, NRFD_PIN, DAV_PIN, EOI_PIN, REN_PIN, SRQ_PIN, ATN_PIN };
 
 
 /***** Set the GPIB data bus to input pullup *****/
 void readyGpibDbus() {
-  uint8_t db = 0;
   for (uint8_t i=0; i<8; i++){
     pinMode(databus[i], INPUT_PULLUP);
   }
@@ -1230,7 +1023,7 @@ void setGpibDbus(uint8_t db) {
 
 /***** Set the direction and state of the GPIB control lines ****/
 /*
-   Bits control lines as follows: 7-ATN, 6-SRQ, 5-REN, 4-EOI, 3-DAV, 2-NRFD, 1-NDAC, 0-IFC
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
    state: 0=LOW; 1=HIGH/INPUT_PULLUP
    dir  : 0=input; 1=output;
    mode:  0=set pin state; 1=set pin direction

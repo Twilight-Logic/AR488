@@ -2,7 +2,7 @@
 #include <EEPROM.h>
 #include "AR488_Eeprom.h"
 
-/***** AR488_Eeprom.cpp, ver. 0.00.06, 16/06/2021 *****/
+/***** AR488_Eeprom.cpp, ver. 0.00.07, 21/12/2023 *****/
 /*
  * EEPROM functions implementation
  */
@@ -130,6 +130,8 @@ void epViewData(Stream& outputStream) {
   uint16_t addr = 0;
   uint8_t dbuf[16];
   char cnt[4]= {'\0'};
+  char oct[4] = {'\0'};
+
 
   // Load EEPROM data from Flash
   EEPROM.begin(EESIZE);

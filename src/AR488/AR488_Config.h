@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.51.20, 15/12/2023"
+#define FWVER "AR488 GPIB controller, ver. 0.51.26, 24/12/2023"
 
 
 
@@ -45,7 +45,6 @@
   #define AR488_UNO
   //#define AR488_NANO
   //#define AR488_MCP23S17
-  //#define AR488_MCP23017
 
 /*** MEGA 32U4 based boards (Micro, Leonardo) ***/
 #elif __AVR_ATmega32U4__
@@ -60,13 +59,28 @@
   //#define AR488_MEGA2560_E1
   //#define AR488_MEGA2560_E2
 //  #define AR488_MCP23S17
-  //#define AR488_MCP23017
 
 /***** Panduino Mega 644 or Mega 1284 board *****/
 #elif defined(__AVR_ATmega644P__) || defined(__AVR_ATmega1284P__)
   /* Board/layout selection */
   #define AR488_MEGA644P_MCGRAW
-  
+
+/***** ESP 32 VROOM-32 *****/
+#elif defined(ESP32)
+  #define NON_ARDUINO
+  #define ESP32_WROOM_32
+
+/***** RPI PIco and Pico W *****/
+//#elif defined(ARDUINO_ARCH_RP2040)
+//  #define NON_ARDUINO
+//  #define RPI_PICO
+
+//#elif defined(ARDUINO_NANO_RP2040_CONNECT)
+
+//#elif defined(ARDUINO_ARCH_MBED_NANO)
+
+//#elif defined(ARDUINO_ARCH_MBED_RP2040)
+
 #endif  // Board/layout selection
 
 
@@ -93,7 +107,7 @@
 #endif
 
 /***** Debug port *****/
-//#define DEBUG_ENABLE
+#define DEBUG_ENABLE
 #ifdef DEBUG_ENABLE
   // Serial port device
   #define DB_SERIAL_PORT Serial
@@ -121,11 +135,11 @@
 /***** SUPPORT FOR PERIPHERAL CHIPS *****/
 /*
  * This sections priovides configuration to enable/disable support
- * for SN7516x, MCP23S17 and MCP23017 chips.
+ * for SN7516x chips and the MCP23S17 GPIO expander.
  */
 
 
-/***** Enable MCP23S17 chip *****/
+/***** Enable MCP23S17 GPIO expander chip *****/
 /*
  * This version uses the SPI interface with speeds up to 10MHz max
  * Note: Use #define MCP23S17 as the layout definition
@@ -134,18 +148,6 @@
   #define MCP_ADDRESS   0
   #define MCP_SELECTPIN 10
   #define MCP_INTERRUPT 2
-#endif
-
-
-/***** Enable MCP23017 chip *****/
-/*
- * This version uses the I2C interface with speeds of 100kHz, 400kHz and 1,7MHz
- * Pull up resistors (4.7k) are required on the SDA and SCL pins
- * Note: Use #define MCP23017 as the layout definition
- */
-#ifdef AR488_MCP23017
-  #define MCP_ADDRESS   1
-  #define MCP_INTERRUPT 3
 #endif
 
 
@@ -174,30 +176,7 @@
  */
 
 
-/***** Pin State Detection *****/
-/*
- * With UNO. NANO and MEGA boards with pre-defined layouts,
- * USE_INTERRUPTS can and should be used.
- * With the AR488_CUSTOM layout and unknown boards, USE_INTERRUPTS must  
- * be commented out. Interrupts are used on pre-defined AVR board layouts 
- * and will respond faster, however in-loop checking for state of pin states
- * can be supported with any board layout.
- */
-/* 
-#ifdef __AVR__
-  // For supported boards use interrupt handlers
-  #if defined (AR488_UNO) || defined (AR488_NANO) || defined (AR488_MEGA2560) || defined (AR488_MEGA32U4)
-    #ifndef AR488_CUSTOM
-      #ifndef AR488_MCP23S17
-        #define USE_INTERRUPTS
-      #endif
-    #endif
-  #endif
-#endif
-*/
-
-
-/***** Local/remote signal (LED) *****/
+/***** Device mode local/remote signal (LED) *****/
 //#define REMOTE_SIGNAL_PIN 7
 
 
@@ -218,7 +197,6 @@
 
 /***** Acknowledge interface is ready *****/
 //#define SAY_HELLO
-
 
 
 
@@ -244,8 +222,8 @@
   //#define DEBUG_GPIB_ADDRESSING // GPIBbus::sendMA(), GPIBbus::sendMLA(), GPIBbus::sendUNT(), GPIBbus::sendUNL() 
   //#define DEBUG_GPIB_DEVICE     // GPIBbus::unAddressDevice(), GPIBbus::addressDevice
   
-  // GPIB layout module
-  //#define DEBUG_LAYOUTS
+  // GPIB layout
+  #define DEBUG_LAYOUT
 
   // EEPROM module
   //#define DEBUG_EEPROM          // EEPROM
@@ -263,28 +241,30 @@
 /*******************************/
 /***** AR488 CUSTOM LAYOUT *****/
 /***** vvvvvvvvvvvvvvvvvvv *****/
+
 #ifdef AR488_CUSTOM
 
-#define DIO1  A0  /* GPIB 1  */
-#define DIO2  A1  /* GPIB 2  */
-#define DIO3  A2  /* GPIB 3  */
-#define DIO4  A3  /* GPIB 4  */
-#define DIO5  A4  /* GPIB 13 */
-#define DIO6  A5  /* GPIB 14 */
-#define DIO7  4   /* GPIB 15 */
-#define DIO8  5   /* GPIB 16 */
+#define DIO1_PIN  A0  /* GPIB 1  */
+#define DIO2_PIN  A1  /* GPIB 2  */
+#define DIO3_PIN  A2  /* GPIB 3  */
+#define DIO4_PIN  A3  /* GPIB 4  */
+#define DIO5_PIN  A4  /* GPIB 13 */
+#define DIO6_PIN  A5  /* GPIB 14 */
+#define DIO7_PIN  4   /* GPIB 15 */
+#define DIO8_PIN  5   /* GPIB 16 */
 
-#define IFC   8   /* GPIB 9  */
-#define NDAC  9   /* GPIB 8  */
-#define NRFD  10  /* GPIB 7  */
-#define DAV   11  /* GPIB 6  */
-#define EOI   12  /* GPIB 5  */
+#define IFC_PIN   8   /* GPIB 9  */
+#define NDAC_PIN  9   /* GPIB 8  */
+#define NRFD_PIN  10  /* GPIB 7  */
+#define DAV_PIN   11  /* GPIB 6  */
+#define EOI_PIN   12  /* GPIB 5  */
 
-#define SRQ   2   /* GPIB 10 */
-#define REN   3   /* GPIB 17 */
-#define ATN   7   /* GPIB 11 */
+#define SRQ_PIN   2   /* GPIB 10 */
+#define REN_PIN   3   /* GPIB 17 */
+#define ATN_PIN   7   /* GPIB 11 */
 
 #endif
+
 /***** ^^^^^^^^^^^^^^^^^^^ *****/
 /***** AR488 CUSTOM LAYOUT *****/
 /*******************************/
