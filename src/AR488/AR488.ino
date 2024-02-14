@@ -14,7 +14,7 @@
 #include "AR488_Eeprom.h"
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.51.26, 24/12/2023" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.51.27, 14/02/2024" *****/
 /*
   Arduino IEEE-488 implementation by John Chajecki
 
