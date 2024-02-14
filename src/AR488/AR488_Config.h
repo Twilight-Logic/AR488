@@ -107,7 +107,7 @@
 #endif
 
 /***** Debug port *****/
-#define DEBUG_ENABLE
+//#define DEBUG_ENABLE
 #ifdef DEBUG_ENABLE
   // Serial port device
   #define DB_SERIAL_PORT Serial
@@ -223,7 +223,7 @@
   //#define DEBUG_GPIB_DEVICE     // GPIBbus::unAddressDevice(), GPIBbus::addressDevice
   
   // GPIB layout
-  #define DEBUG_LAYOUT
+  //#define DEBUG_LAYOUT
 
   // EEPROM module
   //#define DEBUG_EEPROM          // EEPROM
