@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.51.26, 24/12/2023"
+#define FWVER "AR488 GPIB controller, ver. 0.51.28, 16/02/2024"
 
 
 
@@ -65,10 +65,15 @@
   /* Board/layout selection */
   #define AR488_MEGA644P_MCGRAW
 
-/***** ESP 32 VROOM-32 *****/
+/***** ESP32 boards *****/
 #elif defined(ESP32)
-  #define NON_ARDUINO
-  #define ESP32_WROOM_32
+  #define NON_ARDUINO   // MUST BE DEFINED!
+  #define ESP32_DEVKIT1_WROOM_32
+  // David Douard / Johann Wilhelm board layouts
+  //#define ESP32_TTGO_T8_161
+  //#define ESP32_ESP32DEV
+  //#define ESP32_LOLIN32_161   // ESP32_LOLIN32_161_V2 profile has the same pin assigments
+  //#define ESP32_S2_161
 
 /***** RPI PIco and Pico W *****/
 //#elif defined(ARDUINO_ARCH_RP2040)
