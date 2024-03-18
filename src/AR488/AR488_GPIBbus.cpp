@@ -6,6 +6,7 @@
 /***** AR488_GPIB.cpp, ver. 0.51.29, 18/03/2024 *****/
 
 
+
 /****** Process status values *****/
 #define OK false
 #define ERR true
