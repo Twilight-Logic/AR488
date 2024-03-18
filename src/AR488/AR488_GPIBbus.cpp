@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_GPIBbus.h"
 
-/***** AR488_GPIB.cpp, ver. 0.51.25, 21/12/2023 *****/
+/***** AR488_GPIB.cpp, ver. 0.51.29, 18/03/2024 *****/
 
 
 /****** Process status values *****/
@@ -691,13 +691,17 @@ void GPIBbus::sendData(char *data, uint8_t dsize) {
     if (cfg.eoi) {
       // Send all characters
       if (tc) {
-        state = writeByte(data[i], NO_EOI);  // Send EOI with terminator
+        state = writeByte(data[i], NO_EOI);  // Just send the character - EOI will be sent with the terminator
       } else {
         state = writeByte(data[i], (i == (dsize - 1)));  // Send EOI on last character
       }
     } else {
       // Otherwise ignore non-escaped CR, LF and ESC
-      if ((data[i] != CR) && (data[i] != LF) && (data[i] != ESC)) state = writeByte(data[i], NO_EOI);
+      // Filter REMOVED as it afftects read of HP3478A cal data
+      // if ((data[i] != CR) && (data[i] != LF) && (data[i] != ESC)) state = writeByte(data[i], NO_EOI);
+      // Filter REMOVED as it affects read of HP3478A cal data
+      // 
+      state = writeByte(data[i], NO_EOI);
     }
 
 #ifdef DEBUG_GPIBbus_SEND
