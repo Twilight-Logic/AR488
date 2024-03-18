@@ -14,7 +14,7 @@
 #include "AR488_Eeprom.h"
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.51.28, 16/02/2024" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.51.29, 18/03/2024" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -631,7 +631,7 @@ uint8_t parseInput(char c) {
       // Carriage return or newline? Then process the line
       case CR:
       case LF:
-        // If escaped just add to buffer
+        // If escaped add char 0x10 or 0x13 to buffer and clear Escape flag
         if (isEsc) {
           addPbuf(c);
           isEsc = false;
@@ -646,7 +646,6 @@ uint8_t parseInput(char c) {
             }
             return 0;
           } else {
-//            if (isVerb) dataPort.println();  // Move to new line
 #ifdef DEBUG_SERIAL_INPUT
             DB_PRINT(F("parseInput: Received "), pBuf);
 #endif
@@ -679,12 +678,12 @@ uint8_t parseInput(char c) {
       case ESC:
         // Handle the escape character
         if (isEsc) {
-          // Add character to buffer and cancel escape
+          // Add character 0x27 to buffer and clear Escape flag
           addPbuf(c);
           isEsc = false;
         } else {
-          // Set escape flag
-          isEsc  = true;  // Set escape flag
+          // Flag that we have seen an Escape character
+          isEsc  = true;
         }
         break;
       case PLUS:
@@ -697,8 +696,6 @@ uint8_t parseInput(char c) {
         break;
       // Something else?
       default: // any char other than defined above
-//        if (isVerb) dataPort.print(c);  // Humans like to see what they are typing...
-        // Buffer contains '++' (start of command). Stop sending data to serial port by halting GPIB receive.
         addPbuf(c);
         isEsc = false;
     }
