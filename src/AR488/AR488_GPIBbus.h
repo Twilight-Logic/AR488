@@ -12,7 +12,7 @@
 #endif
 #endif
 
-/***** AR488_GPIBbus.cpp, ver. 0.51.29, 18/03/2024 *****/
+/***** AR488_GPIBbus.cpp, ver. 0.52.15, 03/03/2025 *****/
 
 
 /*********************************************/
@@ -23,7 +23,7 @@
 
 /***** Debug Port *****/
 #ifdef DB_SERIAL_ENABLE
-extern Stream &debugStream;
+extern Stream &debugPort;
 /* Configured in Config.h */
 //#define DEBUG_GPIBbus_RECEIVE
 //#define DEBUG_GPIBbus_SEND
@@ -50,6 +50,7 @@ extern Stream &debugStream;
 #define GC_UNT 0x5F
 #define GC_TAD 0x40
 #define GC_PPE 0x60
+#define GC_SAD 0x60
 #define GC_PPD 0x70
 
 
@@ -143,8 +144,8 @@ public:
       bool eoi;         // Assert EOI on last data char written to GPIB - 0-disable, 1-enable
       uint8_t cmode;    // Controller/device mode (0=unset, 1=device, 2=controller)
       uint8_t caddr;    // This interface address
-      uint8_t paddr;    // Primary address to use when addressing device
-      uint8_t saddr;    // Secondary address to use when addressing device
+      uint8_t paddr;    // Primary address to use when addressing a device
+      uint8_t saddr;    // Secondary address to use when addressing a device
       uint8_t eos;      // EOS (end of send to GPIB) characters [0=CRLF, 1=CR, 2=LF, 3=None]
       uint8_t stat;     // Status byte to return in response to a serial poll
       uint8_t amode;    // Auto mode setting (0=off; 1=Prologix; 2=onquery; 3=continuous);
@@ -202,13 +203,14 @@ public:
 
   void setStatus(uint8_t statusByte);
   bool sendCmd(uint8_t cmdByte);
+  bool sendSecondaryCmd(uint8_t paddr, uint8_t saddr, char * data, uint8_t dsize);
   enum gpibHandshakeStates readByte(uint8_t *db, bool readWithEoi, bool *eoi);
   enum gpibHandshakeStates writeByte(uint8_t db, bool isLastByte);
   bool receiveData(Stream &dataStream, bool detectEoi, bool detectEndByte, uint8_t endByte);
   void sendData(char *data, uint8_t dsize);
   void clearDataBus();
-  void setControlVal(uint8_t value, uint8_t mask, uint8_t mode);
-  void setDataVal(uint8_t);
+  void setControlVal(uint8_t value);
+  void setDataVal(uint8_t value);
 
   bool isDeviceAddressedToListen();
   bool isDeviceAddressedToTalk();

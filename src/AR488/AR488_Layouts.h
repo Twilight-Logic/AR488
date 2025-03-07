@@ -6,11 +6,12 @@
 #include "AR488_Config.h"
 
 
-/***** AR488_Hardware.h, ver. 0.51.28, 16/02/2024 *****/
+/***** AR488_Hardware.h, ver. 0.52.15, 03/03/2025 *****/
 
-/*
- * Hardware pin layout definitions
- */
+
+///=================================///
+/// Hardware pin layout definitions ///
+///=================================///
 
 
 /*************************************/
@@ -67,7 +68,7 @@
 #ifdef AR488_MEGA2560_D
 
 // NOTE: MEGA2560 pinout last updated 28/07/2019
-#define DIO1_PIN_PIN  A0  /* GPIB 1  : PORTF bit 0 */
+#define DIO1_PIN  A0  /* GPIB 1  : PORTF bit 0 */
 #define DIO2_PIN  A1  /* GPIB 2  : PORTF bit 1 */
 #define DIO3_PIN  A2  /* GPIB 3  : PORTF bit 2 */
 #define DIO4_PIN  A3  /* GPIB 4  : PORTF bit 3 */
@@ -469,37 +470,100 @@ uint8_t getMcpIntAReg();
 
 
 
+/***************************************/
+/***** RAS PICO LAYOUT 1 DEFINITION *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef RAS_PICO_L1
 
-/*************************************/
-/***** PI PICO LAYOUT DEFINITION *****/
-/***** vvvvvvvvvvvvvvvvvvvvvvvvv *****/
+void gpioFuncList();
 
-//#ifdef RPI_PICO
+#define DIO1_PIN   6   /* GPIB 1  */
+#define DIO2_PIN   7   /* GPIB 2  */
+#define DIO3_PIN   8   /* GPIB 3  */
+#define DIO4_PIN   9   /* GPIB 4  */
+#define DIO5_PIN  10   /* GPIB 13 */
+#define DIO6_PIN  11   /* GPIB 14 */
+#define DIO7_PIN  12   /* GPIB 15 */
+#define DIO8_PIN  13   /* GPIB 16 */
 
-//#define DIO1_PIN   6   /* GPIB 1  */
-//#define DIO2_PIN   7   /* GPIB 2  */
-//#define DIO3_PIN   8   /* GPIB 3  */
-//#define DIO4_PIN   9   /* GPIB 4  */
-//#define DIO5_PIN  10   /* GPIB 13 */
-//#define DIO6_PIN  11   /* GPIB 14 */
-//#define DIO7_PIN  12   /* GPIB 15 */
-//#define DIO8_PIN  13   /* GPIB 16 */
+#define IFC_PIN   14   /* GPIB 9  */
+#define NDAC_PIN  15   /* GPIB 8  */
+#define NRFD_PIN  16   /* GPIB 7  */
+#define DAV_PIN   17   /* GPIB 6  */
+#define EOI_PIN   18   /* GPIB 5  */
 
-//#define IFC_PIN   14   /* GPIB 9  */
-//#define NDAC_PIN  15   /* GPIB 8  */
-//#define NRFD_PIN  16   /* GPIB 7  */
-//#define DAV_PIN   17   /* GPIB 6  */
-//#define EOI_PIN   18   /* GPIB 5  */
+#define REN_PIN   19   /* GPIB 17 */
+#define SRQ_PIN   20   /* GPIB 10 */
+#define ATN_PIN   21   /* GPIB 11 */
 
-//#define SRQ_PIN   19   /* GPIB 10 */
-//#define REN_PIN   20   /* GPIB 17 */
-//#define ATN_PIN   21   /* GPIB 11 */
+#endif // RAS_PICO_L1
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** RAS PICO LAYOUT 1 DEFINITION *****/
+/****************************************/
 
-//#endif // RPI_PICO
 
-/***** ^^^^^^^^^^^^^^^^^^^^^^^ *****/
-/***** ESP32 LAYOUT DEFINITION *****/
-/***********************************/
+
+/****************************************/
+/***** RAS PICO LAYOUT 2 DEFINITION *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef RAS_PICO_L2
+
+void gpioFuncList();
+
+#define DIO1_PIN  14   /* GPIB 1  */
+#define DIO2_PIN  15   /* GPIB 2  */
+#define DIO3_PIN  16   /* GPIB 3  */
+#define DIO4_PIN  17   /* GPIB 4  */
+#define DIO5_PIN  18   /* GPIB 13 */
+#define DIO6_PIN  19   /* GPIB 14 */
+#define DIO7_PIN  20   /* GPIB 15 */
+#define DIO8_PIN  21   /* GPIB 16 */
+
+#define IFC_PIN    6   /* GPIB 9  */
+#define NDAC_PIN   7   /* GPIB 8  */
+#define NRFD_PIN   8   /* GPIB 7  */
+#define DAV_PIN    9   /* GPIB 6  */
+#define EOI_PIN   10   /* GPIB 5  */
+
+#define REN_PIN   11   /* GPIB 17 */
+#define SRQ_PIN   12   /* GPIB 10 */
+#define ATN_PIN   13   /* GPIB 11 */
+
+#endif // RAS_PICO_L2
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** RAS PICO LAYOUT 2 DEFINITION *****/
+/****************************************/
+
+
+
+/*************************************************/
+/***** NANO RP2040 CONNECT LAYOUT DEFINITION *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef RPI_NANO_RP2040
+
+#define DIO1_PIN  21   /* D9, GPIB 1  */
+#define DIO2_PIN  20   /* D8, GPIB 2  */
+#define DIO3_PIN  19   /* D7, GPIB 3  */
+#define DIO4_PIN  18   /* D6, GPIB 4  */
+#define DIO5_PIN  17   /* D5, GPIB 13 */
+#define DIO6_PIN  16   /* D4, GPIB 14 */
+#define DIO7_PIN  15   /* D3, GPIB 15 */
+#define DIO8_PIN  25   /* D2, GPIB 16 */
+
+#define IFC_PIN   27   /* D15, GPIB 9  */
+#define NDAC_PIN  28   /* D16, GPIB 8  */
+#define NRFD_PIN  29   /* D17, GPIB 7  */
+#define DAV_PIN   12   /* D18, GPIB 6  */
+#define EOI_PIN   13   /* D19, GPIB 5  */
+
+#define SRQ_PIN    6   /* D13, GPIB 10 */
+#define REN_PIN    4   /* D12, GPIB 17 */
+#define ATN_PIN    7   /* D10, GPIB 11 */
+
+#endif // RPI_NANO_RP2040
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** NANO RP2040 CONNECT LAYOUT DEFINITION *****/
+/*************************************************/
 
 
 
@@ -510,8 +574,22 @@ uint8_t getMcpIntAReg();
 void readyGpibDbus();
 uint8_t readGpibDbus();
 void setGpibDbus(uint8_t db);
-void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode);
+//oid setGpibState(uint8_t bits, uint8_t mask, uint8_t mode);
+void setGpibCtrlState(uint8_t bits, uint8_t mask);
+void setGpibCtrlDir(uint8_t bits, uint8_t mask);
 uint8_t getGpibPinState(uint8_t pin);
+
+#ifdef LEVEL_SHIFTER
+  void initLevelShifter();
+  void shiftEnable(bool stat);
+#endif
+
+#if defined(RAS_PICO_L1) || defined(RAS_PICO_L2)
+  void initRpGpioPins();
+#endif
+
+
+
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** GLOBAL DEFINITIONS SECTION *****/

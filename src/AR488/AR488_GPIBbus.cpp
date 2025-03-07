@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_GPIBbus.h"
 
-/***** AR488_GPIB.cpp, ver. 0.51.29, 18/03/2024 *****/
+/***** AR488_GPIB.cpp, ver. 0.52.15, 03/03/2025 *****/
 
 
 /****** Process status values *****/
@@ -15,6 +15,9 @@
 #define CR 0xD     // Carriage return
 #define LF 0xA     // Newline/linefeed
 #define PLUS 0x2B  // '+' character
+
+
+
 
 
 
@@ -36,8 +39,16 @@ GPIBbus::GPIBbus() {
 
 /***** Start the bus in controller or device mode depending on config *****/
 void GPIBbus::begin() {
+#if defined(RAS_PICO_L1) || defined(RAS_PICO_L2) 
+  initRpGpioPins();
+#endif
+//gpioFuncList();
+#ifdef LEVEL_SHIFTER
+  initLevelShifter();
+#endif
   if (isController()) {
     startControllerMode();
+//    gpioFuncList();
   } else {
     startDeviceMode();
   }
@@ -48,16 +59,24 @@ void GPIBbus::begin() {
 void GPIBbus::stop() {
   cstate = 0;
   // Set control bus to idle state (all lines input_pullup)
+//Serial.println(F("Clear all signals to input pullup"));
   clearAllSignals();
+//  gpioFuncList();
   // Set data bus to default state (all lines input_pullup)
+//Serial.println(F("Ready the data bus:"));
   readyGpibDbus();
+//  gpioFuncList();
+#ifdef LEVEL_SHIFTER
+  // Disable level shifter
+  shiftEnable(false);
+#endif
 }
 
 
 /***** Initialise the interface *****/
 void GPIBbus::setDefaultCfg() {
   // Set default controller mode values ({'\0'} sets version string array to null)
-  cfg = { false, false, 2, 0, 1, 0, 0, 0, 0, 1200, 0, { '\0' }, 0, { '\0' }, 0, 0 };
+  cfg = { false, false, 2, 0, 1, 0xFF, 0, 0, 0, 1200, 0, { '\0' }, 0, { '\0' }, 0, 0 };
 }
 
 
@@ -71,7 +90,11 @@ void GPIBbus::startDeviceMode() {
   // Set GPIB control bus to device idle mode
   setControls(DINI);
   // Initialise GPIB data lines (sets to INPUT_PULLUP)
-  readyGpibDbus();
+//  readyGpibDbus();
+#ifdef LEVEL_SHIFTER
+  // Enable level shifter
+  shiftEnable(true);
+#endif
 }
 
 
@@ -88,10 +111,15 @@ void GPIBbus::startControllerMode() {
   setControls(CINI);
   // Initialise GPIB data lines (sets to INPUT_PULLUP)
   readyGpibDbus();
+#ifdef LEVEL_SHIFTER
+  // Enable level shifter
+  shiftEnable(true);
+  delay(100);
+#endif
   // Assert IFC to signal controller in charge (CIC)
   sendIFC();
   // Attempt to address device to listen
-  if (cfg.paddr > 1) addressDevice(cfg.paddr, 0);
+//  if (cfg.paddr > 1) addressDevice(cfg.paddr, 0); // Addr not set yet!
 }
 
 
@@ -100,19 +128,18 @@ void GPIBbus::setOperatingMode(enum operatingModes mode) {
   uint8_t outputs = 0;
   switch (mode) {
     case OP_IDLE:
-      setGpibState(0, CTRL_BITS, 1);          // All control signals to inputs
-      setGpibState(CTRL_BITS, CTRL_BITS, 0);  // All control signal states to INPUT_PULLUP
+      setGpibCtrlDir(0, CTRL_BITS);           // Set all control signals to input_pullup
       break;
     case OP_CTRL:
       outputs = (IFC_BIT | REN_BIT | ATN_BIT);  // Signal IFC, REN and ATN, listen to SRQ
-      setGpibState(outputs, CTRL_BITS, 1);      // Set control inputs and outputs (0=input, 1=output)
-      setGpibState(CTRL_BITS, CTRL_BITS, 0);    // Set control signal states: outputs to unasserted/HIGH, inputs to 1 (INPUT_PULLUP)
+      setGpibCtrlDir(outputs, CTRL_BITS);      // Set control inputs and outputs (0=input_pullup, 1=output)
+      setGpibCtrlState(outputs, outputs);  // Set control output signals to unasserted/HIGH
       break;
     case OP_DEVI:
       outputs = (SRQ_BIT);                    // Signal SRQ, listen to IFC, REN and ATN
       clearSignal(REN_BIT);
-      setGpibState(outputs, CTRL_BITS, 1);    // Set control inputs and outputs (0=input, 1=output)
-      setGpibState(CTRL_BITS, CTRL_BITS, 0);  // Set control signal states: outputs to unasserted/HIGH, inputs to 1 (INPUT_PULLUP)
+      setGpibCtrlDir(outputs, CTRL_BITS);     // Set control inputs and outputs (0=input_pullup, 1=output)
+      setGpibCtrlState(outputs, outputs);   // Set control output signals to unasserted/HIGH
       break;
   }
 }
@@ -123,19 +150,17 @@ void GPIBbus::setTransmitMode(enum transmitModes mode) {
   uint8_t outputs = 0;
   switch (mode) {
     case TM_IDLE:
-      setGpibState(0, HSHK_BITS, 1);          // All handshake signals to inputs
-      setGpibState(HSHK_BITS, HSHK_BITS, 0);  // All handshake signal states to INPUT_PULLUP
+      setGpibCtrlDir(0, HSHK_BITS);           // Set all handshake signals to input_pullup
       break;
     case TM_RECV:
-      outputs = (NRFD_BIT | NDAC_BIT);      // Signal NRFD and NDAC, listen to DAV and EOI
-      setGpibState(outputs, HSHK_BITS, 1);  // Set handshake inputs and outputs (0=input, 1=output)
-      outputs = ~outputs & HSHK_BITS;
-      setGpibState(outputs, HSHK_BITS, 0);  // Set handshake signal states: outputs to asserted/LOW, GPIO inputs to 1 (INPUT_PULLUP)
+      outputs = (NRFD_BIT | NDAC_BIT);       // Signal NRFD and NDAC, listen to DAV and EOI
+      setGpibCtrlDir(outputs, HSHK_BITS);    // Set handshake inputs and outputs (0=input_PULLUP, 1=output)
+      setGpibCtrlState(~outputs, outputs);  // Set handshake output signals to asserted/LOW
       break;
     case TM_SEND:
       outputs = (DAV_BIT | EOI_BIT);          // Signal DAV and EOI, listen to NRFD and NDAC
-      setGpibState(outputs, HSHK_BITS, 1);    // Set handshake inputs and outputs (0=input, 1=output)
-      setGpibState(HSHK_BITS, HSHK_BITS, 0);  // Set handshake signal states: outputs to unasserted/HIGH, GPIO inputs to 1 (INPUT_PULLUP)
+      setGpibCtrlDir(outputs, HSHK_BITS);     // Set handshake inputs and outputs (0=input_pullup, 1=output)
+      setGpibCtrlState(outputs, outputs); // Set handshake output signals to unasserted/HIGH
       break;
   }
 }
@@ -143,22 +168,21 @@ void GPIBbus::setTransmitMode(enum transmitModes mode) {
 
 /***** Assert an individual or group of signals *****/
 void GPIBbus::assertSignal(uint8_t sig) {
-  // Note: GPIO pin direction assumed set by mode
-  setGpibState(0, sig, 0);  // Set all signals permitted by mask to LOW (asserted)
+  // Note: GPIO pin direction assumed set by setOperatingMode()
+  setGpibCtrlState(0, sig);   // Set all signals permitted by mask to LOW (asserted)
 }
 
 
 /***** Clear (unassert) an individual or group of signals *****/
 void GPIBbus::clearSignal(uint8_t sig) {
-  // Note: GPIO pin direction assumed set by mode
-  setGpibState(sig, sig, 0);  // Set all signals permitted by mask to HIGH (unasserted)
+  // Note: GPIO pin direction assumed set by setOperatingMode()
+  setGpibCtrlState(sig, sig);   // Set all signals permitted by mask to HIGH (unasserted)
 }
 
 
 /***** Clear all GPIB control signals *****/
 void GPIBbus::clearAllSignals() {
-  setGpibState(0, ALL_BITS, 1);         // Set all signals to inputs
-  setGpibState(ALL_BITS, ALL_BITS, 0);  // Set all GPIO pins to INPUT_PULLUP
+  setGpibCtrlDir(0, ALL_BITS);            // Set all control signal pins to input_pullup
 }
 
 
@@ -470,10 +494,8 @@ bool GPIBbus::sendUNL() {
 }
 
 
-
 /*****  Send a single byte GPIB command *****/
 bool GPIBbus::sendCmd(uint8_t cmdByte) {
-  //  bool stat = false;
   enum gpibHandshakeStates state;
 
   // Set lines for command and assert ATN
@@ -697,7 +719,7 @@ void GPIBbus::sendData(char *data, uint8_t dsize) {
       }
     } else {
       // Otherwise ignore non-escaped CR, LF and ESC
-      // Filter REMOVED as it afftects read of HP3478A cal data
+      // Filter REMOVED as it afftects read of HP3478A cal dataf
       // if ((data[i] != CR) && (data[i] != LF) && (data[i] != ESC)) state = writeByte(data[i], NO_EOI);
       // Filter REMOVED as it affects read of HP3478A cal data
       // 
@@ -792,9 +814,15 @@ void GPIBbus::setControls(uint8_t state) {
 
     // Controller states
     case CINI:  // Initialisation
+//    Serial.println(F("Set CINI OP_CTRL:"));
       setOperatingMode(OP_CTRL);
+//      gpioFuncList();
+//    Serial.println(F("Set CINI TM_IDLE:"));
       setTransmitMode(TM_IDLE);
+//      gpioFuncList();
+//    Serial.println(F("Assert REN_BIT:"));
       assertSignal(REN_BIT);
+//    gpioFuncList();
 #ifdef SN7516X
       digitalWrite(SN7516X_TE, LOW);
 #ifdef SN7516X_DC
@@ -875,7 +903,7 @@ void GPIBbus::setControls(uint8_t state) {
 #endif
 #endif
       clearAllSignals();
-      setOperatingMode(OP_DEVI);
+      setOperatingMode(OP_DEVI);  // Set up for device mode
       // Set data bus to idle state
       readyGpibDbus();
 #ifdef DEBUG_GPIBbus_CONTROL
@@ -929,9 +957,11 @@ void GPIBbus::setControls(uint8_t state) {
 }
 
 
-/***** Set GPI control state using numeric input (xdiag_h) *****/
-void GPIBbus::setControlVal(uint8_t value, uint8_t mask, uint8_t mode) {
-  setGpibState(value, mask, mode);
+/***** Set GPIP control state using numeric input (xdiag_h) *****/
+void GPIBbus::setControlVal(uint8_t value) {
+//  setGpibState(value, mask, mode);
+  setGpibCtrlDir(0xFF, 0xFF); // Sel all outputs
+  setGpibCtrlState(value, 0xFF);
 }
 
 
@@ -948,6 +978,8 @@ bool GPIBbus::unAddressDevice() {
   // Utalk/unlisten
   if (sendCmd(GC_UNL)) return ERR;
   if (sendCmd(GC_UNT)) return ERR;
+  // Clear secondary address
+  cfg.saddr = 0xFF;
   // Clear flag
   deviceAddressed = false;
 #ifdef DEBUG_GPIBbus_DEVICE
@@ -970,9 +1002,17 @@ bool GPIBbus::addressDevice(uint8_t addr, bool talk) {
   if (talk) {
     // Device to talk, controller to listen
     if (sendCmd(GC_TAD + addr)) return ERR;
+    // Secondary address?
+    if (cfg.saddr != 0xFF) {
+      if (sendCmd(cfg.saddr)) return ERR;
+    }
   } else {
     // Device to listen, controller to talk
     if (sendCmd(GC_LAD + addr)) return ERR;
+    // Secondary address?
+    if (cfg.saddr != 0xFF) {
+      if (sendCmd(cfg.saddr)) return ERR;
+    }
   }
 
   // Set flag
@@ -981,32 +1021,30 @@ bool GPIBbus::addressDevice(uint8_t addr, bool talk) {
 }
 
 
-/***** Returns status of controller device addressing *****/
+/***** Return status device addressing (Controller mode) *****/
 /*
- * true = device addressed; false = device is not addressed
+ * true = device has been addressed; false = device has not been addressed
  */
 bool GPIBbus::haveAddressedDevice() {
   return deviceAddressed;
 }
 
 
-/***** Device is addressed to listen? *****/
+/***** Device is addressed to listen? (Device mode) *****/
 bool GPIBbus::isDeviceAddressedToListen() {
-  //  if (deviceAddressedState == DLAS) return true;
   if (cstate == DLAS) return true;
   return false;
 }
 
 
-/***** Device is addressed to talk? *****/
+/***** Device is addressed to talk? (Device mode) *****/
 bool GPIBbus::isDeviceAddressedToTalk() {
-  //  if (deviceAddressedState == DTAS) return true;
   if (cstate == DTAS) return true;
   return false;
 }
 
 
-/***** Device is not addressed? *****/
+/***** Device is not addressed? (Device mode) *****/
 bool GPIBbus::isDeviceInIdleState() {
   if (cstate == DIDS) return true;
   return false;

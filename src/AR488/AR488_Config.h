@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.51.29, 18/03/2024"
+#define FWVER "AR488 GPIB controller, ver. 0.52.17, 07/03/2025"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -75,9 +75,10 @@
   //#define ESP32_S2_161
 
 /***** RPI PIco and Pico W *****/
-//#elif defined(ARDUINO_ARCH_RP2040)
+#elif defined(ARDUINO_ARCH_RP2040)
 //  #define NON_ARDUINO
-//  #define RPI_PICO
+  #define RAS_PICO_L1
+//  #define RAS_PICO_L2
 
 //#elif defined(ARDUINO_NANO_RP2040_CONNECT)
 
@@ -172,6 +173,11 @@
 #endif
 
 
+/***** Level shifter (e.g. TXS0108E) enable pin *****/
+//#define LEVEL_SHIFTER
+#ifdef LEVEL_SHIFTER
+  #define LVL_SHIFT_EN 22
+#endif
 
 
 /***** MISCELLANEOUS OPTIONS *****/

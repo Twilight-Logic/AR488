@@ -3,16 +3,11 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.51.28, 16/02/2024 *****/
+/***** AR488_Hardware.cpp, ver. 0.52.15, 03/03/2025 *****/
 
-/*
- * Hardware layout function definitions
- */
-
-/*
-volatile bool isATN_PIN = false;  // has ATN_PIN been asserted?
-volatile bool isSRQ_PIN = false;  // has SRQ_PIN been asserted?
-*/
+///=================================================///
+///       Hardware layout function definitions      ///
+///=================================================///
 
 /*********************************/
 /***** UNO/NANO BOARD LAYOUT *****/
@@ -24,8 +19,6 @@ void readyGpibDbus() {
   // Set data pins to input
   DDRD &= 0b11001111 ;
   DDRC &= 0b11000000 ;
-  //  PORTD = PORTD | 0b00110000; // PORTD bits 5,4 input_pullup
-  //  PORTC = PORTC | 0b00111111; // PORTC bits 5,4,3,2,1,0 input_pullup
   PORTD |= 0b00110000; // PORTD bits 5,4 input_pullup
   PORTC |= 0b00111111; // PORTC bits 5,4,3,2,1,0 input_pullup
 }
@@ -94,6 +87,69 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
       break;
   }
 }
+
+
+/***** Control pin map *****/
+/*
+   Arduino Uno/Nano pin to Port/bit to direction/state byte map:
+   IFC_PIN   8   PORTB bit 0 byte bit 0
+   NDAC_PIN  9   PORTB bit 1 byte bit 1
+   NRFD_PIN  10  PORTB bit 2 byte bit 2
+   DAV_PIN   11  PORTB bit 3 byte bit 3
+   EOI_PIN   12  PORTB bit 4 byte bit 4
+   SRQ_PIN   2   PORTD bit 2 byte bit 6
+   REN_PIN   3   PORTD bit 3 byte bit 5
+   ATN_PIN   7   PORTD bit 8 byte bit 7
+*/
+
+/***** Set the stateof the GPIB control lines ****/
+/*
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
+    bits : 0=LOW, 1=HIGH
+    mask : 0=unaffected, 1=affected
+*/
+void setGpibCtrlState(uint8_t bits, uint8_t mask) {
+  if (!mask) return;  // Empty mask does nothing!
+  // PORTB - use only the first (right-most) 5 bits (pins 8-12)
+  uint8_t portBb = bits & 0x1F;
+  uint8_t portBm = mask & 0x1F;
+  // PORT D - keep bit 7, rotate bit 6 right 4 positions to set bit 2 on register
+  uint8_t portDb = (bits & 0x80) + ((bits & 0x40) >> 4) + ((bits & 0x20) >> 2);
+  uint8_t portDm = (mask & 0x80) + ((mask & 0x40) >> 4) + ((mask & 0x20) >> 2);
+
+  // Set pin states using mask
+  PORTB = ( (PORTB & ~portBm) | (portBb & portBm) );
+  PORTD = ( (PORTD & ~portDm) | (portDb & portDm) );
+}
+
+/***** Set the direction and state of the GPIB control lines ****/
+/*
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
+    bits : 0=input, 1=output
+    mask : 0=unaffected, 1=affected
+*/
+void setGpibCtrlDir(uint8_t bits, uint8_t mask) {
+  // PORTB - use only the first (right-most) 5 bits (pins 8-12)
+  uint8_t portBb = bits & 0x1F;
+  uint8_t portBm = mask & 0x1F;
+  // PORT D - keep bit 7, rotate bit 6 right 4 positions to set bit 2 on register
+  uint8_t portDb = (bits & 0x80) + ((bits & 0x40) >> 4) + ((bits & 0x20) >> 2);
+  uint8_t portDm = (mask & 0x80) + ((mask & 0x40) >> 4) + ((mask & 0x20) >> 2);
+
+  uint8_t pmask;
+
+  // Set pin direction registers using mask
+  DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
+  DDRD = ( (DDRD & ~portDm) | (portDb & portDm) );
+
+  // Set inputs to input_pullup
+  pmask = (~portBb & portBm);
+  PORTB = ( (PORTB & ~pmask) | pmask );
+  pmask = (~portDb & portDm);
+  PORTD = ( (PORTD & ~pmask) | pmask );
+
+}
+
 
 #endif //AR488UNO/AR488_NANO
 /***** ^^^^^^^^^^^^^^^^^^^^^ *****/
@@ -983,10 +1039,372 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
 
 
+/***********************************/
+/***** RAS PICO BOARD LAYOUT 1 *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef RAS_PICO_L1
+
+const uint32_t gpioDbMask = 0x00003FC0;
+const uint32_t gpioCtrlMask = 0x003FC000;
+const uint8_t gpioDbOffset = 6;
+const uint8_t gpioCtrlOffset = 14;
+
+
+void gpioFuncList(){
+  /*
+  Serial.print(F("Func: "));
+  for (uint8_t i=6; i<21; i++){
+    Serial.print(gpio_get_function(i));
+  }
+  */
+  Serial.println();
+  Serial.print(F("Pull: "));
+  for (uint8_t i=21; i>5; i--){
+    Serial.print(gpio_is_pulled_up(i));
+  }
+  Serial.println();
+  Serial.print(F("Outs: "));
+  for (uint8_t i=21; i>5; i--){
+    Serial.print(gpio_is_dir_out(i));
+  }
+  Serial.println();
+}
+
+
+
+/***** Set GPIO internal pullup resistors *****/
+void gpio_set_pullups_masked(uint32_t mask){
+  for (uint8_t i=0; i<32; i++){
+    if ( mask & (1<<i) ) gpio_pull_up(i);
+  }
+}
+
+
+/***** Disable GPIO pull-up resistors *****/
+void gpio_clear_pullups_masked(uint32_t mask){
+  for (uint8_t i=0; i<32; i++){
+    if ( mask & (1<<i) ) gpio_disable_pulls(i);
+  }
+}
+
+
+/***** Initialise all GPIO pins *****/
+void initRpGpioPins(){
+  uint32_t gpiomask = gpioCtrlMask | gpioDbMask;  // Scope of GPIO pins to be allocated to GPIB
+  gpio_init_mask(gpiomask);                       // Configure as GPIO pins those allocated to GPIB
+  gpio_set_dir_in_masked(gpiomask);               // Configure all as inputs by default
+  gpio_set_pullups_masked(gpiomask);              // Enable all pullups (un-asserted) by default
+  delay(200);                                     // Allow some settling time
+}
+
+
+/***** Set the GPIB data bus to input pullup *****/
+void readyGpibDbus() {
+  // Set data pins to input
+  gpio_set_dir_in_masked(gpioDbMask);
+  gpio_set_pullups_masked(gpioDbMask);
+  
+}
+
+
+/***** Read the GPIB data bus wires to collect the byte of data *****/
+uint8_t readGpibDbus() {
+  // Read the byte of data on the bus
+  uint32_t gpioall = gpio_get_all();
+  gpioall = (gpioall & gpioDbMask) >> gpioDbOffset;
+  return (uint8_t)~gpioall;  
+}
+
+
+/***** Set the GPIB data bus to output and with the requested byte *****/
+void setGpibDbus(uint8_t db) {
+  uint32_t gpioall = ((uint8_t)~db) << gpioDbOffset;
+  gpio_clear_pullups_masked(gpioDbMask);
+  gpio_set_dir_out_masked(gpioDbMask);
+  gpio_put_masked(gpioDbMask, gpioall);
+}
+
+
+/***** Set the direction and state of the GPIB control lines ****/
+/*
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
+    bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
+    mask (mask)     : 0=unaffected, 1=enabled
+    mode (mode)     : 0=set pin state, 1=set pin direction
+   Arduino Uno/Nano pin to Port/bit to direction/state byte map:
+   IFC_PIN   14  byte bit 0
+   NDAC_PIN  15  byte bit 1AR_SERIAL_PORT
+   NRFD_PIN  16  byte bit 2
+   DAV_PIN   17  byte bit 3
+   EOI_PIN   18  byte bit 4
+   SRQ_PIN   19  byte bit 6
+   REN_PIN   20  byte bit 5
+   ATN_PIN   21  byte bit 7
+*/
+
+
+/*
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
+    - bits : 0=LOW, 1=HIGH
+    - mask : 0=unaffected, 1=affected
+    Has relevance only to output pins
+*/
+void setGpibCtrlState(uint8_t bits, uint8_t mask){
+
+  uint32_t gpiobits = (uint8_t)(bits & mask) << gpioCtrlOffset;
+  uint32_t gpioOmask = (mask << gpioCtrlOffset);
+
+  gpio_put_masked(gpioOmask, gpiobits);
+
+}
+
+
+/*
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
+    bits : 0=input pullup, 1=output
+    mask : 0=unaffected, 1=affected
+*/
+void setGpibCtrlDir(uint8_t bits, uint8_t mask){
+
+  uint32_t gpioOmask = ( (bits & mask) << gpioCtrlOffset );
+  uint32_t gpioImask = ( ((uint8_t)~bits & mask) << gpioCtrlOffset );
+
+  if (gpioOmask){
+    gpio_clear_pullups_masked(gpioOmask);
+    gpio_set_dir_out_masked(gpioOmask);
+  }
+
+  if (gpioImask){
+    gpio_set_pullups_masked(gpioImask);
+    gpio_set_dir_in_masked(gpioImask);
+  }
+  
+}
+
+#endif // RAS_PICO_L1
+/***** ^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** RAS PICO BOARD LAYOUT 1 *****/
+/***********************************/
+
+
+
+/***********************************/
+/***** RAS PICO BOARD LAYOUT 2 *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef RAS_PICO_L2
+
+const uint32_t gpioDbMask = 0x23F8000;
+const uint32_t gpioCtrlMask = 0x300030D0;
+//const uint8_t gpioDbOffset = 14;
+//const uint8_t gpioCtrlOffset = 6;
+
+
+
+void gpioFuncList(){
+  /*
+  Serial.print(F("Func: "));
+  for (uint8_t i=6; i<21; i++){
+    Serial.print(gpio_get_function(i));
+  }
+  */
+  Serial.println();
+  Serial.print(F("Pull: "));
+  for (uint8_t i=21; i>5; i--){
+    Serial.print(gpio_is_pulled_up(i));
+  }
+  Serial.println();
+  Serial.print(F("Outs: "));
+  for (uint8_t i=21; i>5; i--){
+    Serial.print(gpio_is_dir_out(i));
+  }
+  Serial.println();
+}
+
+
+/***** Set GPIO internal pullup resistors *****/
+void gpio_set_pullups_masked(uint32_t mask){
+  for (uint8_t i=0; i<32; i++){
+    if ( mask & (1<<i) ) gpio_pull_up(i);
+  }
+}
+
+
+/***** Disable GPIO pull-up resistors *****/
+void gpio_clear_pullups_masked(uint32_t mask){
+  for (uint8_t i=0; i<32; i++){
+    if ( mask & (1<<i) ) gpio_disable_pulls(i);
+  }
+}
+
+
+uint8_t reverseBits(uint8_t dbyte) {
+   dbyte = (dbyte & 0xF0) >> 4 | (dbyte & 0x0F) << 4;
+   dbyte = (dbyte & 0xCC) >> 2 | (dbyte & 0x33) << 2;
+   dbyte = (dbyte & 0xAA) >> 1 | (dbyte & 0x55) << 1;
+   return dbyte;
+}
+
+
+/***** Initialise all GPIO pins *****/
+void initRpGpioPins(){
+  uint32_t gpiomask = gpioCtrlMask | gpioDbMask;  // Scope of GPIO pins to be allocated to GPIB
+  gpio_init_mask(gpiomask);                       // Configure as GPIO pins those allocated to GPIB
+  gpio_set_dir_in_masked(gpiomask);               // Configure all as inputs by default
+  gpio_set_pullups_masked(gpiomask);              // Enable all pullups (un-asserted) by default
+  delay(200);                                     // Allow some settling time
+}
+
+
+/***** Set the GPIB data bus to input pullup *****/
+void readyGpibDbus() {
+  // Set data pins to input  
+//  gpio_init_mask(gpioDbMask);
+  gpio_set_dir_in_masked(gpioDbMask);
+  gpio_set_pullups_masked(gpioDbMask);
+  
+}
+
+
+/***** Read the GPIB data bus wires to collect the byte of data *****/
+uint8_t readGpibDbus() {
+  // Read the byte of data on the bus
+  uint32_t gpioall = gpio_get_all();
+  uint8_t db = 0;
+//  gpioall = (gpioall & gpioDbMask) >> gpioDbOffset;
+  db = (gpioall&0x3F8000) >> 14;
+  db = reversebits(db);
+  db =db || ((gpioall & 0x2000000) >> 18);
+  return (uint8_t)~gpioall;  
+}
+
+
+/***** Set the GPIB data bus to output and with the requested byte *****/
+void setGpibDbus(uint8_t db) {
+//  uint32_t gpioall = ((uint8_t)~db) << gpioDbOffset;
+  uint32_t gpioall = ((reversebits(db)&0xFE)<<14) || ((db&0x80)<<18)
+  gpio_clear_pullups_masked(gpioDbMask);
+  gpio_set_dir_out_masked(gpioDbMask);
+  gpio_put_masked(gpioDbMask, gpioall);
+}
+
+
+/***** Set the direction and state of the GPIB control lines ****/
+/*
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
+    bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
+    mask (mask)     : 0=unaffected, 1=enabled
+    mode (mode)     : 0=set pin state, 1=set pin direction
+   Arduino Uno/Nano pin to Port/bit to direction/state byte map:
+   IFC_PIN   06  byte bit 0
+   NDAC_PIN  07  byte bit 1
+   NRFD_PIN  08  byte bit 2
+   DAV_PIN   09  byte bit 3
+   EOI_PIN   10  byte bit 4
+   REN_PIN   11  byte bit 5
+   SRQ_PIN   12  byte bit 6
+   ATN_PIN   13  byte bit 7
+*/
+
+
+/*
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
+    - bits : 0=LOW, 1=HIGH
+    - mask : 0=unaffected, 1=affected
+    Has relevance only to output pins
+*/
+void setGpibCtrlState(uint8_t bits, uint8_t mask){
+
+  gpioall = ((db & 1)<<4) + ((db&0b11<<6)) + ((db&0b11)<<12) + ((db&0b11<<28))
+
+  uint32_t gpiobits = (uint8_t)(bits & mask) << gpioCtrlOffset;
+  uint32_t gpioOmask = (mask << gpioCtrlOffset);
+
+  gpio_put_masked(gpioOmask, gpiobits);
+
+}
+
+
+/*
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
+    bits : 0=input pullup, 1=output
+    mask : 0=unaffected, 1=affected
+*/
+void setGpibCtrlDir(uint8_t bits, uint8_t mask){
+
+  uint32_t gpioOmask = ( (bits & mask) << gpioCtrlOffset );
+  uint32_t gpioImask = ( ((uint8_t)~bits & mask) << gpioCtrlOffset );
+
+  if (gpioOmask){
+    gpio_clear_pullups_masked(gpioOmask);
+    gpio_set_dir_out_masked(gpioOmask);
+  }
+
+  if (gpioImask){
+    gpio_set_pullups_masked(gpioImask);
+    gpio_set_dir_in_masked(gpioImask);
+  }
+  
+}
+
+
+#endif // RAS_PICO_L2
+/***** ^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** RAS PICO BOARD LAYOUT 2 *****/
+/***********************************/
+
+
+
+/********************************************/
+/***** NANO RP2040 CONNECT BOARD LAYOUT *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef RPI_NANO_RP2040
+
+uint32_t reverseBits(uint32_t dbyte) {
+   dbyte = (dbyte & 0xF0) >> 4 | (dbyte & 0x0F) << 4;
+   dbyte = (dbyte & 0xCC) >> 2 | (dbyte & 0x33) << 2;
+   dbyte = (dbyte & 0xAA) >> 1 | (dbyte & 0x55) << 1;
+   return dbyte;
+}
+
+
+void readyGpibDbus() {
+  // Set data pins to input  
+  gpio_init_mask(0x023F8000);
+  gpio_set_dir_in_masked(0x023F8000);
+  gpio_set_pullups_masked(0x023F8000);
+}
+
+
+/***** Read the GPIB data bus wires to collect the byte of data *****/
+uint8_t readGpibDbus() {
+  // Read the byte of data on the bus
+  uint32_t gpioall = gpio_get_all();
+  uint32_t result1 = reverseBits(gpioall << 6);
+  uint32_t result2 = gpioall >> 25;
+  gpioall = result1 + result2;  
+  return (uint8_t)~gpioall;
+}
+
+
+/***** Set the GPIB data bus to output and with the requested byte *****/
+void setGpibDbus(uint8_t db) {
+  uint32_t gpioall = db << 6;
+  gpio_set_dir_out_masked(0x023F8000);
+  gpio_put_masked(0x023F8000, gpioall);
+}
+
+#endif // RPI_NANO_RP2040
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** NANO RP2040 CONNECT BOARD LAYOUT *****/
+/********************************************/
+
+
+
 /*************************************/
 /***** CUSTOM PIN LAYOUT SECTION *****/
 /***** vvvvvvvvvvvvvvvvvvvvvvvvv *****/
-#if defined (AR488_CUSTOM) || defined (NON_ARDUINO)
+#ifdef AR488_CUSTOM
+//#if defined (AR488_CUSTOM) || defined (NON_ARDUINO)
 
 uint8_t databus[8] = { DIO1_PIN, DIO2_PIN, DIO3_PIN, DIO4_PIN, DIO5_PIN, DIO6_PIN, DIO7_PIN, DIO8_PIN };
 
@@ -1060,10 +1478,33 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 /***** COMMON FUNCTIONS SECTION *****/
 /***** vvvvvvvvvvvvvvvvvvvvvvvv *****/
 
-#if not defined(AR488_MCP23S17) && not defined(AR488_MCP23017)
+#ifdef LEVEL_SHIFTER
+
+void initLevelShifter(){
+  pinMode(LVL_SHIFT_EN, OUTPUT);
+  digitalWrite(LVL_SHIFT_EN, HIGH);
+}
+
+void shiftEnable(bool stat){
+  if (stat) {
+    digitalWrite(LVL_SHIFT_EN, HIGH);
+//    Serial.println(F("Level shifters ON"));
+
+  }else{
+    digitalWrite(LVL_SHIFT_EN, LOW);
+//    Serial.println(F("Level shifters OFF"));
+  }
+}
+
+#endif
+
+
+#if not defined(AR488_MCP23S17)
+
 uint8_t getGpibPinState(uint8_t pin){
   return digitalRead(pin);
 }
+
 #endif
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
