@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.52.17, 07/03/2025"
+#define FWVER "AR488 GPIB controller, ver. 0.52.18, 08/03/2025"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -57,7 +57,6 @@
   #define AR488_MEGA2560_D
   //#define AR488_MEGA2560_E1
   //#define AR488_MEGA2560_E2
-//  #define AR488_MCP23S17
 
 /***** Panduino Mega 644 or Mega 1284 board *****/
 #elif defined(__AVR_ATmega644P__) || defined(__AVR_ATmega1284P__)

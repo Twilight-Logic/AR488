@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.52.15, 03/03/2025 *****/
+/***** AR488_Hardware.cpp, ver. 0.52.18, 08/03/2025 *****/
 
 ///=================================================///
 ///       Hardware layout function definitions      ///
@@ -62,6 +62,7 @@ void setGpibDbus(uint8_t db) {
    REN_PIN   3   PORTD bit 3 byte bit 5
    ATN_PIN   7   PORTD bit 8 byte bit 7
 */
+/*
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
   // PORTB - use only the first (right-most) 5 bits (pins 8-12)
@@ -87,7 +88,7 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
       break;
   }
 }
-
+*/
 
 /***** Control pin map *****/
 /*
@@ -122,6 +123,7 @@ void setGpibCtrlState(uint8_t bits, uint8_t mask) {
   PORTD = ( (PORTD & ~portDm) | (portDb & portDm) );
 }
 
+
 /***** Set the direction and state of the GPIB control lines ****/
 /*
    Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
@@ -149,7 +151,6 @@ void setGpibCtrlDir(uint8_t bits, uint8_t mask) {
   PORTD = ( (PORTD & ~pmask) | pmask );
 
 }
-
 
 #endif //AR488UNO/AR488_NANO
 /***** ^^^^^^^^^^^^^^^^^^^^^ *****/
@@ -210,6 +211,7 @@ void setGpibDbus(uint8_t db) {
    SRQ_PIN   10  PORTB bit 4 byte bit 6
    ATN_PIN   11  PORTB bit 5 byte bit 7
 */
+/*
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
   // PORT H - keep bits 5-0. Move bits 5-2 left 1 position to set bits 6-3 and 1-0 on port
@@ -235,6 +237,59 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
       DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
       break;
   }
+}
+*/
+
+/***** Control pin map *****/
+/*
+   Arduino Mega 2560 Layout D pin to Port/bit to direction/state byte map:
+   IFC_PIN   17  PORTH bit 0 byte bit 0
+   NDAC_PIN  16  PORTH bit 1 byte bit 1
+   NRFD_PIN  6   PORTH bit 3 byte bit 2
+   DAV_PIN   7   PORTH bit 4 byte bit 3
+   EOI_PIN   8   PORTH bit 5 byte bit 4
+   REN_PIN   9   PORTH bit 6 byte bit 5
+   SRQ_PIN   10  PORTB bit 4 byte bit 6
+   ATN_PIN   11  PORTB bit 5 byte bit 7
+*/
+/*
+   Bits control lines as follows: 7-ATN_PIN, 6-SRQ_PIN, 5-REN_PIN, 4-EOI_PIN, 3-DAV_PIN, 2-NRFD_PIN, 1-NDAC_PIN, 0-IFC_PIN
+    bits (databits) : State - 0=LOW, 1=HIGH/INPUT_PULLUP; Direction - 0=input, 1=output;
+    mask (mask)     : 0=unaffected, 1=enabled
+*/
+
+void setGpibCtrlState(uint8_t bits, uint8_t mask) {
+
+  // PORT H - keep bits 5-0. Move bits 5-2 left 1 position to set bits 6-3 and 1-0 on port
+  uint8_t portHb = ((bits & 0x3C) << 1) + (bits & 0x03);
+  uint8_t portHm = ((mask & 0x3C) << 1) + (mask & 0x03);
+
+  // PORT B - keep bits 7 and 6, but rotate right 2 postions to set bits 5 and 4 on port 
+  uint8_t portBb = ((bits & 0xC0) >> 2);
+  uint8_t portBm = ((mask & 0xC0) >> 2);
+ 
+  // Set pin states using mask
+  PORTH = ( (PORTH & ~portHm) | (portHb & portHm) );
+  PORTB = ( (PORTB & ~portBm) | (portBb & portBm) );
+}
+
+
+void setGpibCtrlDir(uint8_t bits, uint8_t mask) {
+
+  // PORT H - keep bits 5-0. Move bits 5-2 left 1 position to set bits 6-3 and 1-0 on port
+  uint8_t portHb = ((bits & 0x3C) << 1) + (bits & 0x03);
+  uint8_t portHm = ((mask & 0x3C) << 1) + (mask & 0x03);
+
+  // PORT B - keep bits 7 and 6, but rotate right 2 postions to set bits 5 and 4 on port 
+  uint8_t portBb = ((bits & 0xC0) >> 2);
+  uint8_t portBm = ((mask & 0xC0) >> 2);
+ 
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  // Set pin direction registers using mask
+  DDRH = ( (DDRH & ~portHm) | (portHb & portHm) );
+  DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
 }
 
 #endif //MEGA2560
@@ -326,6 +381,7 @@ void setGpibDbus(uint8_t db) {
    SRQ_PIN   50  PORTB bit 3 byte bit 6
    ATN_PIN   52  PORTB bit 1 byte bit 7
 */
+/*
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
   // PORT B
@@ -362,6 +418,7 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
       PORTL = ( (PORTL & ~portLm) | (portLb & portLm) );
       break;
     case 1:
+void setGpibCtrlState(uint8_t bi
       // Set pin direction registers using mask
       DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
       DDRD = ( (DDRD & ~portDm) | (portDb & portDm) );
@@ -370,6 +427,77 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
       break;
   }
 }
+*/
+
+void setGpibCtrlState(uint8_t bits, uint8_t mask) {
+
+  // PORT B
+  uint8_t portBb = (((bits >> 7 & 1))<<1) + (((bits >> 6 & 1))<<3);
+  uint8_t portBm = (((mask >> 7 & 1))<<1) + (((mask >> 6 & 1))<<3);
+
+  // PORT D
+  uint8_t portDb = (((bits >> 5 & 1))<<7);
+  uint8_t portDm = (((mask >> 5 & 1))<<7);
+
+  // PORT G
+  uint8_t portGb = (((bits >> 4 & 1))<<1);
+  uint8_t portGm = (((mask >> 4 & 1))<<1);
+
+  // PORT L
+  uint8_t portLb = (((bits >> 0 & 1))<<1) + (((bits >> 1 & 1))<<3) + (((bits >> 2 & 1))<<5) + (((bits >> 3 & 1))<<7);
+  uint8_t portLm = (((mask >> 0 & 1))<<1) + (((mask >> 1 & 1))<<3) + (((mask >> 2 & 1))<<5) + (((mask >> 3 & 1))<<7);
+
+  // Set PORTs using mask to avoid affecting bits that should not be affected
+  // and calculated and masked port byte
+  // PORT B - bits 7 & 6 (ATN_PIN + SRQ_PIN)
+  // PORT D - bit 5 (REN_PIN)
+  // PORT G - bit 4 (EOI_PIN)
+  // PORT L - bits 1,3,5,7 (IFC_PIN, NDAC_PIN, NRFD_PIN, DAV_PIN)
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  // Set pin states using mask
+  PORTB = ( (PORTB & ~portBm) | (portBb & portBm) );
+  PORTD = ( (PORTD & ~portDm) | (portDb & portDm) );
+  PORTG = ( (PORTG & ~portGm) | (portGb & portGm) );
+  PORTL = ( (PORTL & ~portLm) | (portLb & portLm) );
+}
+
+
+void setGpibCtrlDir(uint8_t bits, uint8_t mask) {
+
+  // PORT B
+  uint8_t portBb = (((bits >> 7 & 1))<<1) + (((bits >> 6 & 1))<<3);
+  uint8_t portBm = (((mask >> 7 & 1))<<1) + (((mask >> 6 & 1))<<3);
+
+  // PORT D
+  uint8_t portDb = (((bits >> 5 & 1))<<7);
+  uint8_t portDm = (((mask >> 5 & 1))<<7);
+
+  // PORT G
+  uint8_t portGb = (((bits >> 4 & 1))<<1);
+  uint8_t portGm = (((mask >> 4 & 1))<<1);
+
+  // PORT L
+  uint8_t portLb = (((bits >> 0 & 1))<<1) + (((bits >> 1 & 1))<<3) + (((bits >> 2 & 1))<<5) + (((bits >> 3 & 1))<<7);
+  uint8_t portLm = (((mask >> 0 & 1))<<1) + (((mask >> 1 & 1))<<3) + (((mask >> 2 & 1))<<5) + (((mask >> 3 & 1))<<7);
+
+  // Set PORTs using mask to avoid affecting bits that should not be affected
+  // and calculated and masked port byte
+  // PORT B - bits 7 & 6 (ATN_PIN + SRQ_PIN)
+  // PORT D - bit 5 (REN_PIN)
+  // PORT G - bit 4 (EOI_PIN)
+  // PORT L - bits 1,3,5,7 (IFC_PIN, NDAC_PIN, NRFD_PIN, DAV_PIN)
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  // Set pin direction registers using mask
+  DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
+  DDRD = ( (DDRD & ~portDm) | (portDb & portDm) );
+  DDRG = ( (DDRG & ~portGm) | (portGb & portGm) );
+  DDRL = ( (DDRL & ~portLm) | (portLb & portLm) );
+}
+
 
 #endif //MEGA2560
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
@@ -461,6 +589,7 @@ void setGpibDbus(uint8_t db) {
    SRQ_PIN   50  PORTB bit 3 byte bit 6
    ATN_PIN   52  PORTB bit 1 byte bit 7
 */
+/*
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
   // PORT B
@@ -498,9 +627,67 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
       break;
   }
 }
+*/
+
+void setGpibCtrlState(uint8_t bits, uint8_t mask) {
+
+  // PORT B
+  uint8_t portBb = (((bits >> 7 & 1))<<0) + (((bits >> 6 & 1))<<2);
+  uint8_t portBm = (((mask >> 7 & 1))<<0) + (((mask >> 6 & 1))<<2);
+
+  // PORT G
+  uint8_t portGb = (((bits >> 4 & 1))<<0) + (((bits >> 5 & 1))<<2);
+  uint8_t portGm = (((mask >> 4 & 1))<<0) + (((mask >> 5 & 1))<<2);
+
+  // PORT L
+  uint8_t portLb = (((bits >> 0 & 1))<<0) + (((bits >> 1 & 1))<<2) + (((bits >> 2 & 1))<<4) + (((bits >> 3 & 1))<<6);
+  uint8_t portLm = (((mask >> 0 & 1))<<0) + (((mask >> 1 & 1))<<2) + (((mask >> 2 & 1))<<4) + (((mask >> 3 & 1))<<6);
+
+  // Set PORTs using mask to avoid affecting bits that should not be affected
+  // and calculated and masked port byte
+  // PORT B - bits 0 & 2 (ATN_PIN + SRQ_PIN)
+  // PORT G - bits 0 & 2 (EOI_PIN, REN_PIN)
+  // PORT L - bits 0,2,4,6 (IFC_PIN, NDAC_PIN, NRFD_PIN, DAV_PIN)
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  // Set pin states using mask
+  PORTB = ( (PORTB & ~portBm) | (portBb & portBm) );
+  PORTG = ( (PORTG & ~portGm) | (portGb & portGm) );
+  PORTL = ( (PORTL & ~portLm) | (portLb & portLm) );
+}
+
+
+
+void setGpibCtrlDir(uint8_t bits, uint8_t mask) {
+
+  // PORT B
+  uint8_t portBb = (((bits >> 7 & 1))<<0) + (((bits >> 6 & 1))<<2);
+  uint8_t portBm = (((mask >> 7 & 1))<<0) + (((mask >> 6 & 1))<<2);
+
+  // PORT G
+  uint8_t portGb = (((bits >> 4 & 1))<<0) + (((bits >> 5 & 1))<<2);
+  uint8_t portGm = (((mask >> 4 & 1))<<0) + (((mask >> 5 & 1))<<2);
+
+  // PORT L
+  uint8_t portLb = (((bits >> 0 & 1))<<0) + (((bits >> 1 & 1))<<2) + (((bits >> 2 & 1))<<4) + (((bits >> 3 & 1))<<6);
+  uint8_t portLm = (((mask >> 0 & 1))<<0) + (((mask >> 1 & 1))<<2) + (((mask >> 2 & 1))<<4) + (((mask >> 3 & 1))<<6);
+
+  // Set PORTs using mask to avoid affecting bits that should not be affected
+  // and calculated and masked port byte
+  // PORT B - bits 0 & 2 (ATN_PIN + SRQ_PIN)
+  // PORT G - bits 0 & 2 (EOI_PIN, REN_PIN)
+  // PORT L - bits 0,2,4,6 (IFC_PIN, NDAC_PIN, NRFD_PIN, DAV_PIN)
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  // Set pin direction registers using mask
+  DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
+  DDRG = ( (DDRG & ~portGm) | (portGb & portGm) );
+  DDRL = ( (DDRL & ~portLm) | (portLb & portLm) );
+}
 
 #endif //MEGA2560
-
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** MEGA2560 BOARD LAYOUT E2 *****/
 /************************************/
@@ -570,6 +757,7 @@ void setGpibDbus(uint8_t db) {
  * control word were assigned by name to match suitable port bits : then NDAC_PIN,NRFD_PIN and DAV_PIN
  * could be positioned at bits 4,5,6 to be placed in port F without shifting.
  */
+/*
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
   // most of the time, only these bits change
@@ -626,6 +814,93 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
     }
   }
 }
+*/
+
+void setGpibCtrlState(uint8_t bits, uint8_t mask) {
+
+  // most of the time, only these bits change
+
+  if (mask & 0b00011110) {
+
+    // PORTF - NDAC_PIN, NRFD_PIN, DAV_PIN and EOI_PIN bits 1-4 rotated into bits 4-7
+    uint8_t portFb = (bits & 0x1e) << 3;
+    uint8_t portFm = (mask & 0x1e) << 3;
+
+    // Set registers: register = (register & ~bitmask) | (value & bitmask)
+    // Mask: 0=unaffected; 1=to be changed
+
+    // Set pin states using mask
+    PORTF = ( (PORTF & ~portFm) | (portFb & portFm) );
+
+  }
+
+  if (mask & 0b11100001) {
+
+    // PORTC - REN_PIN bit 5 rotated into bit 6
+    uint8_t portCb = (bits & 0x20) << 1;
+    uint8_t portCm = (mask & 0x20) << 1;
+    // PORTD - IFC_PIN bit 0 rotated into bit 4 and ATN_PIN bit 7 rotated into 1
+    uint8_t portDb = ((bits & 0x01) << 4) | ((bits & 0x80) >> 6);
+    uint8_t portDm = ((mask & 0x01) << 4) | ((mask & 0x80) >> 6);
+    // PORT E - SRQ_PIN bit 6  in bit 6
+    uint8_t portEb = (bits & 0x40);
+    uint8_t portEm = (mask & 0x40);
+
+    // Set registers: register = (register & ~bitmask) | (value & bitmask)
+    // Mask: 0=unaffected; 1=to be changed
+
+    // Set pin states using mask
+    PORTC = ( (PORTC & ~portCm) | (portCb & portCm) );
+    PORTD = ( (PORTD & ~portDm) | (portDb & portDm) );
+    PORTE = ( (PORTE & ~portEm) | (portEb & portEm) );
+
+  }
+
+}
+
+
+void setGpibCtrlDir(uint8_t bits, uint8_t mask) {
+
+  // most of the time, only these bits change
+
+  if (mask & 0b00011110) {
+
+    // PORTF - NDAC_PIN, NRFD_PIN, DAV_PIN and EOI_PIN bits 1-4 rotated into bits 4-7
+    uint8_t portFb = (bits & 0x1e) << 3;
+    uint8_t portFm = (mask & 0x1e) << 3;
+
+    // Set registers: register = (register & ~bitmask) | (value & bitmask)
+    // Mask: 0=unaffected; 1=to be changed
+
+    // Set pin direction registers using mask
+    DDRF = ( (DDRF & ~portFm) | (portFb & portFm) );
+  }
+
+  if (mask & 0b11100001) {
+
+    // PORTC - REN_PIN bit 5 rotated into bit 6
+    uint8_t portCb = (bits & 0x20) << 1;
+    uint8_t portCm = (mask & 0x20) << 1;
+    // PORTD - IFC_PIN bit 0 rotated into bit 4 and ATN_PIN bit 7 rotated into 1
+    uint8_t portDb = ((bits & 0x01) << 4) | ((bits & 0x80) >> 6);
+    uint8_t portDm = ((mask & 0x01) << 4) | ((mask & 0x80) >> 6);
+    // PORT E - SRQ_PIN bit 6  in bit 6
+    uint8_t portEb = (bits & 0x40);
+    uint8_t portEm = (mask & 0x40);
+
+    // Set registers: register = (register & ~bitmask) | (value & bitmask)
+    // Mask: 0=unaffected; 1=to be changed
+
+    // Set pin direction registers using mask
+    DDRC = ( (DDRC & ~portCm) | (portCb & portCm) );
+    DDRD = ( (DDRD & ~portDm) | (portDb & portDm) );
+    DDRE = ( (DDRE & ~portEm) | (portEb & portEm) );
+
+  }
+
+}
+
+
 
 #endif  // AR488_MEGA32U4_MICRO
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
@@ -699,6 +974,7 @@ void setGpibDbus(uint8_t db) {
    REN_PIN   3   PORTD bit 0 byte bit 5
    ATN_PIN   7   PORTE bit 6 byte bit 7
 */
+/*
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
   // PORTB - use bits 0 to 3, rotate bits 4 positions left to set bits 4-7 on register (pins 8-12)
@@ -730,6 +1006,54 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
       DDRE = ( (DDRE & ~portEm) | (portEb & portEm) );
       break;
   }
+}
+*/
+
+void setGpibCtrlState(uint8_t bits, uint8_t mask) {
+
+  // PORTB - use bits 0 to 3, rotate bits 4 positions left to set bits 4-7 on register (pins 8-12)
+  uint8_t portBb = ((bits & 0x0F) << 4);
+  uint8_t portBm = ((mask & 0x0F) << 4);
+  // PORTD - use bit 4, rotate left 2 positions to set bit 6 on register (EOI_PIN)
+  // PORTD - use bit 5, rotate right 5 positions to set bit 0 on register (REN_PIN)
+  // PORTD - use bit 6, rotate right 5 positions to set bit 1 on register (SRQ_PIN)
+  uint8_t portDb = ((bits & 0x10) << 2) + ((bits & 0x20) >> 5) + ((bits & 0x40) >> 5);
+  uint8_t portDm = ((mask & 0x10) << 2) + ((mask & 0x20) >> 5) + ((mask & 0x40) >> 5);
+  // PORTE - use bit 7, rotate left 1 position to set bit 6 on register (ATN_PIN)
+  uint8_t portEb = ((bits & 0x80) >> 1);
+  uint8_t portEm = ((mask & 0x80) >> 1);
+
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  // Set pin states using mask
+  PORTB = ( (PORTB & ~portBm) | (portBb & portBm) );
+  PORTD = ( (PORTD & ~portDm) | (portDb & portDm) );
+  PORTE = ( (PORTE & ~portEm) | (portEb & portEm) );
+}
+
+
+void setGpibCtrlDir(uint8_t bits, uint8_t mask) {
+
+  // PORTB - use bits 0 to 3, rotate bits 4 positions left to set bits 4-7 on register (pins 8-12)
+  uint8_t portBb = ((bits & 0x0F) << 4);
+  uint8_t portBm = ((mask & 0x0F) << 4);
+  // PORTD - use bit 4, rotate left 2 positions to set bit 6 on register (EOI_PIN)
+  // PORTD - use bit 5, rotate right 5 positions to set bit 0 on register (REN_PIN)
+  // PORTD - use bit 6, rotate right 5 positions to set bit 1 on register (SRQ_PIN)
+  uint8_t portDb = ((bits & 0x10) << 2) + ((bits & 0x20) >> 5) + ((bits & 0x40) >> 5);
+  uint8_t portDm = ((mask & 0x10) << 2) + ((mask & 0x20) >> 5) + ((mask & 0x40) >> 5);
+  // PORTE - use bit 7, rotate left 1 position to set bit 6 on register (ATN_PIN)
+  uint8_t portEb = ((bits & 0x80) >> 1);
+  uint8_t portEm = ((mask & 0x80) >> 1);
+
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  // Set pin direction registers using mask
+  DDRB = ( (DDRB & ~portBm) | (portBb & portBm) );
+  DDRD = ( (DDRD & ~portDm) | (portDb & portDm) );
+  DDRE = ( (DDRE & ~portEm) | (portEb & portEm) );
 }
 
 
@@ -819,7 +1143,7 @@ void setGpibDbus(uint8_t db) {
    SRQ_PIN   6   PORTA bit 6 byte bit 6
    ATN_PIN   7   PORTA bit 7 byte bit 7
 */
-
+/*
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
   uint8_t portAb = bits;
@@ -849,6 +1173,45 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
       break;
 
   }
+}
+*/
+
+void setGpibCtrlState(uint8_t bits, uint8_t mask) {
+
+  uint8_t portAb = bits;
+  uint8_t portAm = mask;
+
+  uint8_t regByte = 0;
+  uint8_t regMod = 0; 
+
+
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  // Set pin states using mask
+  regByte = mcpByteRead(MCPPORTA);
+  regMod = (regByte & ~portAm) | (portAb & portAm);
+  mcpByteWrite(MCPPORTA, regMod);
+}
+
+
+void setGpibCtrlDir(uint8_t bits, uint8_t mask) {
+
+  uint8_t portAb = bits;
+  uint8_t portAm = mask;
+
+  uint8_t regByte = 0;
+  uint8_t regMod = 0; 
+
+
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  // Set pin direction registers using mask
+  regByte = ~mcpByteRead(MCPDIRA);   // Note: on MCP23S17 0 = output, 1 = input
+  regMod = (regByte & ~portAm) | (portAb & portAm);
+  mcpByteWrite(MCPDIRA, ~regMod);    // Note: on MCP23S17 0 = output, 1 = input
+
 }
 
 
@@ -1003,6 +1366,7 @@ uint8_t reverseBits(uint8_t dbyte) {
    REN_PIN   24  PORTA bit 0 byte bit 5
    ATN_PIN   31  PORTA bit 7 byte bit 7
 */
+/*
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
   // PORT A - use bits 5 and 7. Map to port A bits 0 and 7
@@ -1030,7 +1394,48 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
       break;
   }
 }
+*/
 
+void setGpibCtrlState(uint8_t bits, uint8_t mask) {
+
+  // PORT A - use bits 5 and 7. Map to port A bits 0 and 7
+  uint8_t portAb = ((bits & 0x20) >> 5) + (bits &  0x80);
+  uint8_t portAm = ((mask & 0x20) >> 5) + (mask &  0x80);
+
+  // PORT C- use the 5 right-most bits (bits 0 - 4) and bit 6
+  // Reverse bits 0-4 and map to bits 2-6. Map bit 6 to bit 7
+  uint8_t portCb = (reverseBits(bits & 0x1F) >> 1) + ((bits & 0x40) << 1);
+  uint8_t portCm = (reverseBits(mask & 0x1F) >> 1) + ((mask & 0x40) << 1);
+
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  // Set pin states using mask
+  PORTA = ( (PORTA & ~portAm) | (portAb & portAm) );
+  PORTC = ( (PORTC & ~portCm) | (portCb & portCm) );
+
+}
+
+
+void setGpibCtrlDir(uint8_t bits, uint8_t mask) {
+
+  // PORT A - use bits 5 and 7. Map to port A bits 0 and 7
+  uint8_t portAb = ((bits & 0x20) >> 5) + (bits &  0x80);
+  uint8_t portAm = ((mask & 0x20) >> 5) + (mask &  0x80);
+
+  // PORT C- use the 5 right-most bits (bits 0 - 4) and bit 6
+  // Reverse bits 0-4 and map to bits 2-6. Map bit 6 to bit 7
+  uint8_t portCb = (reverseBits(bits & 0x1F) >> 1) + ((bits & 0x40) << 1);
+  uint8_t portCm = (reverseBits(mask & 0x1F) >> 1) + ((mask & 0x40) << 1);
+
+  // Set registers: register = (register & ~bitmask) | (value & bitmask)
+  // Mask: 0=unaffected; 1=to be changed
+
+  // Set pin direction registers using mask
+  DDRA = ( (DDRA & ~portAm) | (portAb & portAm) );
+  DDRC = ( (DDRC & ~portCm) | (portCb & portCm) );
+
+}
 
 #endif // AR488_MEGA644P_MCGRAW
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
@@ -1447,6 +1852,7 @@ void setGpibDbus(uint8_t db) {
    dir  : 0=input; 1=output;
    mode:  0=set pin state; 1=set pin direction
 */
+/*
 void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
 
   switch (mode) {
@@ -1462,6 +1868,26 @@ void setGpibState(uint8_t bits, uint8_t mask, uint8_t mode) {
         if (mask&(1<<i)) pinMode( ctrlbus[i], ((bits&(1<<i)) ? OUTPUT : INPUT_PULLUP) );
       }
       break;
+  }
+
+}
+*/
+
+void setGpibCtrlState(uint8_t bits, uint8_t mask) {
+
+  // Set pin state
+  for (uint8_t i=0; i<8; i++) {
+    if (mask&(1<<i)) digitalWrite( ctrlbus[i], ((bits&(1<<i)) ? HIGH : LOW) );
+  }
+
+}
+
+
+void setGpibCtrlDir(uint8_t bits, uint8_t mask) {
+
+  // Set pin direction
+  for (uint8_t i=0; i<8; i++) {
+    if (mask&(1<<i)) pinMode( ctrlbus[i], ((bits&(1<<i)) ? OUTPUT : INPUT_PULLUP) );
   }
 
 }

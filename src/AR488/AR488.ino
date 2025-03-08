@@ -14,7 +14,7 @@
 #include "AR488_Eeprom.h"
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.52.15, 03/03/2025" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.52.18, 08/03/2025" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -182,10 +182,14 @@ static const char cmdHelp[] PROGMEM = {
   "ppoll:C Conduct a parallel poll\n"
   "ren:C Assert or Unassert the REN signal\n"
   "repeat:C Repeat a given command and return result\n"
+  "secread:C Read from a secondary address\n"
+  "secsend:C Send data or command to a secondary address\n"
   "setvstr:C DEPRECATED - see id verstr\n"
   "srqauto:C Automatically conduct serial poll when SRQ is asserted\n"
   "tct:C Signal remote device to take control\n"
   "ton:C Put controller in talk-only mode (send data only)\n"
+  "unl:C Unlisten the GPIB bus\n"
+  "unt:C Untalk the GPIB bus"
   "verbose:C Verbose (human readable) mode\n"
   "xdiag:C Bus diagnostics (see the doc)\n"
 };
@@ -2124,12 +2128,11 @@ void xdiag_h(char *params){
   // Get first parameter (mode = 0 or 1)
   param = strtok(params, " \t");
 
-#ifdef DEBUG_LAYOUT
-    if ( strncmp(param, "pins", 4) ==0) {
-      pinout();
-      return;
-    }
-#endif
+  if ( strncmp(param, "pins", 4) ==0) {
+    printDbPinout();
+    printCtrlPinout();
+    return;
+  }
 
   if (param != NULL) {
     if (strlen(param)<4){
@@ -2140,6 +2143,7 @@ void xdiag_h(char *params){
       }
     }
   }
+
   // Get second parameter (8 bit byte)
   param = strtok(NULL, " \t");
   if (param != NULL) {
@@ -2151,14 +2155,16 @@ void xdiag_h(char *params){
       case 0:
           // Set to required value
           gpibBus.setDataVal(byteval);
+          delay(20);
+          printDbPinout();
           // Reset after 10 seconds
           delay(10000);
           gpibBus.setDataVal(0);
           break;
       case 1:
-//          gpibBus.setControlVal(0xFF, 0xFF, 1);       // Set direction (all pins as outputs)
-//          gpibBus.setControlVal(~byteval, 0xFF, 0);   // Set state (asserted=LOW so value is inverted)          
           gpibBus.setControlVal(~byteval);
+          delay(20);
+          printCtrlPinout();
           // Reset after 10 seconds
           delay(10000);
           if (gpibBus.cfg.cmode==2) {
@@ -2174,28 +2180,40 @@ void xdiag_h(char *params){
 }
 
 
-#ifdef DEBUG_LAYOUT
-void pinout(){
-  // Data pins
-  DB_PRINT(F("DIO1: "), DIO1_PIN);
-  DB_PRINT(F("DIO2: "), DIO2_PIN);
-  DB_PRINT(F("DIO3: "), DIO3_PIN);
-  DB_PRINT(F("DIO4: "), DIO4_PIN);
-  DB_PRINT(F("DIO5: "), DIO5_PIN);
-  DB_PRINT(F("DIO6: "), DIO6_PIN);
-  DB_PRINT(F("DIO7: "), DIO7_PIN);
-  DB_PRINT(F("DIO8: "), DIO8_PIN);
-  // Control pins
-  DB_PRINT(F("IFC:  "), IFC_PIN);
-  DB_PRINT(F("NDAC: "), NDAC_PIN);
-  DB_PRINT(F("NRFD: "), NRFD_PIN);
-  DB_PRINT(F("DAV:  "), DAV_PIN);
-  DB_PRINT(F("EOI:  "), EOI_PIN);
-  DB_PRINT(F("SRQ:  "), SRQ_PIN);
-  DB_PRINT(F("REN:  "), REN_PIN);
-  DB_PRINT(F("ATN:  "), ATN_PIN);
+/***** Print the pinout and pin states for the data bus *****/
+void printDbPinout(){
+  printPin(F("DIO1"), DIO1_PIN);
+  printPin(F("DIO2"), DIO2_PIN);
+  printPin(F("DIO3"), DIO3_PIN);
+  printPin(F("DIO4"), DIO4_PIN);
+  printPin(F("DIO5"), DIO5_PIN);
+  printPin(F("DIO6"), DIO6_PIN);
+  printPin(F("DIO7"), DIO7_PIN);
+  printPin(F("DIO8"), DIO8_PIN);
 }
-#endif
+
+
+/***** Print the pinout and pin states of the control bus *****/
+void printCtrlPinout(){
+  printPin(F("IFC"), IFC_PIN);
+  printPin(F("NDAC"), NDAC_PIN);
+  printPin(F("NRFD"), NRFD_PIN);
+  printPin(F("DAV"), DAV_PIN);
+  printPin(F("EOI"), EOI_PIN);
+  printPin(F("SRQ"), SRQ_PIN);
+  printPin(F("REN"), REN_PIN);
+  printPin(F("ATN"), ATN_PIN);
+
+}
+
+
+void printPin(const __FlashStringHelper* pinid, uint8_t pin){
+  char line[50];
+  char pname[7];
+  strcpy_P(pname, (const char PROGMEM *)pinid);
+  sprintf( line, "%s: \t[%d] \t%d", pname, pin, digitalRead(pin) );
+  Serial.println(line);
+}
 
 
 
@@ -2503,6 +2521,12 @@ void sendmta_h() {
 }
 */
 
+/***** Send to secondary address *****/
+/*
+  Parameters: pri,sec,data
+  pri, sec = GPIB addresses between 0 and 30
+  data is optional
+*/
 void secsend_h(char *params) {
   char * pristr;
   char * secstr;
@@ -2534,36 +2558,39 @@ void secsend_h(char *params) {
       return;
     }
 
-
     // Not using controller address ?
     if (pri == gpibBus.cfg.caddr) {
       errorMsg(2);
       return;
     }
-
+/*
     // Data is not null
     if (strlen(data) == 0) {
       errorMsg(1);
       return;
     }
-
+*/
 Serial.print("PRI:  ");
 Serial.println(pri);
 Serial.print("SEC:  ");
 Serial.println(sec);
 Serial.print("DATA: ");
 Serial.println(data);
+Serial.print("DLEN: ");
+Serial.print(strlen(data));
 
     gpibBus.unAddressDevice();
     gpibBus.cfg.paddr = pri;
     gpibBus.cfg.saddr = sec;
     gpibBus.addressDevice(pri, 0);  // Address to listen
 //    delay(50);
-//    gpibBus.sendData(data, strlen(data));
-    sendToInstrument(data, strlen(data));
+//    gpibBus.setControls(CTAS);
 //    delay(50);
-    gpibBus.unAddressDevice();
-    gpibBus.setControls(CIDS);
+    gpibBus.sendData(data, strlen(data));
+//    sendToInstrument(data, strlen(data));
+//    delay(50);
+//    gpibBus.unAddressDevice();
+//    gpibBus.setControls(CIDS);
 
   }else{
     errorMsg(1);
@@ -2575,6 +2602,11 @@ Serial.println(data);
 }
 
 
+/***** Read from secondary address *****/
+/*
+  Parameters: pri,sec
+  pri, sec = GPIB addresses between 0 and 30
+*/
 void secread_h(char *params) {
   char * pristr;
   char * secstr;

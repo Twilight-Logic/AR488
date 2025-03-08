@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_GPIBbus.h"
 
-/***** AR488_GPIB.cpp, ver. 0.52.15, 03/03/2025 *****/
+/***** AR488_GPIB.cpp, ver. 0.52.18, 08/03/2025 *****/
 
 
 /****** Process status values *****/
@@ -959,8 +959,7 @@ void GPIBbus::setControls(uint8_t state) {
 
 /***** Set GPIP control state using numeric input (xdiag_h) *****/
 void GPIBbus::setControlVal(uint8_t value) {
-//  setGpibState(value, mask, mode);
-  setGpibCtrlDir(0xFF, 0xFF); // Sel all outputs
+  setGpibCtrlDir(0xFF, 0xFF); // Set all as outputs
   setGpibCtrlState(value, 0xFF);
 }
 
