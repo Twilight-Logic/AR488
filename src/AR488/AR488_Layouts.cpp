@@ -1808,8 +1808,8 @@ void setGpibDbus(uint8_t db) {
 /*************************************/
 /***** CUSTOM PIN LAYOUT SECTION *****/
 /***** vvvvvvvvvvvvvvvvvvvvvvvvv *****/
-#ifdef AR488_CUSTOM
-//#if defined (AR488_CUSTOM) || defined (NON_ARDUINO)
+//#ifdef AR488_CUSTOM
+#if defined (AR488_CUSTOM) || defined (NON_ARDUINO)
 
 uint8_t databus[8] = { DIO1_PIN, DIO2_PIN, DIO3_PIN, DIO4_PIN, DIO5_PIN, DIO6_PIN, DIO7_PIN, DIO8_PIN };
 

@@ -14,7 +14,7 @@
 #include "AR488_Eeprom.h"
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.52.18, 08/03/2025" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.52.19, 09/03/2025" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -1920,7 +1920,7 @@ void setvstr_h(char *params) {
   
 /*  
   if (params != NULL) {
-    len = strlen(params);
+    len = strlen(params);NON
     if (len>47) len=47; 
     memset(AR488.vstr, '\0', 48);
     strncpy(AR488.vstr, params, len);
@@ -2114,7 +2114,7 @@ void macro_h(char *params) {
 /***** Bus diagnostics *****/
 /*
  * Usage: xdiag mode byte
- * mode: 0=data bus; 1=control bus
+ * mode: pins=sho state of all pins; 0=data bus; 1=control bus
  * byte: byte to write on the bus
  * Note: values to switch individual bits = 1,2,4,8,10,20,40,80
  * States revert to controller or device mode after 10 seconds
@@ -2126,9 +2126,9 @@ void xdiag_h(char *params){
   uint8_t byteval = 0;
   
   // Get first parameter (mode = 0 or 1)
-  param = strtok(params, " \t");
+  param = strtok(params, " ,\t");
 
-  if ( strncmp(param, "pins", 4) ==0) {
+  if ( strncasecmp(param, "pins", 4) ==0) {
     printDbPinout();
     printCtrlPinout();
     return;
@@ -2327,12 +2327,12 @@ void fndl_h(char *params) {
   char *param;
   uint16_t addrval = 0;
   uint8_t addrList[15] = {0};
-//  uint8_t myaddr = gpibBus.cfg.caddr;
-  uint8_t tmo = gpibBus.cfg.rtmo;
+  uint16_t tmo = gpibBus.cfg.rtmo;
   uint8_t acnt = 0;
   uint8_t xmit = true;
   uint8_t j = 0;
   uint8_t err = 0;
+  uint8_t addr = 0xFF;
 
   // Initialise arrays
   for (int i = 0; i < 15; i++) {
@@ -2347,7 +2347,11 @@ void fndl_h(char *params) {
     // No parameters given - no action to be taken
     errorMsg(1);
     return;
-  } else {
+  }
+
+  if ( strncasecmp(params, "all", 4) ==0) {
+    j = 31;
+  }else{
     // Read address parameters into array
     while (j < 15) {
       if (j == 0) {
@@ -2387,10 +2391,16 @@ void fndl_h(char *params) {
   }
 
   // Poll the GPIB bus
-  for (uint8_t i=0; i < j; i++) {
+  for (uint8_t i=0; i<j; i++) {
+
+    if (j ==31) {
+      addr = i;
+    }else{
+      addr = addrList[i];
+    }
 
     // Poll primary addresses in list
-    if (addrList[i] == gpibBus.cfg.caddr) continue;     // Ignore and skip controller address
+    if (addr == gpibBus.cfg.caddr) continue;     // Ignore and skip controller address
 
     if (gpibBus.sendCmd(GC_UNL) == ERR) {
       xmit = false;
@@ -2398,7 +2408,7 @@ void fndl_h(char *params) {
       break;
     }
     
-    if (gpibBus.sendCmd(addrList[i] + 0x20) == ERR) {
+    if (gpibBus.sendCmd(addr + 0x20) == ERR) {
       xmit = false;
       errorMsg(3);
       break;
@@ -2410,7 +2420,7 @@ void fndl_h(char *params) {
     if (gpibBus.isAsserted(NDAC_PIN)) {
 
       if (acnt>0) Serial.print(",");
-      dataPort.print(addrList[i]);
+      dataPort.print(addr);
       acnt++;
 
     }else{
@@ -2427,7 +2437,7 @@ void fndl_h(char *params) {
           break;
         }
     
-        if (gpibBus.sendCmd(addrList[i] + 0x20) == ERR) {
+        if (gpibBus.sendCmd(addr + 0x20) == ERR) {
           xmit = false;
           errorMsg(3);
           break;
@@ -2451,7 +2461,7 @@ void fndl_h(char *params) {
               break;
             }
     
-            if (gpibBus.sendCmd(addrList[i] + 0x20) == ERR) {
+            if (gpibBus.sendCmd(addr + 0x20) == ERR) {
               xmit = false;
               errorMsg(3);
               break;
@@ -2570,6 +2580,7 @@ void secsend_h(char *params) {
       return;
     }
 */
+/*
 Serial.print("PRI:  ");
 Serial.println(pri);
 Serial.print("SEC:  ");
@@ -2578,7 +2589,7 @@ Serial.print("DATA: ");
 Serial.println(data);
 Serial.print("DLEN: ");
 Serial.print(strlen(data));
-
+*/
     gpibBus.unAddressDevice();
     gpibBus.cfg.paddr = pri;
     gpibBus.cfg.saddr = sec;

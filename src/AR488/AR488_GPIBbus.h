@@ -12,7 +12,7 @@
 #endif
 #endif
 
-/***** AR488_GPIBbus.cpp, ver. 0.52.18, 08/03/2025 *****/
+/***** AR488_GPIBbus.cpp, ver. 0.52.19, 09/03/2025 *****/
 
 
 /*********************************************/
@@ -149,7 +149,7 @@ public:
       uint8_t eos;      // EOS (end of send to GPIB) characters [0=CRLF, 1=CR, 2=LF, 3=None]
       uint8_t stat;     // Status byte to return in response to a serial poll
       uint8_t amode;    // Auto mode setting (0=off; 1=Prologix; 2=onquery; 3=continuous);
-      int rtmo;         // Read timout (read_tmo_ms) in milliseconds - 0-3000 - value depends on instrument
+      uint16_t rtmo;    // Read timout (read_tmo_ms) in milliseconds - 0-32000 - value depends on instrument
       char eot_ch;      // EOT character to append to USB output when EOI signal detected
       char vstr[48];    // Custom version string
       uint8_t eor;      // EOR (end of receive from GPIB instrument) characters [0=CRLF, 1=CR, 2=LF, 3=None, 4=LFCR, 5=ETX, 6=CRLF+ETX, 7=SPACE]
