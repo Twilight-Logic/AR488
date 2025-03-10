@@ -14,7 +14,7 @@
 #include "AR488_Eeprom.h"
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.52.19, 09/03/2025" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.52.20, 10/03/2025" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -2322,6 +2322,27 @@ void idn_h(char * params){
 }
 
 
+
+bool isRange(char * rangestr, size_t rsize, unsigned long values[2] ) {
+//  unsigned long start = 0;
+//  unsigned long finish = 0;
+  char * fp = NULL;
+
+  for (uint8_t i=0; i<rsize; i++) {
+    if (rangestr[i] == '-') {
+      if (!i) return false;
+      fp = &rangestr[i+1];
+      values[0] = strtoul(rangestr, NULL, 10);
+      values[1] = strtoul(fp, NULL, 10);
+      if (values[1] > values[0]) return true;
+    }
+  }
+
+  return false;
+}
+
+
+
 /***** Fine all listeners *****/
 void fndl_h(char *params) {
   char *param;
@@ -2330,9 +2351,12 @@ void fndl_h(char *params) {
   uint16_t tmo = gpibBus.cfg.rtmo;
   uint8_t acnt = 0;
   uint8_t xmit = true;
+  uint8_t i = 0;
   uint8_t j = 0;
-  uint8_t err = 0;
+//  uint8_t err = 0;
   uint8_t addr = 0xFF;
+  unsigned long range[2] = {0,0};
+  bool list = false;
 
   // Initialise arrays
   for (int i = 0; i < 15; i++) {
@@ -2349,9 +2373,31 @@ void fndl_h(char *params) {
     return;
   }
 
-  if ( strncasecmp(params, "all", 4) ==0) {
+
+  // Is it a range?
+  if ( isRange(params, strlen(params), range) ) {
+    if (range[0]<30 && range[1]<31) {
+      i = (uint8_t)range[0];
+      j = (uint8_t)range[1] + 1;
+
+//    Serial.print(F("Start: "));
+//    Serial.println(range[0]);
+//    Serial.print(F("Finish: "));
+//    Serial.println(range[1]);
+
+    }else{
+      errorMsg(2);
+      return;
+    }
+  }
+
+//return;
+
+  if ( strncasecmp(params, "all", 4) == 0) {
     j = 31;
-  }else{
+  }
+
+  if (j==0) {
     // Read address parameters into array
     while (j < 15) {
       if (j == 0) {
@@ -2365,14 +2411,14 @@ void fndl_h(char *params) {
 
       // Valid GPIB address parameter ?
       if (strlen(param) > 2) {
-        err = 2;
-        break;
+        errorMsg(2);
+        return;
       }
 
       // Contains only digits
       if (!isNumber(param)) {
-        err = 2;
-        break;
+        errorMsg(2);
+        return;
       }
 
       // Valid range
@@ -2383,24 +2429,31 @@ void fndl_h(char *params) {
 
     }
 
-    if (err) {
-      errorMsg(err);
-      return;
-    }
+    list = true;
 
   }
 
-  // Poll the GPIB bus
-  for (uint8_t i=0; i<j; i++) {
+//Serial.print("I: ");
+//Serial.println(i);
+//Serial.print("J: ");
+//Serial.println(j);
+//return;
 
-    if (j ==31) {
-      addr = i;
-    }else{
+  // Poll the GPIB bus
+//  for (i=i; i<j; i++) {
+  while (i<j) {
+
+    if (list) {
       addr = addrList[i];
+    }else{
+      addr = i;
     }
 
     // Poll primary addresses in list
-    if (addr == gpibBus.cfg.caddr) continue;     // Ignore and skip controller address
+    if (addr == gpibBus.cfg.caddr) {
+      i++;
+      continue;     // Ignore and skip controller address
+    }
 
     if (gpibBus.sendCmd(GC_UNL) == ERR) {
       xmit = false;
@@ -2473,6 +2526,7 @@ void fndl_h(char *params) {
     }
 
     gpibBus.setControls(CIDS);
+    i++;
 
   }
 

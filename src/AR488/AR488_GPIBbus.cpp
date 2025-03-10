@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_GPIBbus.h"
 
-/***** AR488_GPIB.cpp, ver. 0.52.19, 09/03/2025 *****/
+/***** AR488_GPIB.cpp, ver. 0.52.20, 10/03/2025 *****/
 
 
 /****** Process status values *****/
@@ -418,6 +418,7 @@ void GPIBbus::sendAllClear() {
 
 
 /***** Request device to talk *****/
+/*
 bool GPIBbus::sendMTA() {
 #ifdef DEBUG_GPIB_ADDRESSING
   DB_PRINT(F("address device: "), cfg.paddr);
@@ -432,9 +433,10 @@ bool GPIBbus::sendMTA() {
 #endif
   return OK;
 }
-
+*/
 
 /***** Request device to listen *****/
+/*
 bool GPIBbus::sendMLA() {
 #ifdef DEBUG_GPIB_ADDRESSING
   DB_PRINT(F("address device: "), cfg.paddr);
@@ -449,9 +451,10 @@ bool GPIBbus::sendMLA() {
 #endif
   return OK;
 }
-
+*/
 
 /***** Send secondary address command *****/
+/*
 bool GPIBbus::sendMSA(uint8_t addr) {
   // Send address
   if (sendCmd(addr)) {
@@ -464,9 +467,9 @@ bool GPIBbus::sendMSA(uint8_t addr) {
   clearSignal(ATN_BIT);
   return OK;
 }
+*/
 
-
-/***** Send untalk (SAD mode) *****/
+/***** Send untalk *****/
 bool GPIBbus::sendUNT() {
   if (sendCmd(GC_UNT)) {
 #ifdef DEBUG_GPIB_ADDRESSING
