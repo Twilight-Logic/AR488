@@ -6,11 +6,7 @@
 #include "AR488_Layouts.h"
 #include "AR488_ComPorts.h"
 
-#ifdef EN_STORAGE
-#ifdef EN_TEK_4924
-#include "AR488_Store_Tek_4924.h"
-#endif
-#endif
+
 
 /***** AR488_GPIBbus.cpp, ver. 0.52.21, 12/03/2025 *****/
 
