@@ -12,7 +12,7 @@
 #endif
 #endif
 
-/***** AR488_GPIBbus.cpp, ver. 0.52.20, 10/03/2025 *****/
+/***** AR488_GPIBbus.cpp, ver. 0.52.21, 12/03/2025 *****/
 
 
 /*********************************************/
@@ -218,7 +218,7 @@ public:
 
   void signalBreak();
 
-  bool addressDevice(uint8_t addr, bool dir);
+  bool addressDevice(uint8_t pri, uint8_t sec, bool talk);
   bool unAddressDevice();
   bool haveAddressedDevice();
 

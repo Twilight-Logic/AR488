@@ -14,7 +14,7 @@
 #include "AR488_Eeprom.h"
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.52.20, 10/03/2025" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.52.21, 12/03/2025" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -768,8 +768,6 @@ bool isRead(char *buffr) {
 /***** Is the parameter a number *****/
 bool isNumber(char *numstr){
   uint8_t numlen = strlen(numstr);
-//  char *ptr;
-//  uint8_t num = (uint8_t)strtoul(numstr, &ptr, 10);
   for (uint8_t i=0; i<numlen; i++){
     if (numstr[i]<48 || numstr[i]>57) return false;
   }
@@ -884,7 +882,7 @@ void sendToInstrument(char *buffr, uint8_t dsize) {
 
   if (gpibBus.isController()) {
     // Has controller already addressed the device? - if not then address it
-    if (!gpibBus.haveAddressedDevice()) gpibBus.addressDevice(gpibBus.cfg.paddr, LISTEN);
+    if (!gpibBus.haveAddressedDevice()) gpibBus.addressDevice(gpibBus.cfg.paddr, gpibBus.cfg.saddr, LISTEN);
   }
 
   // Send string to instrument
@@ -1017,7 +1015,7 @@ void getCmd(char *buffr) {
 }
 
 
-/***** Prints charaters as hex bytes *****/
+/***** Prints charaters as heatoix bytes *****/
 /*
 void printHex(char *buffr, int dsize) {
 #ifdef DEBUG_ENABLE
@@ -1035,6 +1033,7 @@ void printHex(char *buffr, int dsize) {
  * to a uint16_t integer in rval. Returns true if successful, 
  * false if not
 */
+/*
 bool notInRange(char *param, uint16_t lowl, uint16_t higl, uint16_t &rval) {
 
   // Null string passed?
@@ -1061,6 +1060,36 @@ bool notInRange(char *param, uint16_t lowl, uint16_t higl, uint16_t &rval) {
     }
     return true;
   }
+  return false;
+}
+*/
+
+
+bool notInRange(char *param, uint16_t lowl, uint16_t higl, uint16_t &rval) {
+
+  unsigned long val = 0;
+
+  // Null string passed?
+  if (strlen(param) == 0) return true;
+
+  // Is it numeric ?
+  if (!isNumber(param)) return true;
+
+  // Convert
+  val = strtoul(param, NULL, 10);
+
+  // Check range
+  if (val < lowl || val > higl) {
+    errorMsg(2);
+    if (isVerb) {
+      dataPort.print(F("Valid range is between "));
+      dataPort.print(lowl);
+      dataPort.print(F(" and "));
+      dataPort.println(higl);
+    }
+    return true;
+  }
+  rval = (uint16_t)val;
   return false;
 }
 
@@ -1346,7 +1375,7 @@ void read_h(char *params) {
     autoRead = true;
   } else {
     // If auto mode is disabled we do a single read
-    gpibBus.addressDevice(gpibBus.cfg.paddr, TALK);
+//    gpibBus.addressDevice(gpibBus.cfg.paddr, gpibBus.cfg.saddr, TALK);
     gpibBus.receiveData(dataPort, readWithEoi, readWithEndByte, endByte);
   }
 }
@@ -2354,7 +2383,7 @@ void fndl_h(char *params) {
   uint8_t i = 0;
   uint8_t j = 0;
 //  uint8_t err = 0;
-  uint8_t addr = 0xFF;
+  uint8_t pri = 0xFF;
   unsigned long range[2] = {0,0};
   bool list = false;
 
@@ -2444,37 +2473,45 @@ void fndl_h(char *params) {
   while (i<j) {
 
     if (list) {
-      addr = addrList[i];
+      pri = addrList[i];
     }else{
-      addr = i;
+      pri = i;
     }
 
     // Poll primary addresses in list
-    if (addr == gpibBus.cfg.caddr) {
+    if (pri == gpibBus.cfg.caddr) {
       i++;
       continue;     // Ignore and skip controller address
     }
-
+/*
     if (gpibBus.sendCmd(GC_UNL) == ERR) {
       xmit = false;
       errorMsg(3);
       break;
     }
-    
+
     if (gpibBus.sendCmd(addr + 0x20) == ERR) {
       xmit = false;
       errorMsg(3);
       break;
     }
+*/
+    if (gpibBus.addressDevice(pri, 0xFF, LISTEN ) == ERR) {
+      xmit = false;
+      errorMsg(3);
+      break;
+    }
+
 
     gpibBus.clearSignal(ATN_BIT);
     delayMicroseconds(1500);
 
     if (gpibBus.isAsserted(NDAC_PIN)) {
 
-      if (acnt>0) Serial.print(",");
-      dataPort.print(addr);
+      if (acnt>0) Serial.print(";");
+      dataPort.print(pri);
       acnt++;
+
 
     }else{
 
@@ -2484,20 +2521,44 @@ void fndl_h(char *params) {
       
       if (gpibBus.isAsserted(NDAC_PIN)) {
 
+        for (uint8_t sec=0x60; sec<0x7F; sec++) {
+          gpibBus.setControls(CIDS);
+          gpibBus.addressDevice(pri, sec, LISTEN);
+          if (gpibBus.isAsserted(NDAC_PIN)) {
+            if (sec == 0x60) {
+              dataPort.print("(");
+            }else{
+              dataPort.print(",");
+            }
+            dataPort.print(sec);
+          }
+        }
+
+      }
+
+
+
+
+/*
+//        gpibBus.assertSignal(ATN_BIT);
+
         if (gpibBus.sendCmd(GC_UNL) == ERR) {
           xmit = false;
           errorMsg(3);
+          Serial.println(1);
           break;
         }
     
         if (gpibBus.sendCmd(addr + 0x20) == ERR) {
           xmit = false;
           errorMsg(3);
+          Serial.println(2);
           break;
         }
 
         // Transmit success
-        for (uint8_t s=0x60; s<0x7E; s++) {
+        for (uint8_t s=0x60; s<0x7F; s++) {
+          gpibBus.sendCmd(s);
           gpibBus.clearSignal(ATN_PIN);
           delayMicroseconds(1500);
           if (gpibBus.isAsserted(NDAC_PIN)) {
@@ -2508,24 +2569,33 @@ void fndl_h(char *params) {
             }
             dataPort.print(s);
 
+            gpibBus.setControls(CIDS);
+            delay(20);
+
+//            gpibBus.assertSignal(ATN_PIN);
+
             if (gpibBus.sendCmd(GC_UNL) == ERR) {
               xmit = false;
               errorMsg(3);
+              Serial.println(3);
               break;
             }
     
             if (gpibBus.sendCmd(addr + 0x20) == ERR) {
               xmit = false;
               errorMsg(3);
+               Serial.println(4);
               break;
             }
           }
         }
-        dataPort.print("),");
-      }
-    }
+        dataPort.print(")");
+//      }
+*/
 
+    }
     gpibBus.setControls(CIDS);
+//    gpibBus.assertSignal(ATN_BIT);
     i++;
 
   }
@@ -2598,7 +2668,7 @@ void secsend_h(char *params) {
   uint8_t pri;
   uint8_t sec;
   uint16_t val;
-  const uint8_t prisaved = gpibBus.cfg.paddr;
+//  const uint8_t prisaved = gpibBus.cfg.paddr;
 
   if (params != NULL) {
     pristr = strtok(params, " ,\t");
@@ -2611,16 +2681,22 @@ void secsend_h(char *params) {
       return;
     }
 
-    // Are addresses in range
-    if (notInRange(pristr, 0, 30, val)) return;
-    pri = (uint8_t)val;
-    if (notInRange(secstr, 0, 30, val)) return;
-    sec = (uint8_t)val;
-    if (sec<31) sec += 0x60;
-    if (sec<96 && sec>126) {
+    // Primary address in range ?
+    val = strtoul(pristr, NULL, 10);
+    if (val>30) {
       errorMsg(2);
       return;
     }
+    pri = (uint8_t)val;
+
+    // Secondary address in range ?
+    val = strtoul(secstr, NULL, 10);
+    if (val<31) val = val ^ 0x60;
+    if (val<0x60 || val>0x7E) {
+      errorMsg(2);
+      return;
+    }
+    sec = (uint8_t)val;
 
     // Not using controller address ?
     if (pri == gpibBus.cfg.caddr) {
@@ -2645,24 +2721,24 @@ Serial.print("DLEN: ");
 Serial.print(strlen(data));
 */
     gpibBus.unAddressDevice();
-    gpibBus.cfg.paddr = pri;
-    gpibBus.cfg.saddr = sec;
-    gpibBus.addressDevice(pri, 0);  // Address to listen
+//    gpibBus.cfg.paddr = pri;
+//    gpibBus.cfg.saddr = sec;
+    gpibBus.addressDevice(pri, sec, LISTEN);
 //    delay(50);
 //    gpibBus.setControls(CTAS);
 //    delay(50);
     gpibBus.sendData(data, strlen(data));
 //    sendToInstrument(data, strlen(data));
 //    delay(50);
-//    gpibBus.unAddressDevice();
+    gpibBus.unAddressDevice();
 //    gpibBus.setControls(CIDS);
 
   }else{
     errorMsg(1);
   }
 
-  gpibBus.cfg.paddr = prisaved;
-  gpibBus.cfg.saddr = 0xFF;
+//  gpibBus.cfg.paddr = prisaved;
+//  gpibBus.cfg.saddr = 0xFF;
 
 }
 
@@ -2677,8 +2753,9 @@ void secread_h(char *params) {
   char * secstr;
   uint8_t pri;
   uint8_t sec;
-  uint16_t val;
+  unsigned long val;
   const uint8_t prisaved = gpibBus.cfg.paddr;
+  const uint8_t secsaved = gpibBus.cfg.saddr;
 
   if (params != NULL) {
     pristr = strtok(params, " ,\t");
@@ -2690,16 +2767,22 @@ void secread_h(char *params) {
       return;
     }
 
-    // Are addresses in range
-    if (notInRange(pristr, 0, 30, val)) return;
-    pri = (uint8_t)val;
-    if (notInRange(secstr, 0, 30, val)) return;
-    sec = (uint8_t)val;
-    if (sec<31) sec += 0x60;
-    if (sec<96 && sec>126) {
+    // Primary address in range ?
+    val = strtoul(pristr, NULL, 10);
+    if (val>30) {
       errorMsg(2);
       return;
     }
+    pri = (uint8_t)val;
+
+    // Secondary address in range ?
+    val = strtoul(secstr, NULL, 10);
+    if (val<31) val = val ^ 0x60;
+    if (val<0x60 || val>0x7E) {
+      errorMsg(2);
+      return;
+    }
+    sec = (uint8_t)val;
 
     // Not using controller address ?
     if (pri == gpibBus.cfg.caddr) {
@@ -2707,19 +2790,18 @@ void secread_h(char *params) {
       return;
     }
 
-    gpibBus.unAddressDevice();
     gpibBus.cfg.paddr = pri;
     gpibBus.cfg.saddr = sec;
-    gpibBus.addressDevice(pri, 1);  // Address to talk
-    delay(50);
-    gpibBus.setControls(CLAS);
-    delay(50);
-    gpibBus.receiveData(dataPort, true, false, 0);
+
     gpibBus.unAddressDevice();
     gpibBus.setControls(CIDS);
+    delay(50);
+    gpibBus.addressDevice(pri, sec, TALK);
+    delay(50);
+    gpibBus.receiveData(dataPort, true, false, 0);
 
     gpibBus.cfg.paddr = prisaved;
-    gpibBus.cfg.saddr = 0xFF;
+    gpibBus.cfg.saddr = secsaved;
 
   }else{
     errorMsg(1);

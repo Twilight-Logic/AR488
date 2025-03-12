@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_GPIBbus.h"
 
-/***** AR488_GPIB.cpp, ver. 0.52.20, 10/03/2025 *****/
+/***** AR488_GPIB.cpp, ver. 0.52.21, 12/03/2025 *****/
 
 
 /****** Process status values *****/
@@ -249,7 +249,7 @@ bool GPIBbus::sendSDC() {
 #ifdef DEBUG_GPIB_COMMANDS
   DB_PRINT(F("sending SDC..."), "");
 #endif
-  if (addressDevice(cfg.paddr, 0)) {
+  if (addressDevice(cfg.paddr, cfg.saddr, LISTEN)) {
 #ifdef DEBUG_GPIB_COMMANDS
     DB_PRINT(F("failed to address the device."), "");
 #endif
@@ -281,7 +281,7 @@ bool GPIBbus::sendLLO() {
 #ifdef DEBUG_GPIB_COMMANDS
   DB_PRINT(F("sending LLO..."), "");
 #endif
-  if (addressDevice(cfg.paddr, 0)) {
+  if (addressDevice(cfg.paddr, cfg.saddr, LISTEN)) {
 #ifdef DEBUG_GPIB_COMMANDS
     DB_PRINT(F("failed to address the device."), "");
 #endif
@@ -313,7 +313,7 @@ bool GPIBbus::sendGTL() {
 #ifdef DEBUG_GPIB_COMMANDS
   DB_PRINT(F("sending LOC..."), "");
 #endif
-  if (addressDevice(cfg.paddr, 0)) {
+  if (addressDevice(cfg.paddr, cfg.saddr, LISTEN)) {
 #ifdef DEBUG_GPIB_COMMANDS
     DB_PRINT(F("failed to address the device."), "");
 #endif
@@ -345,7 +345,7 @@ bool GPIBbus::sendGET(uint8_t addr) {
 #ifdef DEBUG_GPIB_COMMANDS
   DB_PRINT(F("sending GET..."), "");
 #endif
-  if (addressDevice(addr, 0)) {
+  if (addressDevice(addr, 0xFF, LISTEN)) {
 #ifdef DEBUG_GPIB_COMMANDS
     DB_PRINT(F("failed to address the device."), "");
 #endif
@@ -377,7 +377,7 @@ bool GPIBbus::sendTCT(uint8_t addr){
  #ifdef DEBUG_GPIB_COMMANDS
   DB_PRINT(F("sending TCT..."), "");
 #endif
-  if (addressDevice(addr, 0)) {
+  if (addressDevice(addr, 0xFF, LISTEN)) {
 #ifdef DEBUG_GPIB_COMMANDS
     DB_PRINT(F("failed to address the device."), "");
 #endif
@@ -543,7 +543,7 @@ bool GPIBbus::receiveData(Stream &dataStream, bool detectEoi, bool detectEndByte
   if (cfg.cmode == 2) {  // Controler mode
 
     // Address device to talk
-    if (addressDevice(cfg.paddr, 1)) {
+    if (addressDevice(cfg.paddr, cfg.saddr, TALK)) {
 #ifdef DEBUG_GPIBbus_RECEIVE
       DB_PRINT(F("Failed to address device to talk: "), cfg.paddr);
 #endif
@@ -995,25 +995,31 @@ bool GPIBbus::unAddressDevice() {
 /*
  * talk: false=listen; true=talk;
  */
-bool GPIBbus::addressDevice(uint8_t addr, bool talk) {
-  //  uint8_t saddr = 0;
+bool GPIBbus::addressDevice(uint8_t pri, uint8_t sec=0xFF, bool talk=false) {
+
+  if (pri>30) return ERR;
+
+  if ( sec<0x60 || (sec>0x7E && sec!=0xFF) ) return ERR;
+
   if (sendCmd(GC_UNL)) return ERR;
+//Serial.println(F("Addressing..."));
 #ifdef DEBUG_GPIBbus_DEVICE
-  DB_PRINT(F("addressDevice: "), addr);
+  DB_PRINT(F("addressDevice: pri="), pri);
+  DB_PRINT(F("addressDevice: sec="), sec);
 #endif
   if (talk) {
     // Device to talk, controller to listen
-    if (sendCmd(GC_TAD + addr)) return ERR;
+    if (sendCmd(GC_TAD + pri)) return ERR;
     // Secondary address?
-    if (cfg.saddr != 0xFF) {
-      if (sendCmd(cfg.saddr)) return ERR;
+    if (sec != 0xFF) {
+      if (sendCmd(sec)) return ERR;
     }
   } else {
     // Device to listen, controller to talk
-    if (sendCmd(GC_LAD + addr)) return ERR;
+    if (sendCmd(GC_LAD + pri)) return ERR;
     // Secondary address?
-    if (cfg.saddr != 0xFF) {
-      if (sendCmd(cfg.saddr)) return ERR;
+    if (sec != 0xFF) {
+      if (sendCmd(sec)) return ERR;
     }
   }
 
