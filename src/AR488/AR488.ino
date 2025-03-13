@@ -14,7 +14,7 @@
 #include "AR488_Eeprom.h"
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.52.21, 12/03/2025" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.52.22, 13/03/2025" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -2386,6 +2386,7 @@ void fndl_h(char *params) {
   uint8_t pri = 0xFF;
   unsigned long range[2] = {0,0};
   bool list = false;
+  bool secfound = false;
 
   // Initialise arrays
   for (int i = 0; i < 15; i++) {
@@ -2513,7 +2514,7 @@ void fndl_h(char *params) {
       acnt++;
 
 
-    }else{
+//    }else{
 
       // Poll all secondary addresses
       gpibBus.clearSignal(ATN_PIN);
@@ -2524,7 +2525,10 @@ void fndl_h(char *params) {
         for (uint8_t sec=0x60; sec<0x7F; sec++) {
           gpibBus.setControls(CIDS);
           gpibBus.addressDevice(pri, sec, LISTEN);
+          gpibBus.clearSignal(ATN_PIN);
+          delayMicroseconds(1500);
           if (gpibBus.isAsserted(NDAC_PIN)) {
+            secfound = true;
             if (sec == 0x60) {
               dataPort.print("(");
             }else{
@@ -2533,6 +2537,7 @@ void fndl_h(char *params) {
             dataPort.print(sec);
           }
         }
+        if(secfound) dataPort.print(F(")"));
 
       }
 
@@ -2595,10 +2600,11 @@ void fndl_h(char *params) {
 
     }
     gpibBus.setControls(CIDS);
+    delay(50);
 //    gpibBus.assertSignal(ATN_BIT);
     i++;
 
-  }
+  } // END while
 
   dataPort.println();
   gpibBus.cfg.rtmo = tmo;
@@ -2691,7 +2697,7 @@ void secsend_h(char *params) {
 
     // Secondary address in range ?
     val = strtoul(secstr, NULL, 10);
-    if (val<31) val = val ^ 0x60;
+    if (val<31) val = val + 0x60;
     if (val<0x60 || val>0x7E) {
       errorMsg(2);
       return;
@@ -2777,7 +2783,7 @@ void secread_h(char *params) {
 
     // Secondary address in range ?
     val = strtoul(secstr, NULL, 10);
-    if (val<31) val = val ^ 0x60;
+    if (val<31) val = val + 0x60;
     if (val<0x60 || val>0x7E) {
       errorMsg(2);
       return;
