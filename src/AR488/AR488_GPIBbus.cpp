@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_GPIBbus.h"
 
-/***** AR488_GPIB.cpp, ver. 0.52.21, 12/03/2025 *****/
+/***** AR488_GPIB.cpp, ver. 0.52.25, 15/03/2025 *****/
 
 
 /****** Process status values *****/
@@ -118,8 +118,6 @@ void GPIBbus::startControllerMode() {
 #endif
   // Assert IFC to signal controller in charge (CIC)
   sendIFC();
-  // Attempt to address device to listen
-//  if (cfg.paddr > 1) addressDevice(cfg.paddr, 0); // Addr not set yet!
 }
 
 
@@ -477,7 +475,7 @@ bool GPIBbus::sendUNT() {
 #endif
     return ERR;
   }
-  setControls(CIDS);
+//  setControls(CIDS);
   deviceAddressed = false;
   return OK;
 }
@@ -491,7 +489,7 @@ bool GPIBbus::sendUNL() {
 #endif
     return ERR;
   }
-  setControls(CIDS);
+//  setControls(CIDS);
   deviceAddressed = false;
   return OK;
 }
@@ -1144,7 +1142,7 @@ enum gpibHandshakeStates GPIBbus::readByte(uint8_t *db, bool readWithEoi, bool *
   if ((gpibState == HANDSHAKE_STARTED) || (gpibState == UNASSERTED_NDAC)) {
     DB_PRINT(F("DAV timout!"), "");
   } else {
-    DB_PRINT(F("Handshake error!"));
+    DB_PRINT(F("Handshake error!"), "");
   }
 #endif
 

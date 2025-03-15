@@ -8,7 +8,7 @@
 
 
 
-/***** AR488_GPIBbus.cpp, ver. 0.52.21, 12/03/2025 *****/
+/***** AR488_GPIBbus.cpp, ver. 0.52.25, 15/03/2025 *****/
 
 
 /*********************************************/
@@ -152,6 +152,7 @@ public:
       char sname[16];   // Interface short name
       uint32_t serial;  // Serial number
       uint8_t idn;      // Send ID in response to *idn? 0=disable, 1=send name; 2=send name+serial
+      uint8_t hflags;   // Handshaking indicator flags
     };
     uint8_t db[GPIB_CFG_SIZE];
   };

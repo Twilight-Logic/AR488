@@ -14,7 +14,7 @@
 #include "AR488_Eeprom.h"
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.52.22, 13/03/2025" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.52.25, 15/03/2025" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -233,7 +233,7 @@ bool autoRead = false;              // Auto reading (auto mode 3) GPIB data in p
 bool readWithEoi = false;           // Read eoi requested
 bool readWithEndByte = false;       // Read with specified terminator character
 bool isQuery = false;               // Direct instrument command is a query
-uint8_t tranBrk = 0;                // Transmission break on 1=++, 2=EOI, 3=ATN 4=UNL
+// uint8_t tranBrk = 0;                // Transmission break on 1=++, 2=EOI, 3=ATN 4=UNL
 uint8_t endByte = 0;                // Termination character
 bool isProm = false;                // Promiscuous mode flag
 bool isSpoll = false;               // Serial poll flag
@@ -247,7 +247,6 @@ bool isRO = false;
 
 // Talk only mode flag
 uint8_t isTO = 0;
-
 
 // Data send mode flags
 bool dataBufferFull = false;    // Flag when parse buffer is full
@@ -267,7 +266,6 @@ uint8_t runMacro = 0;
 
 // Send response to *idn?
 bool sendIdn = false;
-
 
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** COMMON VARIABLES SECTION *****/
@@ -357,9 +355,7 @@ void setup() {
 // while(!AR_SERIAL_PORT);
 // Un-comment for diagnostic purposes
 
-  // Initialise
-//  initAR488();
-
+  // Read config from EEPROM
 #ifdef E2END
 //  DB_RAW_PRINTLN(F("EEPROM detected!"));
   // Read data from non-volatile memory
@@ -371,7 +367,6 @@ void setup() {
 //DB_RAW_PRINTLN(F("CRC check failed. Erasing EEPROM...."));
       epErase();
       gpibBus.setDefaultCfg();
-//      initAR488();
       epWriteData(gpibBus.cfg.db, GPIB_CFG_SIZE);
 //DB_RAW_PRINTLN(F("EEPROM data set to default."));
     }
@@ -407,6 +402,7 @@ void setup() {
 
   // Start the interface in the configured mode
   gpibBus.begin();
+  if (gpibBus.cfg.hflags == 0xFF) gpibBus.cfg.hflags = 0;
 
 #if defined(USE_MACROS) && defined(RUN_STARTUP)
   // Run startup macro
@@ -421,6 +417,8 @@ void setup() {
     dataPort.println(F("(device)."));
   }
 #endif
+
+  if (gpibBus.cfg.hflags & 0x01) dataPort.print(F("AR488~RDY"));
 
   dataPort.flush();
 
@@ -819,6 +817,7 @@ static cmdRec cmdHidx [] = {
   { "eos",         3, eos_h       },
   { "eot_char",    3, eot_char_h  },
   { "eot_enable",  3, eot_en_h    },
+  { "flags",       2, hflags_h    },
   { "fndl",        2, fndl_h      },
   { "help",        3, help_h      },
   { "ifc",         2, (void(*)(char*)) ifc_h     },
@@ -828,10 +827,7 @@ static cmdRec cmdHidx [] = {
   { "loc",         2, loc_h       },
   { "lon",         1, lon_h       },
   { "macro",       2, macro_h     },
-//  { "mla",         2, (void(*)(char*)) sendmla_h },
   { "mode" ,       3, cmode_h     },
-//  { "msa",         2, sendmsa_h   },
-//  { "mta",         2, (void(*)(char*)) sendmta_h },
   { "ppoll",       2, (void(*)(char*)) ppoll_h   },
   { "prom",        1, prom_h      },
   { "read",        2, read_h      },
@@ -855,7 +851,6 @@ static cmdRec cmdHidx [] = {
   { "ver",         3, ver_h       },
   { "verbose",     3, (void(*)(char*)) verb_h    },
   { "xdiag",       3, xdiag_h     }
-//  { "xonxoff",     3, xonxoff_h   }
 };
 
 
@@ -899,6 +894,9 @@ void sendToInstrument(char *buffr, uint8_t dsize) {
 #ifdef DEBUG_SEND_TO_INSTR
   DB_PRINT(F("done."),"");
 #endif
+
+  // Show handshake flag
+  if (gpibBus.cfg.hflags & 0x07) dataPort.println("Send^OK");
 
   // Show a prompt on completion?
   if (isVerb) showPrompt();
@@ -1377,6 +1375,7 @@ void read_h(char *params) {
     // If auto mode is disabled we do a single read
 //    gpibBus.addressDevice(gpibBus.cfg.paddr, gpibBus.cfg.saddr, TALK);
     gpibBus.receiveData(dataPort, readWithEoi, readWithEndByte, endByte);
+    if ( !autoRead && (gpibBus.cfg.hflags & 0x02) ) dataPort.println(F("Read^OK"));
   }
 }
 
@@ -1448,7 +1447,7 @@ void ifc_h() {
     gpibBus.assertSignal(IFC_BIT);
     delayMicroseconds(150);
     // De-assert IFC
-    gpibBus.assertSignal(IFC_BIT);
+    gpibBus.clearSignal(IFC_BIT);
     if (isVerb) dataPort.println(F("IFC signal asserted for 150 microseconds"));
   }
 }
@@ -2232,7 +2231,6 @@ void printCtrlPinout(){
   printPin(F("SRQ"), SRQ_PIN);
   printPin(F("REN"), REN_PIN);
   printPin(F("ATN"), ATN_PIN);
-
 }
 
 
@@ -2351,10 +2349,26 @@ void idn_h(char * params){
 }
 
 
+/***** Handshaking indicator flags *****/
+/*
+ * flags & 0x01 = AR488~RDY
+ * flass & 0x02 = Read^OK
+ * flags & 0x07 = Send^OK
+ */
+void hflags_h(char * params) {
+  uint16_t val;
+  if (params != NULL) {
+    if (notInRange(params, 0, 7, val)) return;
+    gpibBus.cfg.hflags = (uint8_t)val;
+  }else{
+    dataPort.println(gpibBus.cfg.hflags);
+  }
+}
+
+
+/***** Fine all listeners *****/
 
 bool isRange(char * rangestr, size_t rsize, unsigned long values[2] ) {
-//  unsigned long start = 0;
-//  unsigned long finish = 0;
   char * fp = NULL;
 
   for (uint8_t i=0; i<rsize; i++) {
@@ -2371,8 +2385,6 @@ bool isRange(char * rangestr, size_t rsize, unsigned long values[2] ) {
 }
 
 
-
-/***** Fine all listeners *****/
 void fndl_h(char *params) {
   char *param;
   uint16_t addrval = 0;
@@ -2382,7 +2394,6 @@ void fndl_h(char *params) {
   uint8_t xmit = true;
   uint8_t i = 0;
   uint8_t j = 0;
-//  uint8_t err = 0;
   uint8_t pri = 0xFF;
   unsigned long range[2] = {0,0};
   bool list = false;
@@ -2403,26 +2414,18 @@ void fndl_h(char *params) {
     return;
   }
 
-
   // Is it a range?
   if ( isRange(params, strlen(params), range) ) {
     if (range[0]<30 && range[1]<31) {
       i = (uint8_t)range[0];
       j = (uint8_t)range[1] + 1;
-
-//    Serial.print(F("Start: "));
-//    Serial.println(range[0]);
-//    Serial.print(F("Finish: "));
-//    Serial.println(range[1]);
-
     }else{
       errorMsg(2);
       return;
     }
   }
 
-//return;
-
+  // Requested 'all'?
   if ( strncasecmp(params, "all", 4) == 0) {
     j = 31;
   }
@@ -2463,70 +2466,56 @@ void fndl_h(char *params) {
 
   }
 
-//Serial.print("I: ");
-//Serial.println(i);
-//Serial.print("J: ");
-//Serial.println(j);
-//return;
-
-  // Poll the GPIB bus
-//  for (i=i; i<j; i++) {
+  // Poll the range of GPIB adresses
   while (i<j) {
 
+    // Get from list or use actual value of iterator?
     if (list) {
       pri = addrList[i];
     }else{
       pri = i;
     }
 
-    // Poll primary addresses in list
+    // Ignore the controller address
     if (pri == gpibBus.cfg.caddr) {
       i++;
-      continue;     // Ignore and skip controller address
-    }
-/*
-    if (gpibBus.sendCmd(GC_UNL) == ERR) {
-      xmit = false;
-      errorMsg(3);
-      break;
+      continue;
     }
 
-    if (gpibBus.sendCmd(addr + 0x20) == ERR) {
+    // Send UNL + UNT + LAD (addressDevice function adds 0x20 to pri)
+    if (gpibBus.addressDevice(pri, 0xFF, LISTEN) == ERR) {
       xmit = false;
       errorMsg(3);
       break;
     }
-*/
-    if (gpibBus.addressDevice(pri, 0xFF, LISTEN ) == ERR) {
-      xmit = false;
-      errorMsg(3);
-      break;
-    }
-
 
     gpibBus.clearSignal(ATN_BIT);
-    delayMicroseconds(1500);
+    delayMicroseconds(1600);
 
     if (gpibBus.isAsserted(NDAC_PIN)) {
-
+ 
       if (acnt>0) Serial.print(";");
       dataPort.print(pri);
       acnt++;
 
+    }else{
 
-//    }else{
+      // Send all secondary addresses
+      gpibBus.assertSignal(ATN_BIT);
+      for (uint8_t sec=0x60; sec<0x7F; sec++){
+        gpibBus.writeByte(sec, false);
+      }
+      gpibBus.clearSignal(ATN_BIT);
+      delayMicroseconds(1600);
 
-      // Poll all secondary addresses
-      gpibBus.clearSignal(ATN_PIN);
-      delayMicroseconds(1500);
-      
       if (gpibBus.isAsserted(NDAC_PIN)) {
-
-        for (uint8_t sec=0x60; sec<0x7F; sec++) {
-          gpibBus.setControls(CIDS);
-          gpibBus.addressDevice(pri, sec, LISTEN);
-          gpibBus.clearSignal(ATN_PIN);
-          delayMicroseconds(1500);
+        gpibBus.writeByte(GC_UNL, false);
+        gpibBus.writeByte( (pri+0x20), false ); // LAD
+        
+        for (uint8_t sec=0x60; sec<0x7F; sec++){
+          gpibBus.writeByte(sec, false);
+          gpibBus.clearSignal(ATN_BIT);
+          delayMicroseconds(1600);
           if (gpibBus.isAsserted(NDAC_PIN)) {
             secfound = true;
             if (sec == 0x60) {
@@ -2535,73 +2524,19 @@ void fndl_h(char *params) {
               dataPort.print(",");
             }
             dataPort.print(sec);
+            gpibBus.writeByte(GC_UNL, false);
+            gpibBus.writeByte((pri+0x20), false); // LAD
           }
         }
+
         if(secfound) dataPort.print(F(")"));
 
       }
 
+    } // End if NDAC aserted (else)
 
-
-
-/*
-//        gpibBus.assertSignal(ATN_BIT);
-
-        if (gpibBus.sendCmd(GC_UNL) == ERR) {
-          xmit = false;
-          errorMsg(3);
-          Serial.println(1);
-          break;
-        }
-    
-        if (gpibBus.sendCmd(addr + 0x20) == ERR) {
-          xmit = false;
-          errorMsg(3);
-          Serial.println(2);
-          break;
-        }
-
-        // Transmit success
-        for (uint8_t s=0x60; s<0x7F; s++) {
-          gpibBus.sendCmd(s);
-          gpibBus.clearSignal(ATN_PIN);
-          delayMicroseconds(1500);
-          if (gpibBus.isAsserted(NDAC_PIN)) {
-            if (s == 0x60) {
-              dataPort.print("(");
-            }else{
-              dataPort.print(",");
-            }
-            dataPort.print(s);
-
-            gpibBus.setControls(CIDS);
-            delay(20);
-
-//            gpibBus.assertSignal(ATN_PIN);
-
-            if (gpibBus.sendCmd(GC_UNL) == ERR) {
-              xmit = false;
-              errorMsg(3);
-              Serial.println(3);
-              break;
-            }
-    
-            if (gpibBus.sendCmd(addr + 0x20) == ERR) {
-              xmit = false;
-              errorMsg(3);
-               Serial.println(4);
-              break;
-            }
-          }
-        }
-        dataPort.print(")");
-//      }
-*/
-
-    }
     gpibBus.setControls(CIDS);
     delay(50);
-//    gpibBus.assertSignal(ATN_BIT);
     i++;
 
   } // END while
@@ -2693,6 +2628,7 @@ void secsend_h(char *params) {
       errorMsg(2);
       return;
     }
+
     pri = (uint8_t)val;
 
     // Secondary address in range ?
@@ -2707,7 +2643,8 @@ void secsend_h(char *params) {
     // Not using controller address ?
     if (pri == gpibBus.cfg.caddr) {
       errorMsg(2);
-      return;
+      return;        }else{
+
     }
 /*
     // Data is not null
@@ -2836,8 +2773,6 @@ void untalk_h() {
   // Set GPIB controls back to idle state
   gpibBus.setControls(CIDS);
 }
-
-
 
 
 
@@ -3129,7 +3064,6 @@ void device_listen_h(){
 void device_talk_h(){
   DB_PRINT("LnRdy: ", lnRdy);
   DB_PRINT("Buffer: ", pBuf);
-//  if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
   if (lnRdy == 2) gpibBus.sendData(pBuf, pbPtr);
   // Flush the parse buffer and clear line ready flag
   flushPbuf();
@@ -3189,7 +3123,7 @@ bool device_unl_h() {
   // Stop receiving and go to idle
   readWithEoi = false;
   // Immediate break - shouldn't ATN do this anyway?
-  tranBrk = 3;  // Stop receving transmission
+//  tranBrk = 3;  // Stop receving transmission
   // Clear addressed state flag and set controls to idle
   if (gpibBus.isDeviceAddressedToListen()) {
     gpibBus.setControls(DIDS);
