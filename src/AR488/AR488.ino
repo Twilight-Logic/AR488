@@ -14,7 +14,7 @@
 #include "AR488_Eeprom.h"
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.52.25, 15/03/2025" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.52.26, 16/03/2025" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -2239,7 +2239,7 @@ void printPin(const __FlashStringHelper* pinid, uint8_t pin){
   char pname[7];
   strcpy_P(pname, (const char PROGMEM *)pinid);
   sprintf( line, "%s: \t[%d] \t%d", pname, pin, digitalRead(pin) );
-  Serial.println(line);
+  dataPort.println(line);
 }
 
 
@@ -2456,7 +2456,6 @@ void fndl_h(char *params) {
 
       // Valid range
       if (notInRange(param, 0, 30, addrval)) return;
-
       addrList[j] = (uint8_t)addrval;
       j++;
 
@@ -2494,7 +2493,7 @@ void fndl_h(char *params) {
 
     if (gpibBus.isAsserted(NDAC_PIN)) {
  
-      if (acnt>0) Serial.print(";");
+      if (acnt>0) Serial.print(',');
       dataPort.print(pri);
       acnt++;
 
@@ -2502,13 +2501,17 @@ void fndl_h(char *params) {
 
       // Send all secondary addresses
       gpibBus.assertSignal(ATN_BIT);
+//      delayMicroseconds(50);  // Give instruments time to respond
       for (uint8_t sec=0x60; sec<0x7F; sec++){
         gpibBus.writeByte(sec, false);
       }
+      
       gpibBus.clearSignal(ATN_BIT);
       delayMicroseconds(1600);
 
       if (gpibBus.isAsserted(NDAC_PIN)) {
+        gpibBus.assertSignal(ATN_BIT);
+//        delayMicroseconds(50);  // Give instruments time to respond
         gpibBus.writeByte(GC_UNL, false);
         gpibBus.writeByte( (pri+0x20), false ); // LAD
         
@@ -2518,18 +2521,21 @@ void fndl_h(char *params) {
           delayMicroseconds(1600);
           if (gpibBus.isAsserted(NDAC_PIN)) {
             secfound = true;
-            if (sec == 0x60) {
-              dataPort.print("(");
-            }else{
-              dataPort.print(",");
-            }
+//            if (sec == 0x60) {
+//              dataPort.print("(");
+//            }else{
+              dataPort.print(',');
+//            }
+            dataPort.print(pri);
+            dataPort.print(':');
             dataPort.print(sec);
+            gpibBus.assertSignal(ATN_BIT);
             gpibBus.writeByte(GC_UNL, false);
             gpibBus.writeByte((pri+0x20), false); // LAD
           }
         }
 
-        if(secfound) dataPort.print(F(")"));
+//        if(secfound) dataPort.print(F(")"));
 
       }
 
