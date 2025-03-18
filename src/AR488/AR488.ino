@@ -2524,7 +2524,8 @@ void fndl_h(char *params) {
 //            if (sec == 0x60) {
 //              dataPort.print("(");
 //            }else{
-              dataPort.print(',');
+              if (acnt>0) dataPort.print(',');
+              acnt++;
 //            }
             dataPort.print(pri);
             dataPort.print(':');
@@ -2649,9 +2650,9 @@ void secsend_h(char *params) {
     // Not using controller address ?
     if (pri == gpibBus.cfg.caddr) {
       errorMsg(2);
-      return;        }else{
-
+      return;
     }
+    
 /*
     // Data is not null
     if (strlen(data) == 0) {
