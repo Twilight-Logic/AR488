@@ -8,7 +8,7 @@
 
 
 
-/***** AR488_GPIBbus.cpp, ver. 0.52.25, 15/03/2025 *****/
+/***** AR488_GPIBbus.cpp, ver. 0.52.29, 24/03/2025 *****/
 
 
 /*********************************************/
@@ -65,7 +65,7 @@ extern Stream &debugPort;
 
 
 /***** Addressing direction *****/
-#define TONONE 0;
+#define TONONE 0
 #define TOLISTEN 1
 #define TOTALK 2
 

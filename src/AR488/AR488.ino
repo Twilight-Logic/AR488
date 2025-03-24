@@ -470,36 +470,38 @@ if (lnRdy>0){
   if (gpibBus.isController()) {
     // lnRdy=2: received data - send it to the instrument...
     if (lnRdy == 2) {
+
       sendToInstrument(pBuf, pbPtr);
+
       // Auto-read data from GPIB bus following any command
       if (gpibBus.cfg.amode == 1) {
+        gpibBus.addressDevice(gpibBus.cfg.paddr, gpibBus.cfg.saddr, TOTALK);
         errFlg = gpibBus.receiveData(dataPort, gpibBus.cfg.eoi, false, 0);
+        gpibBus.unAddressDevice();
       }
+
       // Auto-receive data from GPIB bus following a query command
       if (gpibBus.cfg.amode == 2 && isQuery) {
+        gpibBus.addressDevice(gpibBus.cfg.paddr, gpibBus.cfg.saddr, TOTALK);
         errFlg = gpibBus.receiveData(dataPort, gpibBus.cfg.eoi, false, 0);
         isQuery = false;
+        gpibBus.unAddressDevice();
       }
-    }
 
-    // Automatic serial poll (check status of SRQ and SPOLL if asserted)?
-//    if (isSrqa) {
-//      if (gpibBus.isAsserted(SRQ)) spoll_h(NULL);
-//    }
+    }
 
     // Continuous auto-receive data from GPIB bus
     if ((gpibBus.cfg.amode==3) && autoRead) {
       // Nothing is waiting on the serial input so read data from GPIB
       if (lnRdy==0) {
+        if (gpibBus.haveAddressedDevice() == TONONE) gpibBus.addressDevice(gpibBus.cfg.paddr, gpibBus.cfg.saddr, TOTALK);
         errFlg = gpibBus.receiveData(dataPort, readWithEoi, readWithEndByte, endByte);
       }
-/*      
-      else{
-        // Otherwise clear auto-read flag and unaddress device
-        autoReading = false;
-        gpibBus.unAddressDevice();
-      }
-*/
+    }
+
+    // Automatic serial poll (check status of SRQ and SPOLL if asserted)?
+    if (isSrqa) {
+      if (gpibBus.isAsserted(SRQ_PIN)) spoll_h(NULL);
     }
 
     // Did we get an error during read?
@@ -517,11 +519,7 @@ if (lnRdy>0){
     }else if (isRO) {
       lonMode();
     }else if (gpibBus.isAsserted(ATN_PIN)) {
-//      dataPort.println(F("Attention signal detected"));
       attnRequired();
-//      dataPort.println(F("ATN loop finished"));
-//    }else{
-//      if (lnRdy == 2) sendToInstrument(pBuf, pbPtr);
     }
 
     // Can't send in LON mode so just clear the buffer
@@ -2011,10 +2009,10 @@ void ton_h(char *params) {
 
 /***** SRQ auto - show or enable/disable automatic spoll on SRQ *****/
 /*
- * In device mode, when the SRQ interrupt is triggered and SRQ
- * auto is set to 1, a serial poll is conducted automatically
- * and the status byte for the instrument requiring service is
- * automatically returned. When srqauto is set to 0 (default)
+ * When SRQ auto is set to 1 and a decivce triggers thw SRQ
+ * signal, a serial poll is conducted automatically and
+ * the status byte for the instrument requiring service gets
+ * returned automatically. When srqauto is set to 0 (default)
  * an ++spoll command needs to be given manually to return
  * the status byte.
  */
@@ -2389,7 +2387,7 @@ void fndl_h(char *params) {
   uint8_t addrList[15] = {0};
   uint16_t tmo = gpibBus.cfg.rtmo;
   uint8_t acnt = 0;
-  uint8_t xmit = true;
+//  uint8_t xmit = true;
   uint8_t i = 0;
   uint8_t j = 0;
   uint8_t pri = 0xFF;
