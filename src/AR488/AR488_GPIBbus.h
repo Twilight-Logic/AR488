@@ -65,8 +65,10 @@ extern Stream &debugPort;
 
 
 /***** Addressing direction *****/
-#define TALK true
-#define LISTEN false
+#define TONONE 0;
+#define TOLISTEN 1
+#define TOTALK 2
+
 
 /***** Lastbyte - send EOI *****/
 #define NO_EOI false
@@ -215,14 +217,14 @@ public:
 
   void signalBreak();
 
-  bool addressDevice(uint8_t pri, uint8_t sec, bool talk);
+  bool addressDevice(uint8_t pri, uint8_t sec, uint8_t dir);
   bool unAddressDevice();
   bool haveAddressedDevice();
 
 private:
 
   bool txBreak;  // Signal to break the GPIB transmission
-  bool deviceAddressed;
+  uint8_t deviceAddressed;
   bool isTerminatorDetected(uint8_t bytes[3], uint8_t eorSequence);
 
   // Interrupt flag for MCP23S17

@@ -14,7 +14,7 @@
 #include "AR488_Eeprom.h"
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.52.26, 16/03/2025" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.52.29, 24/03/2025" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -251,15 +251,8 @@ uint8_t isTO = 0;
 // Data send mode flags
 bool dataBufferFull = false;    // Flag when parse buffer is full
 
-// State flags set by interrupt being triggered
-//extern volatile bool isATN;  // has ATN been asserted?
-//extern volatile bool isSRQ;  // has SRQ been asserted?
-
 // SRQ auto mode
 bool isSrqa = false;
-
-// Interrupt without handler fired
-//volatile bool isBAD = false;
 
 // Whether to run Macro 0 (macros must be enabled)
 uint8_t runMacro = 0;
@@ -396,6 +389,7 @@ void setup() {
     #endif
     #ifdef SN7516X_SC
       digitalWrite(SN7516X_SC, LOW);
+  bool eoiDetected = false;
     #endif
   }
 #endif
@@ -877,7 +871,7 @@ void sendToInstrument(char *buffr, uint8_t dsize) {
 
   if (gpibBus.isController()) {
     // Has controller already addressed the device? - if not then address it
-    if (!gpibBus.haveAddressedDevice()) gpibBus.addressDevice(gpibBus.cfg.paddr, gpibBus.cfg.saddr, LISTEN);
+    if (gpibBus.haveAddressedDevice() != TOLISTEN) gpibBus.addressDevice(gpibBus.cfg.paddr, gpibBus.cfg.saddr, TOLISTEN);
   }
 
   // Send string to instrument
@@ -1349,7 +1343,7 @@ void ver_h(char *params) {
 
 /***** Address device to talk and read the sent data *****/
 void read_h(char *params) {
-  // Clear read flags
+  // Clear read flagshaveAddressed
   readWithEoi = false;
   readWithEndByte = false;
   endByte = 0;
@@ -1368,13 +1362,17 @@ void read_h(char *params) {
 //DB_PRINT(F("readWithEoi:     "), readWithEoi);
 //DB_PRINT(F("readWithEndByte: "), readWithEndByte);
 
+  // Address device to talk
+  if (gpibBus.haveAddressedDevice() != TOTALK) gpibBus.addressDevice(gpibBus.cfg.paddr, gpibBus.cfg.saddr, TOTALK);
+
+  // Read data
   if (gpibBus.cfg.amode == 3) {
     // In auto continuous mode we set this flag to indicate we are ready for continuous read
     autoRead = true;
   } else {
     // If auto mode is disabled we do a single read
-//    gpibBus.addressDevice(gpibBus.cfg.paddr, gpibBus.cfg.saddr, TALK);
     gpibBus.receiveData(dataPort, readWithEoi, readWithEndByte, endByte);
+    gpibBus.unAddressDevice();
     if ( !autoRead && (gpibBus.cfg.hflags & 0x02) ) dataPort.println(F("Read^OK"));
   }
 }
@@ -2405,7 +2403,7 @@ void fndl_h(char *params) {
   }
 
   // Set minimal timeout
-  gpibBus.cfg.rtmo = 5;
+  gpibBus.cfg.rtmo = 35;
 
   // Read parameters
   if (params == NULL) {
@@ -2481,9 +2479,11 @@ void fndl_h(char *params) {
       continue;
     }
 
+//Serial.print("PRI: ");
+//Serial.println(pri);
+
     // Send UNL + UNT + LAD (addressDevice function adds 0x20 to pri)
-    if (gpibBus.addressDevice(pri, 0xFF, LISTEN) == ERR) {
-      xmit = false;
+    if (gpibBus.addressDevice(pri, 0xFF, TOLISTEN) == ERR) {
       errorMsg(3);
       break;
     }
@@ -2501,7 +2501,6 @@ void fndl_h(char *params) {
 
       // Send all secondary addresses
       gpibBus.assertSignal(ATN_BIT);
-//      delayMicroseconds(50);  // Give instruments time to respond
       for (uint8_t sec=0x60; sec<0x7F; sec++){
         gpibBus.writeByte(sec, false);
       }
@@ -2511,97 +2510,48 @@ void fndl_h(char *params) {
 
       if (gpibBus.isAsserted(NDAC_PIN)) {
         gpibBus.assertSignal(ATN_BIT);
-//        delayMicroseconds(50);  // Give instruments time to respond
         gpibBus.writeByte(GC_UNL, false);
         gpibBus.writeByte( (pri+0x20), false ); // LAD
-        
+
         for (uint8_t sec=0x60; sec<0x7F; sec++){
           gpibBus.writeByte(sec, false);
           gpibBus.clearSignal(ATN_BIT);
           delayMicroseconds(1600);
           if (gpibBus.isAsserted(NDAC_PIN)) {
-            secfound = true;
-//            if (sec == 0x60) {
-//              dataPort.print("(");
-//            }else{
-              if (acnt>0) dataPort.print(',');
-              acnt++;
-//            }
+            if (acnt>0) dataPort.print(',');
+            acnt++;
             dataPort.print(pri);
             dataPort.print(':');
             dataPort.print(sec);
+
             gpibBus.assertSignal(ATN_BIT);
-            gpibBus.writeByte(GC_UNL, false);
             gpibBus.writeByte((pri+0x20), false); // LAD
+          }else{
+            gpibBus.assertSignal(ATN_BIT);
           }
+//          delayMicroseconds(50);
         }
 
-//        if(secfound) dataPort.print(F(")"));
+        gpibBus.clearSignal(ATN_BIT);
+        delayMicroseconds(1600);
 
       }
 
     } // End if NDAC aserted (else)
 
     gpibBus.setControls(CIDS);
-    delay(50);
+//    delay(50);
     i++;
 
   } // END while
 
   dataPort.println();
   gpibBus.cfg.rtmo = tmo;
-  if (xmit) gpibBus.sendCmd(GC_UNL);
+//  if (xmit) gpibBus.sendCmd(GC_UNL);
   gpibBus.setControls(CIDS);
 
 }
 
-
-
-/***** Send listen address *****/
-/*
-void sendmla_h() {
-  if (gpibBus.sendMLA())  {
-    if (isVerb) dataPort.println(F("Failed to send MLA"));
-    return;
-  }
-}
-*/
-
-/***** Send talk address *****/
-/*
-void sendmta_h() {
-  if (gpibBus.sendMTA())  {
-    if (isVerb) dataPort.println(F("Failed to send MTA"));
-    return;
-  }
-}
-*/
-
-/***** Send secondary address *****/
-/*void sendmsa_h(char *params) {
-  uint16_t saddr;
-  char * param;
-  if (params != NULL) {
-    // Secondary address
-    param = strtok(params, " \t");
-    if (strlen(param) > 0) {
-      if (notInRange(param, 96, 126, saddr)) return;
-      if (gpibBus.sendMSA(saddr)){
-        if (isVerb) dataPort.println(F("Failed to send MSA"));
-        return;
-      }
-    }
-    // Secondary address command parameter
-    param = strtok(NULL, " \t");
-    if (strlen(param)>0) {
-      gpibBus.setControls(CTAS);
-      gpibBus.sendData(param, strlen(param));
-      gpibBus.setControls(CLAS);
-    }
-//    addressingSuppressed = true;
-  }
-}
-*/
 
 /***** Send to secondary address *****/
 /*
@@ -2616,7 +2566,6 @@ void secsend_h(char *params) {
   uint8_t pri;
   uint8_t sec;
   uint16_t val;
-//  const uint8_t prisaved = gpibBus.cfg.paddr;
 
   if (params != NULL) {
     pristr = strtok(params, " ,\t");
@@ -2652,43 +2601,15 @@ void secsend_h(char *params) {
       errorMsg(2);
       return;
     }
-    
-/*
-    // Data is not null
-    if (strlen(data) == 0) {
-      errorMsg(1);
-      return;
-    }
-*/
-/*
-Serial.print("PRI:  ");
-Serial.println(pri);
-Serial.print("SEC:  ");
-Serial.println(sec);
-Serial.print("DATA: ");
-Serial.println(data);
-Serial.print("DLEN: ");
-Serial.print(strlen(data));
-*/
+
     gpibBus.unAddressDevice();
-//    gpibBus.cfg.paddr = pri;
-//    gpibBus.cfg.saddr = sec;
-    gpibBus.addressDevice(pri, sec, LISTEN);
-//    delay(50);
-//    gpibBus.setControls(CTAS);
-//    delay(50);
+    gpibBus.addressDevice(pri, sec, TOLISTEN);
     gpibBus.sendData(data, strlen(data));
-//    sendToInstrument(data, strlen(data));
-//    delay(50);
     gpibBus.unAddressDevice();
-//    gpibBus.setControls(CIDS);
 
   }else{
     errorMsg(1);
   }
-
-//  gpibBus.cfg.paddr = prisaved;
-//  gpibBus.cfg.saddr = 0xFF;
 
 }
 
@@ -2704,8 +2625,6 @@ void secread_h(char *params) {
   uint8_t pri;
   uint8_t sec;
   unsigned long val;
-  const uint8_t prisaved = gpibBus.cfg.paddr;
-  const uint8_t secsaved = gpibBus.cfg.saddr;
 
   if (params != NULL) {
     pristr = strtok(params, " ,\t");
@@ -2740,18 +2659,12 @@ void secread_h(char *params) {
       return;
     }
 
-    gpibBus.cfg.paddr = pri;
-    gpibBus.cfg.saddr = sec;
-
     gpibBus.unAddressDevice();
     gpibBus.setControls(CIDS);
     delay(50);
-    gpibBus.addressDevice(pri, sec, TALK);
-    delay(50);
+    gpibBus.addressDevice(pri, sec, TOTALK);
+//    delay(50);
     gpibBus.receiveData(dataPort, true, false, 0);
-
-    gpibBus.cfg.paddr = prisaved;
-    gpibBus.cfg.saddr = secsaved;
 
   }else{
     errorMsg(1);
@@ -2794,7 +2707,7 @@ void untalk_h() {
 void attnRequired() {
 
   const uint8_t cmdbuflen = 35;
-  uint8_t cmdbytes[5] = {0};
+  uint8_t cmdbytes[cmdbuflen] = {0};
   uint8_t db = 0;
   bool eoiDetected = false;
   uint8_t gpibcmd = 0;
@@ -2823,17 +2736,9 @@ void attnRequired() {
     if (gpibBus.readByte(&db, false, &eoiDetected) != HANDSHAKE_COMPLETE ) break;
 
     // Untalk or unlisten
-    switch (db) {
-      case 0x3F:  
-        ustat |= 0x01;
-        break;
-      case 0x5F:
-        ustat |= 0x02;
-        break;
-      default:
-        cmdbytes[bytecnt] = db;
-        bytecnt++;
-    }
+    cmdbytes[bytecnt] = db;
+    bytecnt++;
+
 #ifdef DEBUG_DEVICE_ATN
     cmdbyteslist[listbytecnt] = db;
     listbytecnt++;
@@ -2851,16 +2756,7 @@ void attnRequired() {
     return;
   }
 
-  /***** Try to unlisten bus *****/
-  if (ustat & 0x01) {
-    if (!device_unl_h()) ustat &= ~0x01; // Clears bit if UNL was not required
-  }
-
-  /***** Try to untalk bus *****/
-  if (ustat & 0x02) {
-    if (!device_unt_h()) ustat &= ~0x02; // Clears bit if UNT was not required
-  }
-
+  
   /***** Command process loop *****/
   // Process received addresses and command tokens
   if (bytecnt>0) {
@@ -2868,9 +2764,21 @@ void attnRequired() {
     // Process received command tokens
     for (uint8_t i=0; i<bytecnt; i++) { 
 
-      if (!cmdbytes[i]) break;  // End loop on zero
+//      if (!cmdbytes[i]) break;  // End loop on zero
 
       db = cmdbytes[i];
+
+      // Unlisten
+      if (db == 0x3F) {
+        if (!device_unl_h()) ustat &= ~0x01; // Clears bit if UNL was not required
+        continue;
+      }
+
+      // Untalk
+      if (db == 0x5F) {
+        if (!device_unt_h()) ustat &= ~0x02; // Clears bit if UNT was not required
+        continue;
+      }
 
       // Device is addressed to listen
       if (gpibBus.cfg.paddr == (db ^ 0x20)) { // MLA = db^0x20

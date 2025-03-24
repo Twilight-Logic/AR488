@@ -33,7 +33,7 @@ GPIBbus::GPIBbus() {
   // Default configuration values
   setDefaultCfg();
   cstate = 0;
-  deviceAddressed = false;
+  deviceAddressed = TONONE;
 }
 
 
@@ -247,7 +247,7 @@ bool GPIBbus::sendSDC() {
 #ifdef DEBUG_GPIB_COMMANDS
   DB_PRINT(F("sending SDC..."), "");
 #endif
-  if (addressDevice(cfg.paddr, cfg.saddr, LISTEN)) {
+  if (addressDevice(cfg.paddr, cfg.saddr, TOLISTEN)) {
 #ifdef DEBUG_GPIB_COMMANDS
     DB_PRINT(F("failed to address the device."), "");
 #endif
@@ -279,7 +279,7 @@ bool GPIBbus::sendLLO() {
 #ifdef DEBUG_GPIB_COMMANDS
   DB_PRINT(F("sending LLO..."), "");
 #endif
-  if (addressDevice(cfg.paddr, cfg.saddr, LISTEN)) {
+  if (addressDevice(cfg.paddr, cfg.saddr, TOLISTEN)) {
 #ifdef DEBUG_GPIB_COMMANDS
     DB_PRINT(F("failed to address the device."), "");
 #endif
@@ -311,7 +311,7 @@ bool GPIBbus::sendGTL() {
 #ifdef DEBUG_GPIB_COMMANDS
   DB_PRINT(F("sending LOC..."), "");
 #endif
-  if (addressDevice(cfg.paddr, cfg.saddr, LISTEN)) {
+  if (addressDevice(cfg.paddr, cfg.saddr, TOLISTEN)) {
 #ifdef DEBUG_GPIB_COMMANDS
     DB_PRINT(F("failed to address the device."), "");
 #endif
@@ -343,7 +343,7 @@ bool GPIBbus::sendGET(uint8_t addr) {
 #ifdef DEBUG_GPIB_COMMANDS
   DB_PRINT(F("sending GET..."), "");
 #endif
-  if (addressDevice(addr, 0xFF, LISTEN)) {
+  if (addressDevice(addr, 0xFF, TOLISTEN)) {
 #ifdef DEBUG_GPIB_COMMANDS
     DB_PRINT(F("failed to address the device."), "");
 #endif
@@ -375,7 +375,7 @@ bool GPIBbus::sendTCT(uint8_t addr){
  #ifdef DEBUG_GPIB_COMMANDS
   DB_PRINT(F("sending TCT..."), "");
 #endif
-  if (addressDevice(addr, 0xFF, LISTEN)) {
+  if (addressDevice(addr, 0xFF, TOLISTEN)) {
 #ifdef DEBUG_GPIB_COMMANDS
     DB_PRINT(F("failed to address the device."), "");
 #endif
@@ -476,7 +476,7 @@ bool GPIBbus::sendUNT() {
     return ERR;
   }
 //  setControls(CIDS);
-  deviceAddressed = false;
+  deviceAddressed = TONONE;
   return OK;
 }
 
@@ -490,7 +490,7 @@ bool GPIBbus::sendUNL() {
     return ERR;
   }
 //  setControls(CIDS);
-  deviceAddressed = false;
+  deviceAddressed = TONONE;
   return OK;
 }
 
@@ -540,13 +540,14 @@ bool GPIBbus::receiveData(Stream &dataStream, bool detectEoi, bool detectEndByte
   // Set up for reading in Controller mode
   if (cfg.cmode == 2) {  // Controler mode
 
+/*
     // Address device to talk
-    if (addressDevice(cfg.paddr, cfg.saddr, TALK)) {
+    if (addressDevice(cfg.paddr, cfg.saddr, TOTALK)) {
 #ifdef DEBUG_GPIBbus_RECEIVE
       DB_PRINT(F("Failed to address device to talk: "), cfg.paddr);
 #endif
     }
-
+*/
     // Wait for instrument ready
     // Set GPIB control lines to controller read mode
     setControls(CLAS);
@@ -648,12 +649,13 @@ bool GPIBbus::receiveData(Stream &dataStream, bool detectEoi, bool detectEndByte
   if (cfg.cmode == 2) {
 
     // Untalk bus and unlisten controller
+/*
     if (unAddressDevice()) {
 #ifdef DEBUG_GPIBbus_RECEIVE
       DB_PRINT(F("Failed to untalk bus"), "");
 #endif
     }
-
+*/
     // Set controller back to idle state
     setControls(CIDS);
 
@@ -679,7 +681,6 @@ bool GPIBbus::receiveData(Stream &dataStream, bool detectEoi, bool detectEndByte
 
 /***** Send a series of characters as data to the GPIB bus *****/
 void GPIBbus::sendData(char *data, uint8_t dsize) {
-
   //  bool err = false;
   uint8_t tc;
   enum gpibHandshakeStates state;
@@ -695,7 +696,6 @@ void GPIBbus::sendData(char *data, uint8_t dsize) {
     default:
       tc = 2;
   }
-
   // Set control pins for writing data (ATN unasserted)
   if (cfg.cmode == 2) {
     setControls(CTAS);
@@ -710,6 +710,7 @@ void GPIBbus::sendData(char *data, uint8_t dsize) {
 
   // Write the data string
   for (int i = 0; i < dsize; i++) {
+
     // If EOI asserting is on
     if (cfg.eoi) {
       // Send all characters
@@ -840,8 +841,8 @@ void GPIBbus::setControls(uint8_t state) {
 
 
     case CIDS:  // Controller idle state
-      setTransmitMode(TM_IDLE);
       clearSignal(ATN_BIT);
+      setTransmitMode(TM_IDLE);
 #ifdef SN7516X
       digitalWrite(SN7516X_TE, LOW);
 #endif
@@ -865,8 +866,8 @@ void GPIBbus::setControls(uint8_t state) {
 
     case CLAS:  // Controller - read data bus
       // Set state for receiving data
-      setTransmitMode(TM_RECV);
       clearSignal(ATN_BIT);
+      setTransmitMode(TM_RECV);
 #ifdef SN7516X
       digitalWrite(SN7516X_TE, LOW);
 #endif
@@ -877,8 +878,8 @@ void GPIBbus::setControls(uint8_t state) {
 
 
     case CTAS:  // Controller - write data bus
-      setTransmitMode(TM_SEND);
       clearSignal(ATN_BIT);
+      setTransmitMode(TM_SEND);
 #ifdef SN7516X
       digitalWrite(SN7516X_TE, HIGH);
 #endif
@@ -981,7 +982,7 @@ bool GPIBbus::unAddressDevice() {
   // Clear secondary address
   cfg.saddr = 0xFF;
   // Clear flag
-  deviceAddressed = false;
+  deviceAddressed = TONONE;
 #ifdef DEBUG_GPIBbus_DEVICE
   DB_PRINT(F("done."), "");
 #endif
@@ -990,28 +991,29 @@ bool GPIBbus::unAddressDevice() {
 
 
 /***** Untalk bus then address a device *****/
-/*
- * talk: false=listen; true=talk;
- */
-bool GPIBbus::addressDevice(uint8_t pri, uint8_t sec=0xFF, bool talk=false) {
+bool GPIBbus::addressDevice(uint8_t pri, uint8_t sec=0xFF, uint8_t dir=TOLISTEN) {
 
   if (pri>30) return ERR;
 
   if ( sec<0x60 || (sec>0x7E && sec!=0xFF) ) return ERR;
 
   if (sendCmd(GC_UNL)) return ERR;
+  if (sendCmd(GC_UNT)) return ERR;
+
 //Serial.println(F("Addressing..."));
 #ifdef DEBUG_GPIBbus_DEVICE
   DB_PRINT(F("addressDevice: pri="), pri);
   DB_PRINT(F("addressDevice: sec="), sec);
 #endif
-  if (talk) {
+
+  if (dir == TOTALK) {
     // Device to talk, controller to listen
     if (sendCmd(GC_TAD + pri)) return ERR;
     // Secondary address?
     if (sec != 0xFF) {
       if (sendCmd(sec)) return ERR;
     }
+    deviceAddressed = TOTALK;
   } else {
     // Device to listen, controller to talk
     if (sendCmd(GC_LAD + pri)) return ERR;
@@ -1019,10 +1021,11 @@ bool GPIBbus::addressDevice(uint8_t pri, uint8_t sec=0xFF, bool talk=false) {
     if (sec != 0xFF) {
       if (sendCmd(sec)) return ERR;
     }
+    deviceAddressed = TOLISTEN;
   }
 
   // Set flag
-  deviceAddressed = true;
+//  deviceAddressed = true;
   return OK;
 }
 
