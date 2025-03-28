@@ -574,7 +574,7 @@ void initController() {
  * this buffer until serialEvent_h() is called. parsedInput() takes a character at 
  * a time and places it into the 256 character parse buffer whereupon it is parsed
  * to determine whether a command or data are present.
- * lnRdy=0: terminator not detected yet
+ * lnRdy=0: terminator not detected yetloop
  * lnRdy=1: terminator detected, sequence in parse buffer is a ++ command
  * lnRdy=2: terminator detected, sequence in parse buffer is data or direct instrument command
  */ 
@@ -875,7 +875,7 @@ void sendToInstrument(char *buffr, uint8_t dsize) {
   // Send string to instrument
   gpibBus.sendData(buffr, dsize);
 
-  // If controller then unaddress device
+  // If controller then unaddress devicesendTo
   if (gpibBus.isController() &&  dataBufferFull == false) {
     gpibBus.unAddressDevice();
   }
@@ -2453,7 +2453,8 @@ void fndl_h(char *params) {
       // Valid range
       if (notInRange(param, 0, 30, addrval)) return;
       addrList[j] = (uint8_t)addrval;
-      j++;
+      j++;            gpibBus.writeByte(GC_UNL, false);
+
 
     }
 
@@ -2469,7 +2470,8 @@ void fndl_h(char *params) {
       pri = addrList[i];
     }else{
       pri = i;
-    }
+    }            gpibBus.writeByte(GC_UNL, false);
+
 
     // Ignore the controller address
     if (pri == gpibBus.cfg.caddr) {
@@ -2523,9 +2525,11 @@ void fndl_h(char *params) {
             dataPort.print(sec);
 
             gpibBus.assertSignal(ATN_BIT);
+            gpibBus.writeByte(GC_UNL, false);
             gpibBus.writeByte((pri+0x20), false); // LAD
           }else{
             gpibBus.assertSignal(ATN_BIT);
+            gpibBus.writeByte(GC_UNT, false);
           }
 //          delayMicroseconds(50);
         }
@@ -2603,6 +2607,13 @@ void secsend_h(char *params) {
     gpibBus.unAddressDevice();
     gpibBus.addressDevice(pri, sec, TOLISTEN);
     gpibBus.sendData(data, strlen(data));
+
+    if (gpibBus.cfg.amode == 1) {
+      gpibBus.addressDevice(pri, sec, TOTALK);
+      gpibBus.receiveData(dataPort, gpibBus.cfg.eoi, false, 0);
+//      gpibBus.unAddressDevice();
+    }
+
     gpibBus.unAddressDevice();
 
   }else{
