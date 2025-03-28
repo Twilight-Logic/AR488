@@ -2672,8 +2672,8 @@ void secread_h(char *params) {
     gpibBus.setControls(CIDS);
     delay(50);
     gpibBus.addressDevice(pri, sec, TOTALK);
-//    delay(50);
     gpibBus.receiveData(dataPort, true, false, 0);
+    gpibBus.unAddressDevice();
 
   }else{
     errorMsg(1);
