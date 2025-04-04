@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.52.30, 28/03/2025"
+#define FWVER "AR488 GPIB controller, ver. 0.53.02, 04/04/2025"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -63,8 +63,14 @@
   /* Board/layout selection */
   #define AR488_MEGA644P_MCGRAW
 
+/***** Pololu 328PB board *****/
+#elif defined(__AVR_ATmega328PB__)
+  /* Board/layout selection */
+  #define AR488_UNO
+
 /***** ESP32 boards *****/
 #elif defined(ESP32)
+  /* Board/layout selection */
   #define NON_ARDUINO   // MUST BE DEFINED!
   #define ESP32_DEVKIT1_WROOM_32
   // David Douard / Johann Wilhelm board layouts
@@ -75,7 +81,7 @@
 
 /***** RPI PIco and Pico W *****/
 #elif defined(ARDUINO_ARCH_RP2040)
-//  #define NON_ARDUINO
+  /* Board/layout selection */
   #define RAS_PICO_L1
 //  #define RAS_PICO_L2
 
@@ -151,7 +157,7 @@
 #ifdef AR488_MCP23S17
   #define MCP_ADDRESS   0
   #define MCP_SELECTPIN 10
-  #define MCP_INTERRUPT 2••••••••••
+  #define MCP_INTERRUPT 2
 #endif
 
 

@@ -3,7 +3,7 @@
 #include "AR488_Config.h"
 #include "AR488_Layouts.h"
 
-/***** AR488_Hardware.cpp, ver. 0.52.18, 08/03/2025 *****/
+/***** AR488_Hardware.cpp, ver. 0.53.02, 04/04/2025 *****/
 
 ///=================================================///
 ///       Hardware layout function definitions      ///
@@ -1538,7 +1538,7 @@ void setGpibDbus(uint8_t db) {
     mode (mode)     : 0=set pin state, 1=set pin direction
    Arduino Uno/Nano pin to Port/bit to direction/state byte map:
    IFC_PIN   14  byte bit 0
-   NDAC_PIN  15  byte bit 1AR_SERIAL_PORT
+   NDAC_PIN  15  byte bit 1
    NRFD_PIN  16  byte bit 2
    DAV_PIN   17  byte bit 3
    EOI_PIN   18  byte bit 4
@@ -1598,10 +1598,12 @@ void setGpibCtrlDir(uint8_t bits, uint8_t mask){
 /***** vvvvvvvvvvvvvvvvvvvvvvv *****/
 #ifdef RAS_PICO_L2
 
-const uint32_t gpioDbMask = 0x23F8000;
-const uint32_t gpioCtrlMask = 0x300030D0;
-//const uint8_t gpioDbOffset = 14;
-//const uint8_t gpioCtrlOffset = 6;
+const uint32_t gpioDbMask = 0x003FC000;
+const uint32_t gpioCtrlMask = 0x00003FC0;
+//const uint32_t gpioDbMask = 0x23F8000;
+//const uint32_t gpioCtrlMask = 0x300030D0;
+const uint8_t gpioDbOffset = 14;
+const uint8_t gpioCtrlOffset = 6;
 
 
 
@@ -1641,14 +1643,14 @@ void gpio_clear_pullups_masked(uint32_t mask){
   }
 }
 
-
+/*
 uint8_t reverseBits(uint8_t dbyte) {
    dbyte = (dbyte & 0xF0) >> 4 | (dbyte & 0x0F) << 4;
    dbyte = (dbyte & 0xCC) >> 2 | (dbyte & 0x33) << 2;
    dbyte = (dbyte & 0xAA) >> 1 | (dbyte & 0x55) << 1;
    return dbyte;
 }
-
+*/
 
 /***** Initialise all GPIO pins *****/
 void initRpGpioPins(){
@@ -1662,8 +1664,7 @@ void initRpGpioPins(){
 
 /***** Set the GPIB data bus to input pullup *****/
 void readyGpibDbus() {
-  // Set data pins to input  
-//  gpio_init_mask(gpioDbMask);
+  // Set data pins to input
   gpio_set_dir_in_masked(gpioDbMask);
   gpio_set_pullups_masked(gpioDbMask);
   
@@ -1671,22 +1672,44 @@ void readyGpibDbus() {
 
 
 /***** Read the GPIB data bus wires to collect the byte of data *****/
+/*
 uint8_t readGpibDbus() {
   // Read the byte of data on the bus
   uint32_t gpioall = gpio_get_all();
   uint8_t db = 0;
 //  gpioall = (gpioall & gpioDbMask) >> gpioDbOffset;
   db = (gpioall&0x3F8000) >> 14;
-  db = reversebits(db);
+  db = reverseBits(db);
   db =db || ((gpioall & 0x2000000) >> 18);
+  return (uint8_t)~gpioall;  
+}
+*/
+
+/***** Read the GPIB data bus wires to collect the byte of data *****/
+uint8_t readGpibDbus() {
+  // Read the byte of data on the bus
+  uint32_t gpioall = gpio_get_all();
+  gpioall = (gpioall & gpioDbMask) >> gpioDbOffset;
   return (uint8_t)~gpioall;  
 }
 
 
+
 /***** Set the GPIB data bus to output and with the requested byte *****/
+/*
 void setGpibDbus(uint8_t db) {
 //  uint32_t gpioall = ((uint8_t)~db) << gpioDbOffset;
-  uint32_t gpioall = ((reversebits(db)&0xFE)<<14) || ((db&0x80)<<18)
+  uint32_t gpioall = ( ((reverseBits(db)&0xFE)<<14) || ((db&0x80)<<18) );
+  gpio_clear_pullups_masked(gpioDbMask);
+  gpio_set_dir_out_masked(gpioDbMask);
+  gpio_put_masked(gpioDbMask, gpioall);
+}
+*/
+
+
+/***** Set the GPIB data bus to output and with the requested byte *****/
+void setGpibDbus(uint8_t db) {
+  uint32_t gpioall = ((uint8_t)~db) << gpioDbOffset;
   gpio_clear_pullups_masked(gpioDbMask);
   gpio_set_dir_out_masked(gpioDbMask);
   gpio_put_masked(gpioDbMask, gpioall);
@@ -1718,8 +1741,6 @@ void setGpibDbus(uint8_t db) {
     Has relevance only to output pins
 */
 void setGpibCtrlState(uint8_t bits, uint8_t mask){
-
-  gpioall = ((db & 1)<<4) + ((db&0b11<<6)) + ((db&0b11)<<12) + ((db&0b11<<28))
 
   uint32_t gpiobits = (uint8_t)(bits & mask) << gpioCtrlOffset;
   uint32_t gpioOmask = (mask << gpioCtrlOffset);
@@ -1763,6 +1784,9 @@ void setGpibCtrlDir(uint8_t bits, uint8_t mask){
 /***** NANO RP2040 CONNECT BOARD LAYOUT *****/
 /***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
 #ifdef RPI_NANO_RP2040
+
+const uint32_t gpioDbMask = 0x23F8000;
+const uint32_t gpioCtrlMask = 0x300030D0;
 
 uint32_t reverseBits(uint32_t dbyte) {
    dbyte = (dbyte & 0xF0) >> 4 | (dbyte & 0x0F) << 4;

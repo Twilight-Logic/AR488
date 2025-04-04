@@ -14,7 +14,7 @@
 #include "AR488_Eeprom.h"
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.52.29, 24/03/2025" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.53.02, 04/04/2025" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -829,8 +829,8 @@ static cmdRec cmdHidx [] = {
   { "rst",         3, (void(*)(char*)) rst_h     },
   { "trg",         2, trg_h       },
   { "savecfg",     3, (void(*)(char*)) save_h    },
-  { "secread",     2, secread_h   },
-  { "secsend",     2, secsend_h   },
+//  { "secread",     2, secread_h   },
+  { "send",        2, send_h      },
   { "setvstr",     3, setvstr_h   },
   { "spoll",       2, spoll_h     },
   { "srq",         2, (void(*)(char*)) srq_h     },
@@ -1314,7 +1314,7 @@ void amode_h(char *params) {
     gpibBus.cfg.amode = (uint8_t)val;
     if (gpibBus.cfg.amode < 3) autoRead = false;
     if (isVerb) {
-      dataPort.print(F("Auto mode: "));
+      dataPort.print(F("Auto mode: "));      // 3rd parameter
       dataPort.println(gpibBus.cfg.amode);
     }
   } else {
@@ -1341,19 +1341,60 @@ void ver_h(char *params) {
 
 /***** Address device to talk and read the sent data *****/
 void read_h(char *params) {
+  uint8_t maxparam = 3;
+  uint8_t pcnt = 0;
+  uint8_t pri = gpibBus.cfg.paddr;
+  uint8_t sec = gpibBus.cfg.saddr;
+  uint16_t val = 0xFF;
+  char * param;
   // Clear read flagshaveAddressed
   readWithEoi = false;
   readWithEndByte = false;
   endByte = 0;
+
   // Read any parameters
   if (params != NULL) {
-    if (strlen(params) > 3) {
-      if (isVerb) dataPort.println(F("Invalid parameter - ignored!"));
+
+    // 1st parameter ( eoi, terminator character or address value ? )
+    param = strtok(params, " ,\t");
+    if (isNumber(param)) {
+      // Primary address in range ?
+      val = strtoul(param, NULL, 10);
+      if (val>30) {
+        errorMsg(2);
+        return;
+      }
+      pri = (uint8_t)val;
+
+      // 2nd parameter ( * or address value )
+      param = strtok(NULL, " ,\t");
+      if (isNumber(param)) {
+        val = strtoul(param, NULL, 10);
+        if (val<31) val = val + 0x60;
+        if (val<0x60 || val>0x7E) {
+          errorMsg(2);
+          return;
+        }
+        sec = (uint8_t)val;
+
+        // 3rd parameter
+        param = strtok(NULL, " ,\t");
+
+      }else{
+        sec = 0xFF;
+      }
+
+    }
+    
+    // Check for eoi or terminator character
+    if (strlen(param) > 3) {
+      errorMsg(2);
+      return;
     } else if (strncasecmp(params, "eoi", 3) == 0) { // Read with eoi detection
       readWithEoi = true;
     } else { // Assume ASCII character given and convert to an 8 bit byte
       readWithEndByte = true;
-      endByte = atoi(params);
+      endByte = atoi(param);
     }
   }
 
@@ -1361,7 +1402,7 @@ void read_h(char *params) {
 //DB_PRINT(F("readWithEndByte: "), readWithEndByte);
 
   // Address device to talk
-  if (gpibBus.haveAddressedDevice() != TOTALK) gpibBus.addressDevice(gpibBus.cfg.paddr, gpibBus.cfg.saddr, TOTALK);
+  if (gpibBus.haveAddressedDevice() != TOTALK) gpibBus.addressDevice(pri, sec, TOTALK);
 
   // Read data
   if (gpibBus.cfg.amode == 3) {
@@ -1451,8 +1492,9 @@ void ifc_h() {
 
 /***** Send a trigger command *****/
 void trg_h(char *params) {
+  const uint8_t maxparam = 15;
   char *param;
-  uint8_t addrs[15] = {0};
+  uint8_t addrs[maxparam] = {0};
   uint16_t val = 0;
   uint8_t cnt = 0;
 
@@ -1465,7 +1507,7 @@ void trg_h(char *params) {
     cnt++;
   } else {
     // Read address parameters into array
-    while (cnt < 15) {
+    while (cnt < maxparam) {
       if (cnt == 0) {
         param = strtok(params, " \t");
       } else {
@@ -2453,8 +2495,7 @@ void fndl_h(char *params) {
       // Valid range
       if (notInRange(param, 0, 30, addrval)) return;
       addrList[j] = (uint8_t)addrval;
-      j++;            gpibBus.writeByte(GC_UNL, false);
-
+      j++;
 
     }
 
@@ -2470,8 +2511,7 @@ void fndl_h(char *params) {
       pri = addrList[i];
     }else{
       pri = i;
-    }            gpibBus.writeByte(GC_UNL, false);
-
+    }
 
     // Ignore the controller address
     if (pri == gpibBus.cfg.caddr) {
@@ -2561,52 +2601,60 @@ void fndl_h(char *params) {
   pri, sec = GPIB addresses between 0 and 30
   data is optional
 */
-void secsend_h(char *params) {
-  char * pristr;
-  char * secstr;
+//void secsend_h(char *params) {
+void send_h(char *params) {
+  char * param;
   char * data;
-  uint8_t pri;
-  uint8_t sec;
+  uint8_t pri = 0xFF;
+  uint8_t sec = 0xFF;
   uint16_t val;
 
   if (params != NULL) {
-    pristr = strtok(params, " ,\t");
-    secstr = strtok(NULL, " ,\t");
-    data = strtok(NULL, "\0");
+    // 1st parameter (must be an address value)
+    param = strtok(params, " ,\t");
 
     // Are addresses numerical
-    if ( (!isNumber(pristr)) || (!isNumber(secstr)) ) {
+    if (!isNumber(param)) {
       errorMsg(2);
       return;
     }
 
     // Primary address in range ?
-    val = strtoul(pristr, NULL, 10);
+    val = strtoul(param, NULL, 10);
     if (val>30) {
+      errorMsg(2);
+      return;
+    }
+
+    // Not using controller address ?
+    if (val == gpibBus.cfg.caddr) {
       errorMsg(2);
       return;
     }
 
     pri = (uint8_t)val;
 
-    // Secondary address in range ?
-    val = strtoul(secstr, NULL, 10);
-    if (val<31) val = val + 0x60;
-    if (val<0x60 || val>0x7E) {
-      errorMsg(2);
-      return;
-    }
-    sec = (uint8_t)val;
+    // 2nd parameter (secondary address value or data)
+    param = strtok(NULL, " ,\t");
 
-    // Not using controller address ?
-    if (pri == gpibBus.cfg.caddr) {
-      errorMsg(2);
-      return;
+    if (isNumber(param)) {
+      // Secondary address in range ?
+      val = strtoul(param, NULL, 10);
+      if (val<31) val = val + 0x60;
+      if (val<0x60 || val>0x7E) {
+        errorMsg(2);
+        return;
+      }
+      sec = (uint8_t)val;
+
+      // 3rd parameter
+      param = strtok(NULL, "\0");
+
     }
 
     gpibBus.unAddressDevice();
     gpibBus.addressDevice(pri, sec, TOLISTEN);
-    gpibBus.sendData(data, strlen(data));
+    gpibBus.sendData(param, strlen(param));
 
     if (gpibBus.cfg.amode == 1) {
       gpibBus.addressDevice(pri, sec, TOTALK);
@@ -2628,6 +2676,7 @@ void secsend_h(char *params) {
   Parameters: pri,sec
   pri, sec = GPIB addresses between 0 and 30
 */
+/*
 void secread_h(char *params) {
   char * pristr;
   char * secstr;
@@ -2680,7 +2729,7 @@ void secread_h(char *params) {
   }
 
 }
-
+*/
 
 /***** Send device clear (usually resets the device to power on state) *****/
 void unlisten_h() {
