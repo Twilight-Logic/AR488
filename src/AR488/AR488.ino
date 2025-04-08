@@ -14,7 +14,7 @@
 #include "AR488_Eeprom.h"
 
 
-/***** FWVER "AR488 GPIB controller, ver. 0.53.02, 04/04/2025" *****/
+/***** FWVER "AR488 GPIB controller, ver. 0.53.03, 08/04/2025" *****/
 
 /*
   Arduino IEEE-488 implementation by John Chajecki
@@ -888,7 +888,7 @@ void sendToInstrument(char *buffr, uint8_t dsize) {
 #endif
 
   // Show handshake flag
-  if (gpibBus.cfg.hflags & 0x07) dataPort.println("Send^OK");
+  if (gpibBus.cfg.hflags & 0x04) dataPort.println("Send^OK");
 
   // Show a prompt on completion?
   if (isVerb) showPrompt();
@@ -2391,7 +2391,7 @@ void idn_h(char * params){
 /*
  * flags & 0x01 = AR488~RDY
  * flass & 0x02 = Read^OK
- * flags & 0x07 = Send^OK
+ * flags & 0x04 = Send^OK
  */
 void hflags_h(char * params) {
   uint16_t val;
