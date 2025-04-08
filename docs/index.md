@@ -1,24 +1,24 @@
 **AR488 GPIB Controller**
 
-**User Manual**
+***User Manual***
 
-**Version:**
+***Version:***
 
 0.53.03
 
-**Dated:**
+***Dated:***
 
-**8**\ :sup:`th`\ **April 2025**
+**8**^**th**^** April 2025**
 
 **Twilight Logic**
 
 **01001010 01000011 01001000**
 
-The AR488 GPIB Controller
-=========================
+# []{#anchor}[]{#anchor-1}The AR488 GPIB Controller
 
-Introduction
-------------
+## 
+
+## []{#anchor-2}Introduction
 
 The AR488 GPIB controller is an Arduino-based controller for interfacing
 with IEEE488 GPIB devices. The code has been tested on Arduino Uno and
@@ -27,12 +27,12 @@ and MicroCore ATMega644 and ATMega1024 boards. It provides a low cost
 alternative to other commercial interfaces. There is also a forked
 version for the ESP32 which can be found here:
 
-*https://github.com/douardda/AR488/tree/esp32*
+**https://github.com/douardda/AR488/tree/esp32**
 
 A list of other related projects and utilities built by others can be
 found here:
 
-https://www.eevblog.com/forum/projects/ar488-arduino-based-gpib-adapter/msg2184323/#msg2184323
+[**https://www.eevblog.com/forum/projects/ar488-arduino-based-gpib-adapter/msg2184323/#msg2184323**](https://www.eevblog.com/forum/projects/ar488-arduino-based-gpib-adapter/msg2184323/#msg2184323)
 
 To build an interface, at least one of the aforementioned Arduino boards
 will be required to act as the interface hardware. Connecting to an
@@ -56,14 +56,13 @@ implemented differently. A number of additional custom commands have
 also been implemented. Details of all commands can be found in the
 *Command Reference* section.
 
-The Table of Contents section of this document is hyperlinked. Use Ctrl
-+ Right-Click on the mouse to go directly to the relevant section of the
-document.
+The Table of Contents section of this document is hyperlinked. Use
+Ctrl + Right-Click on the mouse to go directly to the relevant section
+of the document.
 
-.. _section-1:
+## 
 
-Driver Installation
--------------------
+## []{#anchor-3}Driver Installation
 
 In order to be able to connect to a computer via USB, the above
 mentioned boards will usually have an on-board serial to USB converter
@@ -76,18 +75,18 @@ then present a COM port.
 
 The official source for FTDI drivers is here:
 
-https://www.ftdichip.com/FTDrivers.htm
+[**https://www.ftdichip.com/FTDrivers.htm**](https://www.ftdichip.com/FTDrivers.htm)
 
 The VCP driver provides a virtual COM port for communication while the
 D2XX (direct) driver allows direct access via a DLL interface.
 
 The official CH340G driver source is here:
 
-http://www.wch.cn/download/CH341SER_EXE.html
+[**http://www.wch.cn/download/CH341SER_EXE.html**](http://www.wch.cn/download/CH341SER_EXE.html)
 
 The official CVP2102 driver can be found here:
 
-*https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers?tab=downloads*
+**https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers?tab=downloads**
 
 There seems to be no official driver source for the 16u2 chip.
 
@@ -102,21 +101,19 @@ to be officially supported in Linux seem to be recognized by the Kernel.
 There seems to be no official driver source for the Holtek chip but it
 should be recognized by Windows.
 
-Firmware Upgrades
------------------
+## []{#anchor-4}Firmware Upgrades
 
 The firmware is updated by compiling the source in the Arduino IDE and
 then uploading the compiled code over USB, but an AVR programmer can
 also be used to upload the compiled firmware binary to the Arduino
 microcontroller.
 
-Updates are available from https://github.com/Twilight-Logic/AR488
+Updates are available from
+[**https://github.com/Twilight-Logic/AR488**](https://github.com/Twilight-Logic/AR488)
 
-Wireless Operation
-------------------
+## []{#anchor-5}Wireless Operation
 
-Bluetooth
-~~~~~~~~~
+### []{#anchor-6}Bluetooth
 
 The AR488 interface can communicate using a Bluetooth HC05 master
 module. The HC05 module supports command mode and can be auto-configured
@@ -128,30 +125,28 @@ command mode so cannot be configured remotely by the AR488 sketch. It
 has to be configured manually. For this reason, the master module is
 recommended.
 
-WiFi
-~~~~
+### []{#anchor-7}WiFi
 
 David Douard has produced fork of the AR488 project running on an ESP32.
 His project can be found here:
 
-*https://github.com/douardda/AR488-ESP32/tree/esp32*
+**https://github.com/douardda/AR488-ESP32/tree/esp32**
 
-Client Software
----------------
+## []{#anchor-8}Client Software
 
 The interface can be accessed via a number of software client programs.
 
 Serial Terminal software:
 
-*https://www.putty.org/*
+**https://www.putty.org/**
 
 EZGPIB:
 
-*http://www.ulrich-bangert.de/html/downloads.html*
+**http://www.ulrich-bangert.de/html/downloads.html**
 
 KE5FX GPIB Toolkit (GPIB Configurator):
 
-http://www.ke5fx.com/gpib/readme.htm
+[**http://www.ke5fx.com/gpib/readme.htm**](http://www.ke5fx.com/gpib/readme.htm)
 
 Python scripts and almost anything that can access the Prologix adapter
 
@@ -162,33 +157,30 @@ the interface. On Linux, the port will be a TTY device such as
 
 Specific considerations may apply when using an Arduino based interface
 with EZGPIB and the KE5FX toolkit. These are described in the *Working
-with EZGPIB and KE5FX*\ section.
+with EZGPIB and KE5FX *section.
 
-Applications
-------------
+## []{#anchor-9}Applications
 
 There are a number of compatible applications that can be used with the
 AR488:
 
-Luke Mester’s Instrument Control Software (HP3478 and WaveTek 178) :
+Luke Mester's Instrument Control Software (HP3478 and WaveTek 178) :
 
-`https://mesterhome.com/gpibsw/ <https://mesterhome.com/gpibsw/hp3478a/>`__
+[**https://mesterhome.com/gpibsw/**](https://mesterhome.com/gpibsw/hp3478a/)
 
 Data logging software by Nirav Patel:
 
-https://www.eevblog.com/forum/projects/ar488-arduino-based-gpib-adapter/msg3586488/#msg3586488
+[**https://www.eevblog.com/forum/projects/ar488-arduino-based-gpib-adapter/msg3586488/#msg3586488**](https://www.eevblog.com/forum/projects/ar488-arduino-based-gpib-adapter/msg3586488/#msg3586488)
 
 PyMeasure:
 
-https://www.eevblog.com/forum/projects/ar488-arduino-based-gpib-adapter/msg4604662/#msg4604662
+[**https://www.eevblog.com/forum/projects/ar488-arduino-based-gpib-adapter/msg4604662/#msg4604662**](https://www.eevblog.com/forum/projects/ar488-arduino-based-gpib-adapter/msg4604662/#msg4604662)
 
-*https://pymeasure.readthedocs.io/en/latest/*
+**https://pymeasure.readthedocs.io/en/latest/**
 
-GPIB
-----
+## []{#anchor-10}GPIB
 
-A Brief Overview
-~~~~~~~~~~~~~~~~
+### []{#anchor-11}A Brief Overview
 
 GPIB is an early technology designed for interconnecting computers,
 peripherals (displays, disks and printers) and instruments originally
@@ -204,17 +196,16 @@ cables terminated with a 24-way Centronics connector. Modern
 implementations can run over Ethernet cables.
 
 There have been further enhancements to the Standards for Programmable
-Instrumentation (SCPI) and National Instruments “high speed 488”. Some
+Instrumentation (SCPI) and National Instruments "high speed 488". Some
 interesting historical and technical information can be found here:
 
-https://www.hp9845.net/9845/tutorials/hpib/
+<https://www.hp9845.net/9845/tutorials/hpib/>
 
 Full details of the standard can be found here:
 
-https://webuser.unicas.it/misure/MAQ_OLD%20(VO)/Dispense/DISP_7STANDARD%20IEEE%20488_2%201992.pdf
+<https://webuser.unicas.it/misure/MAQ_OLD%20(VO)/Dispense/DISP_7STANDARD%20IEEE%20488_2%201992.pdf>
 
-GPIB Addressing
-~~~~~~~~~~~~~~~
+### []{#anchor-12}GPIB Addressing
 
 In order to identify addresses on the bus, each device has to have a
 GPIB address. GPIB addresses range from 0 to 31, there being 32
@@ -254,13 +245,11 @@ The AR488 supports both primary and secondary addressing using the
 and *++secsend*) to simplify sending and receiving data when using a
 secondary address.
 
-Operating Modes
----------------
+## []{#anchor-13}Operating Modes
 
 The interface can operate in both controller and device modes.
 
-Controller Mode
-~~~~~~~~~~~~~~~
+### []{#anchor-14}Controller Mode
 
 In this mode the interface can control and read data from various
 instruments including Digital multimeters (DMMs). oscilloscopes, signal
@@ -269,7 +258,7 @@ sends out an IFC (Interface Clear) to the GPIB bus to indicate that it
 is now the Controller-in-Charge (CIC).
 
 All commands are preceded with the ++ sequence and terminated with a
-carriage return (CR), newline [a.k.a. linefeed] (LF) or both (CRLF).
+carriage return (CR), newline \[a.k.a. linefeed\] (LF) or both (CRLF).
 Commands are sent to or affect the currently addressed instrument which
 can be specified with the *++addr* command (see command help for more
 information).
@@ -283,15 +272,13 @@ continue to perform reading of measurements automatically after the next
 *++read* command is used and using the parameters that were specified
 when issuing that command.
 
-Device Mode
-~~~~~~~~~~~
+### []{#anchor-15}Device Mode
 
 The interface supports device mode allowing it to be used to send data
 to GPIB devices such as plotters via a serial USB connection. All device
 mode commands are supported.
 
-Transmission of Commands and Data
----------------------------------
+## []{#anchor-16}Transmission of Commands and Data
 
 All data from the computer is sent to the interface over the USB to
 Serial. Commands sent to the interface are prefixed with a double plus
@@ -310,21 +297,20 @@ exception. If EOI only is being used as a terminator, a character may be
 substituted to indicate a terminator depending on the configuration of
 the *++eot* and *++eot_char* commands.
 
-Sending Data and Special Characters
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-17}Sending Data and Special Characters
 
-Carriage return (CR, hex 0D, decimal 13), newline [a.k.a linefeed] (LF,
-hex 0A, decimal 10), escape (hex 1B, decimal 27) and ‘+’ (hex 2B,
-decimal 43) are special “control” characters. Carriage return and
+Carriage return (CR, hex 0D, decimal 13), newline \[a.k.a linefeed\]
+(LF, hex 0A, decimal 10), escape (hex 1B, decimal 27) and '+' (hex 2B,
+decimal 43) are special "control" characters. Carriage return and
 newline terminate command strings and direct instrument commands,
-whereas the sequence ‘++’ precedes a command token. Special care needs
+whereas the sequence '++' precedes a command token. Special care needs
 to be taken when sending binary data to an instrument, because we do not
 want control characters to be interpreted as some kind of action.
 Rather, they need to be treated as ordinary binary data and transmitted
 as part of the binary data stream.
 
 When sending binary data, the above mentioned characters must be
-‘escaped’ by preceding them with a single escape (hex 1B, decimal 27)
+'escaped' by preceding them with a single escape (hex 1B, decimal 27)
 byte. For example, consider sending the following binary data sequence:
 
 54 45 1B 53 2B 0D 54 46
@@ -346,8 +332,7 @@ the transmission of termination characters. The command *++eos 0* will
 restore default operation. See the command help that follows for more
 details.
 
-Receiving Data
-~~~~~~~~~~~~~~
+### []{#anchor-18}Receiving Data
 
 Binary data received from an instrument is transmitted over GPIB and
 then via serial over USB to the host computer PC unmodified. Since
@@ -357,12 +342,11 @@ indicate the end of the data transmission. Detection of the EOI signal
 while reading data can be accomplished with the *++read eoi* command,
 while an optional character can be added as a delimiter with the
 
-+\ *+eot_enable* command (see the command help that follows). The
+\+*+eot_enable* command (see the command help that follows). The
 instrument must be configured to send the EOI signal. For further
 information on enabling the sending of EOI see your instrument manual.
 
-Interrupting Transmission of Data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-19}Interrupting Transmission of Data
 
 In normal operation, the user issue the ++ command, the instrument
 responds and data is returned form the instrument over serial. Once the
@@ -370,11 +354,11 @@ transmission is complete, the next *++* command can be sent. However,
 under certain conditions when the instrument is addressed to talk, data
 transmission may continue indefinitely, for example:
 
--  when *eos* is set to 3 [no terminator character] and the expected
-   termination character is not received from the instrument
--  ‘read with eoi’ has been configured on the interface but the
-   instrument is not configured to assert eoi
--  auto mode is enabled
+-   when *eos* is set to 3 \[no terminator character\] and the expected
+    termination character is not received from the instrument
+-   'read with eoi' has been configured on the interface but the
+    instrument is not configured to assert eoi
+-   auto mode is enabled
 
 If this happens, the interface should still respond to the a double plus
 followed by an exclamation mark *++!* or a command (e.g. ++auto 0 or
@@ -382,10 +366,9 @@ followed by an exclamation mark *++!* or a command (e.g. ++auto 0 or
 transmission should stop allowing the interface or instrument
 configuration to be adjusted.
 
-Listen-only (LON), Talk-only (TON) and Promiscuous modes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-20}Listen-only (LON), Talk-only (TON) and Promiscuous modes
 
-In device mode, the interface supports “listen-only”, “talk-only” and
+In device mode, the interface supports "listen-only", "talk-only" and
 promiscuous modes (for further details see the *++lon, ++ton* and
 *++prom* commands. Talk-only and listen-only modes are non-addressed
 modes and do not require a GPIB address to be set. Any GPIB address that
@@ -394,7 +377,7 @@ not controlled by the CIC. Data characters are sent using standard GPIB
 handshaking , but GPIB commands are ignored. The bus acts as a simple
 one way transmission medium. In *LON* mode, the device is in listen-only
 mode and will receive any data placed on the bus by a talker in
-*Talk-Only* Mode. In *TON* mode the device is in *Talk-Only*\ mode. It
+*Talk-Only* Mode. In *TON* mode the device is in *Talk-Only *mode. It
 can send data only and cannot receive data from other devices on the
 bus. Only one talker can exist on the bus, but it is possible to have
 many listeners.
@@ -407,21 +390,19 @@ received data to the serial port.
 LON and TON are standard GPIB modes. Promiscuous mode is a custom option
 provided by the AR488 interface.
 
-Configuration
-=============
+# []{#anchor-21}Configuration
 
-The Configuration File
-----------------------
+## []{#anchor-22}The Configuration File
 
 Configuration of the AR488 is achieved be editing the *AR488_Config.h*
 file. This is a C++ style header file containing various definition
-statements, also known as ‘define macros’ , starting with keyword
-‘\ *#define’*, that can be used to configure the firmware. The
+statements, also known as 'define macros' , starting with keyword
+'*#define'*, that can be used to configure the firmware. The
 *AR488_config.h* file must be included in the main AR488 sketch as well
 as any other module header file (e.g. *AR488_Layouts.cpp* and
 *AR488_Layouts.h*) with an include statement:
 
-#include "AR488_Config.h
+#include \"AR488_Config.h
 
 A number of these definition statements are contained within an *#ifdef
 .. #endif* construct, some of which may contain additional *#else* or
@@ -433,7 +414,7 @@ other file.
 The firmware version is defined at the top of the AR488_Config.h file in
 the format:
 
-#define FWVER "AR488 GPIB controller, ver. 0.51.09, 20/06/2022"
+#define FWVER \"AR488 GPIB controller, ver. 0.51.09, 20/06/2022\"
 
 The *#define* command is a compiler directive instructing it to store
 the version string, whoch is contained within the double quotes, in a
@@ -443,13 +424,12 @@ length and ideally should also not be changed. If required, the string
 can be overridden using the *++id* command (see the *Command
 Reference*).
 
-Board Selection
----------------
+## []{#anchor-23}Board Selection
 
 The AR488 supports a number of Arduino AVR boards and also a custom GPIO
 pin layout which can be defined by the user in the *Custom Board Layout*
 section. If a custom GPIO pin layout is to be used, then following entry
-must have the comment characters (preceding ‘//’) removed:
+must have the comment characters (preceding '//') removed:
 
 //#define AR488_CUSTOM
 
@@ -470,19 +450,19 @@ definitions for microprocessor types. The structure looks like this:
 
 #ifdef AR488_CUSTOM
 
-…
+...
 
-#elif \__AVR_Atmega328P_\_
-
-…
-
-#elif \__AVR_Atmega32U4_\_
+#elif \_\_AVR_Atmega328P\_\_
 
 ...
 
-#elif \__AVR_Atmega2560_\_
+#elif \_\_AVR_Atmega32U4\_\_
 
-…
+\...
+
+#elif \_\_AVR_Atmega2560\_\_
+
+...
 
 #endif // Board/layout selection
 
@@ -493,11 +473,11 @@ contains a definition referencing one or more pre-defined board layouts
 as well as serial port definitions corresponding to the features of
 specific boards. For example here are the definitions for boards based
 on the 328p microprocessor which are found within the
-*\__AVR_Atmega328P_\_* section of the *#ifdef* statement:
+*\_\_AVR_Atmega328P\_\_* section of the *#ifdef* statement:
 
-/**\* UNO and NANO boards \***/
+/\*\*\* UNO and NANO boards \*\*\*/
 
-#elif \__AVR_ATmega328P_\_
+#elif \_\_AVR_ATmega328P\_\_
 
 /\* Board/layout selection \*/
 
@@ -521,18 +501,16 @@ in Config.h, the correct board must be selected in the Board Manager
 within the Arduino IDE (see Tools \| Board: ).
 
 **It is important to make sure that the correct board is selected in the
-Arduino IDE Boards Manager (**\ **Tools => Board**\ **) otherwise the
+Arduino IDE Boards Manager (*****Tools =\> Board*****) otherwise the
 sketch will not compile correctly.**
 
-Serial Port Configuration
--------------------------
+## []{#anchor-24}Serial Port Configuration
 
-Hardware Serial Ports
-~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-25}Hardware Serial Ports
 
 The firmware implements separate ports for data flow and debug messages.
 These can be enabled activating or de-activating the DATAPORT_ENABLE and
-DEBUG_ENABLE flags by adding or removing the preceding comment ‘//’
+DEBUG_ENABLE flags by adding or removing the preceding comment '//'
 character sequence. In order to receive data from instruments and
 responses to commands, DATAPORT_ENABLE must be defined, otherwise the
 port will be disabled and there will be no output. It is not recommended
@@ -541,7 +519,7 @@ to comment this flag out.
 Here is an example of the serial port configuration section for the data
 port:
 
-/****\* Communication port \*****/
+/\*\*\*\*\* Communication port \*\*\*\*\*/
 
 #define DATAPORT_ENABLE
 
@@ -561,9 +539,9 @@ port:
 
 //#define AR_SERIAL_BT_ENABLE 12 // HC05 enable pin
 
-//#define AR_SERIAL_BT_NAME "AR488-BT" // Bluetooth device name
+//#define AR_SERIAL_BT_NAME \"AR488-BT\" // Bluetooth device name
 
-//#define AR_SERIAL_BT_CODE "488488" // Bluetooth pairing code
+//#define AR_SERIAL_BT_CODE \"488488\" // Bluetooth pairing code
 
 #endif
 
@@ -579,20 +557,19 @@ Leonardo, is implemented in firmware and called a CDC port. In addition,
 these boards have a hardware port called *Serial1* implemented on the
 Rx/Tx pins.
 
-The Mega 2560 has 4 hardware serial ports so either of ‘\ *Serial’*,
-‘\ *Serial1’*, ‘\ *Serial2’* or ‘\ *Serial3’*\ should be selected. Most
-likely the default port named *Serial* will be used although other
-options are possible if required. However, please note that the default
-GPIO pin layout for the Mega 2560 board (AR488_MEGA2560_D) uses the pins
-assigned to *Serial2*\ for other purposes, so this cannot be used as a
-serial port when that particular layout definition is in use. However,
-it can be used with the *E1* and *E2* definitions.
+The Mega 2560 has 4 hardware serial ports so either of '*Serial'*,
+'*Serial1'*, '*Serial2'* or '*Serial3' *should be selected. Most likely
+the default port named *Serial* will be used although other options are
+possible if required. However, please note that the default GPIO pin
+layout for the Mega 2560 board (AR488_MEGA2560_D) uses the pins assigned
+to *Serial2 *for other purposes, so this cannot be used as a serial port
+when that particular layout definition is in use. However, it can be
+used with the *E1* and *E2* definitions.
 
 Since the format for serial port names is standard for both hardware and
 CDC ports, the Arduino handles this automatically behind the scenes.
 
-Software Serial Library
-~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-26}Software Serial Library
 
 A serial port can also be implemented using a library called
 *SoftwareSerial* which allows a pair of arbitrary GPIO pins to be used
@@ -609,7 +586,7 @@ Needs to be commented out. Instead the line:
 
 // #define AR_SERIAL_SWPORT
 
-Needs to be uncommented by removing the preceding ‘//‘.
+Needs to be uncommented by removing the preceding '//'.
 
 The *SoftwareSerial* port section then needs to be configured by
 specifying the RX and TX pins as shown in the example below:
@@ -625,8 +602,7 @@ specifying the RX and TX pins as shown in the example below:
 It should be noted only ONE *SoftwareSerial* port can be set per board,
 and only ONE serial port can be enabled in within the data port section.
 
-Enabling Bluetooth Support
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-27}Enabling Bluetooth Support
 
 The AR488 firmware supports Bluetooth using the HC05 module. Since
 communication between the Arduino and the HC05 module is via serial, it
@@ -637,9 +613,9 @@ configuring the following 3 lines:
 
 //#define AR_SERIAL_BT_ENABLE 12 // HC05 enable pin
 
-//#define AR_SERIAL_BT_NAME "AR488-BT" // Bluetooth device name
+//#define AR_SERIAL_BT_NAME \"AR488-BT\" // Bluetooth device name
 
-//#define AR_SERIAL_BT_CODE "488488" // Bluetooth pairing code
+//#define AR_SERIAL_BT_CODE \"488488\" // Bluetooth pairing code
 
 AR_SERIAL_BT_ENABLE sets the GPIO pin that is connected to the EN(able)
 pin on the HC05.
@@ -651,8 +627,7 @@ AR_SERIAL_BT_CODE sets the Bluetooth pairing code.
 More detailed information on pairing and setting up in Windows and Linux
 can be found in the Bluetooth section.
 
-Configuring the Debug Serial Port
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-28}Configuring the Debug Serial Port
 
 The Debug port is configured in a similar way to the data port. It can
 be set to the same port as the data port, or to a separate one, allowing
@@ -685,14 +660,14 @@ section. Only ONE *SoftwareSerial* port can be set per board.
 
 DB_SERIAL_SPEED sets the baud rate for the port.
 
-To enable this feature, first uncomment *#define DEBUG_ENABLE.*\ Set the
+To enable this feature, first uncomment *#define DEBUG_ENABLE. *Set the
 serial port to the port that will receive the debug messages and
 configure the baud rate. If using *SoftwareSerial*, comment out
 DB_SERIAL_PORT and un-comment DB_SERIAL_SWPORT instead. Next, configure
 the GPIO pins to be used, for example:
 
-| #if defined(AR_SERIAL_SWPORT) \|\| defined(DB_SERIAL_SWPORT)
-| #define SW_SERIAL_RX_PIN 50
+#if defined(AR_SERIAL_SWPORT) \|\| defined(DB_SERIAL_SWPORT)\
+#define SW_SERIAL_RX_PIN 50
 
 #define SW_SERIAL_TX_PIN 51
 
@@ -760,7 +735,7 @@ board provides additional serial ports or where sufficient GPIO pins are
 available to use *SoftwareSerial*, this can be an alternative serial
 port. The advantage of sending debug messages to another port is that
 they will not interfere with normal interface communications. Debug
-messages can be viewed on the alternative ‘debug’ port while normal
+messages can be viewed on the alternative 'debug' port while normal
 interface operations are in progress on the communications port.
 
 Debug messages do not include messages shown when verbose mode is
@@ -770,8 +745,7 @@ enabled with the
 another program, verbose mode should be turned off otherwise verbose
 messages may interfere with normal operations.
 
-Serial Handling in Applications and Scripts
--------------------------------------------
+## []{#anchor-29}Serial Handling in Applications and Scripts
 
 When working with programs and scripts (e.g. Python), it should be
 bourne in mind that the Arduino is only 64 bytes in size. Due to the
@@ -788,8 +762,7 @@ factors such as the interface hardware being used, the time taken for
 the instrument to respond, as well as the GPIB speed of the instrument
 being addressed.
 
-Macro Support
--------------
+## []{#anchor-30}Macro Support
 
 Macros in this context are short sequences of commands that can be used
 to accomplish a particular task. Controlling an instrument usually
@@ -814,15 +787,15 @@ general, in order to create macros, a few simple rules will need to be
 followed.
 
 Firstly, macros need to be enabled. In the AR488_Config.h file there are
-two definitions under the heading ‘Enable Macros’:
+two definitions under the heading 'Enable Macros':
 
 #define USE_MACROS // Enable the macro feature
 
 #define RUN_STARTUP // Run MACRO_0 (the startup macro)
 
 The *#define USE_MACROS* construct enables or disables the macro
-feature. When this line is commented out by preceding it with ‘//’ then
-macros are disabled. Removing the preceding ‘//’ will enable the macro
+feature. When this line is commented out by preceding it with '//' then
+macros are disabled. Removing the preceding '//' will enable the macro
 feature.
 
 The *#define RUN_STARTUP* statement controls whether the start-up macro
@@ -830,7 +803,7 @@ will run when the interface is powered up or re-started. The start-up
 macro is designated MACRO_0 and if *#define RUN_STARTUP* is enabled,
 this macro will run when the interface is powered on or reset.
 
-When *#define USE_MACROS*\ is disabled, then the start-up macro will not
+When *#define USE_MACROS *is disabled, then the start-up macro will not
 be activated when the interface is powered up or reset and none of the
 user macros (1-9) will be available at runtime.
 
@@ -857,56 +830,56 @@ program the Arduino using a suitable AVR programmer.
 In the AR488_Config.h file, sketch, below the help information there is
 a section that starts:
 
-/********************************/
+/\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*/
 
-/****\* AR488 MACROS SECTION \*****/
+/\*\*\*\*\* AR488 MACROS SECTION \*\*\*\*\*/
 
-/****\* vvvvvvvvvvvvvvvvvvvv \*****/
+/\*\*\*\*\* vvvvvvvvvvvvvvvvvvvv \*\*\*\*\*/
 
 #ifdef USE_MACROS
 
 Macros are defined here. The first macro is the startup macro, an
 example of which might be defined as follows:
 
-#define MACRO_0 "\\
+#define MACRO_0 \"\\
 
-**++addr 9\n\\**
+**++addr 9\\n\\**
 
-**++auto 2\n\\**
+**++auto 2\\n\\**
 
-**\*RST\n\\**
+**\*RST\\n\\**
 
-**:func 'volt:ac'**
+**:func \'volt:ac\'**
 
-"
+\"
 
-/\* End of MACRO_0 (Startup macro)*/
+/\* End of MACRO_0 (Startup macro)\*/
 
 Note that the macro code itself, is shown in **bold,** and has been
 inserted immediately after the *#define MACRO_0* line and before the
 ending comment:
 
-#define MACRO_0 “\\
+#define MACRO_0 "\\
 
 **macro**
 
-“
+"
 
-/*<-End of startup macro*/.
+/\*\<-End of startup macro\*/.
 
-All macro commands comprising the macro must be placed after the ‘\’ on
+All macro commands comprising the macro must be placed after the '\\' on
 the first line and before the final quote on the line before the ending
 comment. Nothing outside of these lines, including the quote marks and
-the ‘\’ and after the macro name should be modified. The final quote
+the '\\' and after the macro name should be modified. The final quote
 mark can be appended to the last command in the sequence if preferred.
 It is shown here on a separate line for clarity. Everything between the
-two quote marks is a string of characters and must be delimited. The ‘\’
-character indicate to the pre-processor that the string continues on the
-next line. Each command ends with ‘\n’ which is the newline terminator
-and serves to delimit each command. The actual sequence shown above is
-therefore comprised of 4 commands, each command ending with ‘\n’ and
-then a ‘\’ to indicate that the next command is to follow on the next
-line. Try to avoid leaving or including any unnecessary spaces.
+two quote marks is a string of characters and must be delimited. The
+'\\' character indicate to the pre-processor that the string continues
+on the next line. Each command ends with '\\n' which is the newline
+terminator and serves to delimit each command. The actual sequence shown
+above is therefore comprised of 4 commands, each command ending with
+'\\n' and then a '\\' to indicate that the next command is to follow on
+the next line. Try to avoid leaving or including any unnecessary spaces.
 
 Each of these commands is either a standard AR488 interface command
 found in the command reference, or an instrument specific command. All
@@ -916,40 +889,40 @@ commands are direct instrument commands using the SCPI protocol, the
 first of which resets the instrument and the second selects the
 instrument AC voltage function.
 
-As shown, each command must be terminated with a ‘\n’ (newline) or ‘\r’
-(carriage return) delimiter character.
+As shown, each command must be terminated with a '\\n' (newline) or
+'\\r' (carriage return) delimiter character.
 
 User defined macros that can be run using the *++macro* command follow
 next, and have a similar format, e.g:
 
-#define MACRO_2 "\\
+#define MACRO_2 \"\\
 
-"
+\"
 
-/*<-End of macro 2*/
+/\*\<-End of macro 2\*/
 
 Once again, the required command sequence must be placed between the two
-quotes and after the first ‘/’ and be terminated with a ‘\n’ or ‘\r’
-delimiter. Each line must be wrapped with ‘\’.
+quotes and after the first '/' and be terminated with a '\\n' or '\\r'
+delimiter. Each line must be wrapped with '\\'.
 
 There is a slightly shorter method of defining a macro by placing all
 commands on a single line. For example this:
 
-#define MACRO_1 "++addr 7\n++auto 1\n*RST\n:func 'volt:ac'"
+#define MACRO_1 \"++addr 7\\n++auto 1\\n\*RST\\n:func \'volt:ac\'\"
 
 Is exactly the same as this:
 
-#define MACRO_1 "\\
+#define MACRO_1 \"\\
 
-++addr 7\n\\
+++addr 7\\n\\
 
-++auto 1\n\\
+++auto 1\\n\\
 
-\*RST\n\\
+\*RST\\n\\
 
-:func 'volt:ac'\\
+:func \'volt:ac\'\\
 
-"
+\"
 
 The first definition is more condensed and requires no line wrap
 characters, but it is perhaps easier to see what is going on in the
@@ -960,11 +933,11 @@ The macro definition area provided in the sketch ends with:
 
 #endif
 
-/****\* ^^^^^^^^^^^^^^^^^^^^ \*****/
+/\*\*\*\*\* \^\^\^\^\^\^\^\^\^\^\^\^\^\^\^\^\^\^\^\^ \*\*\*\*\*/
 
-/****\* AR488 MACROS SECTION \*****/
+/\*\*\*\*\* AR488 MACROS SECTION \*\*\*\*\*/
 
-/********************************/
+/\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*/
 
 Anything outside of this section does not relate to macros.
 
@@ -990,8 +963,7 @@ but any individual command sequence should not exceed 126 characters.
 This may be particularly relevant to SCPI commands which can be composed
 of multiple instructions separated by colons.
 
-SN7516x GPIB Transceiver Support
---------------------------------
+## []{#anchor-31}SN7516x GPIB Transceiver Support
 
 Support for the SN75160 and SN75161 GPIB transceiver integrated circuits
 can be enabled by uncommenting the following line:
@@ -1033,8 +1005,7 @@ If a separate GPIO pin is used to control DC then the ++REN command will
 return the status of REN as usual. (See *++REN* in the *Custom Comands*
 section of the *Command Reference*).
 
-Custom Board Layout Section
----------------------------
+## []{#anchor-32}Custom Board Layout Section
 
 The custom board layout section in the Config.h file can be used to
 create a custom pin layout for the AR488. This can be helpful for
@@ -1089,11 +1060,9 @@ states and therefore *USE_INTERRUPTS* will not be defined and interrupts
 will not be activated. Pin states will be checked on every iteration of
 *void loop()* instead.
 
-Building an AR488 GPIB Interface
-================================
+# []{#anchor-33}Building an AR488 GPIB Interface
 
-Overview
---------
+## []{#anchor-34}Overview
 
 Construction of an Arduino GPIB interface is relatively straightforward
 and requires a supported single Arduino board, a length of cable that is
@@ -1104,7 +1073,7 @@ IEEE488 connector will need to be purchased.
 
 New GPIB/IEEE488 cables are expensive. Cheaper cables can be found from
 various sellers on eBay. Connectors can be found by searching for
-‘Centronics 24’ rather than ‘IEEE488’ or ‘GPIB’. In the UK, RS
+'Centronics 24' rather than 'IEEE488' or 'GPIB'. In the UK, RS
 Components sell these as part number 239-1207, for £2.86. They can also
 be found on eBay. Old parallel printer cables can still be found on
 charity/thrift shops or on market stalls.
@@ -1112,11 +1081,11 @@ charity/thrift shops or on market stalls.
 For connection details and wiring diagrams for specific boards, please
 see:
 
-Appendix A – Uno and Nano (also Logic Green LGT8F328P)
+Appendix A -- Uno and Nano (also Logic Green LGT8F328P)
 
-Appendix B – Mega 2560
+Appendix B -- Mega 2560
 
-Appendix C – Micro 32u4
+Appendix C -- Micro 32u4
 
 Ideally, in a GPIB cable, ground pins 18, 19, 20, 21, 22, 23 should be
 connected to a ground wire that forms a twisted pair with the DAV, NRFD,
@@ -1128,11 +1097,11 @@ numbers of conductors are not available.
 
 Further information can be found by following the links below:
 
-*Additional*\ `GPIB pinout information - Link
-1 <https://www.electronics-notes.com/articles/test-methods/gpib-ieee-488-bus/pinout-pin-connections.php>`__
+**Additional **[**GPIB pinout information - Link
+1**](https://www.electronics-notes.com/articles/test-methods/gpib-ieee-488-bus/pinout-pin-connections.php)
 
-*Additional*\ `GPIB pinout information - Link
-2 <https://allpinouts.org/pinouts/connectors/buses/ieee-488-gpib-hpib/>`__
+**Additional **[**GPIB pinout information - Link
+2**](https://allpinouts.org/pinouts/connectors/buses/ieee-488-gpib-hpib/)
 
 Once the cable has been completed, the sketch should then be downloaded
 to the Arduino board and the interface should be ready to test.
@@ -1140,30 +1109,19 @@ to the Arduino board and the interface should be ready to test.
 In order to provide multi-platform compatibility, the AR488 firmware
 sketch is modular and comes in several files:
 
-+------------------------+--------------------------------------------+
-| *Filename:*            | *Purpose:*                                 |
-+------------------------+--------------------------------------------+
-| **AR488.ino**          | This is the main AR488 firmware sketch     |
-+------------------------+--------------------------------------------+
-| **AR488_Config.h**     | This is the configuration file. All        |
-|                        | configuration options are set here.        |
-+------------------------+--------------------------------------------+
-| **AR488_ComPorts.h**   | Communication ports header file            |
-+------------------------+--------------------------------------------+
-| **AR488_ComPorts.cpp** | Communication ports implementation         |
-+------------------------+--------------------------------------------+
-| **AR488_Eeprom.h**     | EEPROM functions header file               |
-+------------------------+--------------------------------------------+
-| **AR488_Eeprom.cpp**   | EEPROM functions implementation            |
-+------------------------+--------------------------------------------+
-| **AR488_GPIBbus.h**    | GPIB functions header file                 |
-+------------------------+--------------------------------------------+
-| **AR488_GPIBbus.cpp**  | GPIB functions implementation              |
-+------------------------+--------------------------------------------+
-| **AR488_Layouts.h**    | Board layout header file                   |
-+------------------------+--------------------------------------------+
-| **AR488_Layouts.cpp**  | Board layout functions implementation      |
-+------------------------+--------------------------------------------+
+  ------------------------ -------------------------------------------------------------------------
+  *Filename:*              *Purpose:*
+  **AR488.ino**            This is the main AR488 firmware sketch
+  **AR488_Config.h**       This is the configuration file. All configuration options are set here.
+  **AR488_ComPorts.h**     Communication ports header file
+  **AR488_ComPorts.cpp**   Communication ports implementation
+  **AR488_Eeprom.h**       EEPROM functions header file
+  **AR488_Eeprom.cpp**     EEPROM functions implementation
+  **AR488_GPIBbus.h**      GPIB functions header file
+  **AR488_GPIBbus.cpp**    GPIB functions implementation
+  **AR488_Layouts.h**      Board layout header file
+  **AR488_Layouts.cpp**    Board layout functions implementation
+  ------------------------ -------------------------------------------------------------------------
 
 The firmware is supplied in a ZIP file. Download and unpack all files
 into a directory called AR488. Load the main sketch, AR488.ino into the
@@ -1173,17 +1131,15 @@ save. Then select the correct board from the list of boards within the
 Arduino IDE, Tools \| Board menu option and compile and upload the
 sketch.
 
-.. image:: /Pictures/100000010000027E000001F75F3ADEF329E63F62.png
-   :width: 9.793cm
-   :height: 7.721cm
+![](/Pictures/100000010000027E000001F75F3ADEF329E63F62.png){width="9.793cm"
+height="7.721cm"}
 
 An example of a completed Arduino GPIB adapter
 
 The following section details further hardware tweaks that may be
 required to make the board work correctly with specific GPIB software.
 
-Multiple Arduino Interfaces on the Bus
---------------------------------------
+## []{#anchor-35}Multiple Arduino Interfaces on the Bus
 
 The AR488 can be used in both controller mode and device mode and only
 ONE controller can be active at any one time. When there is just one
@@ -1215,7 +1171,7 @@ phenomenon that is not specific to Arduino microcontrollers only, but
 can affect various other devices also. Further information regarding
 this phenomenon can be found here:
 
-https://www.eevblog.com/forum/blog/eevblog-831-power-a-micro-with-no-power-pin!/
+[**https://www.eevblog.com/forum/blog/eevblog-831-power-a-micro-with-no-power-pin!/**](https://www.eevblog.com/forum/blog/eevblog-831-power-a-micro-with-no-power-pin!/)
 
 Consequently, unpowered Arduino devices may adversely affect other
 devices on the GPIB bus. It is therefore essential to either keep
@@ -1223,17 +1179,16 @@ Arduino devices powered on, or else physically disconnected from the
 bus. This is NOT an issue when there is just ONE Arduino-based GPIB
 controller remotely controlling instruments on a bus. Nevertheless,
 other than when a sole Arduino is operating as a controller, it is not
-recommended to leave unpowered Arduino’s connected to the bus.
+recommended to leave unpowered Arduino's connected to the bus.
 
-SN7516x GPIB Transceiver Integrated Circuits
---------------------------------------------
+## []{#anchor-36}SN7516x GPIB Transceiver Integrated Circuits
 
 The AR488 firmware supports SN75160 and SN75161 GPIB transceiver
 integrated circuits. These ICs provide a buffer between the Arduino and
 the GPIB bus and allow the full 48mA drive current for a GPIB device. In
 addition, when powered down, these devices present a high impedance to
 the GPIB bus so that the connected device does not interfere with the
-operation of the bus. This solves the ‘parasitic power’ problem that
+operation of the bus. This solves the 'parasitic power' problem that
 ocurrs when using Arduinos connected directly without buffering to the
 the GPIB bus and means that theinterface can be safely powered down
 without affecting communication on the GPIB bus.
@@ -1247,8 +1202,8 @@ connections for the Uno board. A similar approach can be used for any
 other board using available GPIO pins.
 
 Operation of the SN75160 is simple. The Arduino outputs are connected to
-the ‘Terminal I/O ports’ side of the IC and the GPIB bus DIO lines to
-the ‘GPIB I/O ports side. The PE pin should be connected to VCC in order
+the 'Terminal I/O ports' side of the IC and the GPIB bus DIO lines to
+the 'GPIB I/O ports side. The PE pin should be connected to VCC in order
 to provide 3-state output. The TE (talk-enable) pin is connected to a
 GPIO pin on the Arduino. The GPIO pin is defined in *Config.h*. For
 further details see the *Configuration* section.
@@ -1274,8 +1229,7 @@ pin of the SN75162 but this is currently untested and unsupported.
 Alternatively some means of hardware inversion could be devised and the
 pin connected to DC, but in this case, experiment at your own risk.
 
-Arduino Brownout Detection Setting
-----------------------------------
+## []{#anchor-37}Arduino Brownout Detection Setting
 
 The first three bits of the Arduino extended fuse determine the brownout
 detection (BOD) setting. BOD will hold the processor in the reset state
@@ -1295,13 +1249,13 @@ BOD on an Arduino being used as a GPIB interface.
 
 Arduino BOD settings are as follows:
 
-============ ============= =====================
-*BOD Level:* *Bit setting* *Threshold*
-DISABLED     111           BOD disabled
-BODLEVEL0    110           1.7 – 2.0v (avg 1.8v)
-BODLEVEL1    101           2.5 – 2.9v (avg 2.7v)
-BODLEVEL2    100           4.1 – 4.5v (avg 4.3v)
-============ ============= =====================
+  -------------- --------------- ------------------------
+  *BOD Level:*   *Bit setting*   *Threshold*
+  DISABLED       111             BOD disabled
+  BODLEVEL0      110             1.7 -- 2.0v (avg 1.8v)
+  BODLEVEL1      101             2.5 -- 2.9v (avg 2.7v)
+  BODLEVEL2      100             4.1 -- 4.5v (avg 4.3v)
+  -------------- --------------- ------------------------
 
 To check the extended fuse setting, the following AVRDUDE command line
 can be used:
@@ -1324,8 +1278,7 @@ convention. If your Arduino has a 328pb processor IC, then this will
 have a different signature to the 328p and the -p parameter needs to be
 specified as *-p m328pb* or *-p atmega328pb*.
 
-USB-to-Serial UART ICs and Handshaking
-======================================
+# []{#anchor-38}USB-to-Serial UART ICs and Handshaking
 
 Most Arduino boards have a serial ports. Some, like the Mega 2560 even
 have multiple serial ports. In order to communicate over USB with a PC,
@@ -1338,7 +1291,7 @@ they are ready to receive or send. It prevents data from being lost by
 one device still trying to send while the other is not yet ready to
 receive. It also provides a means to ensure that buffers are managed so
 that they are not overrun. Most commonly when computer programs want to
-communicate over a serial port, they will make use of two signals –
+communicate over a serial port, they will make use of two signals --
 Clear-to-Send (CLS) and Ready-to-Send (RTS). Programs will assert RTS to
 indicate that they are ready to send and then check the CTS response to
 confirm that the interface is ready to accept data before sending
@@ -1401,10 +1354,12 @@ not support serial handshaking using RTS/CTS signalling by default.
 Commonly used clone boards have on board a serial UART IC such as the
 CH340 or the Holtek HT42B534 which exposes the RTS and CTS pins, but
 these pins are usually not connected anywhere. It is, of course possible
-that the CH340G could be |image1|\ connected to GPIO pins in order to
-list16 pten to the RTS signal from the remote computer and send it a CTS
-signal. On the Holtek chip, the CTS pin does not appear to be functional
-and remains asserted continuously.
+that the CH340G could be
+![](/Pictures/10000000000003E9000003E9E97A43BBC0C067AA.png){width="4.761cm"
+height="4.191cm"}connected to GPIO pins in order to list16 pten to the
+RTS signal from the remote computer and send it a CTS signal. On the
+Holtek chip, the CTS pin does not appear to be functional and remains
+asserted continuously.
 
 It is also possible to obtain a USB-to-Serial breakout boards, for
 example, the most common one of these is the FT232RL USB2.0 to TTL
@@ -1420,8 +1375,7 @@ present on some Logic Green LGT8F328P boards. While the GPIB interface
 will run on the LGTF328P board, serial handshaking is not possible with
 the Holtek UART chip.
 
-CH340G Serial UART
-------------------
+## []{#anchor-39}CH340G Serial UART
 
 The CH340G chipset present in many Arduino compatible boards does not
 respond with the CTS signal. There appear to be two possible
@@ -1435,10 +1389,9 @@ confident in your soldering skills. I take no responsibility for damaged
 Arduino boards so if in doubt, ask a qualified or skilled person for
 assistance.
 
-.. _section-2:
+### 
 
-Workaround 1
-~~~~~~~~~~~~
+### []{#anchor-40}Workaround 1
 
 The workaround requires that pin 14 be connected to pin 9 on the CH340G
 chip. When RTS is asserted by the host over USB, the signal is passed to
@@ -1452,8 +1405,7 @@ handshaking, it does allow the interface to respond with a CTS signal
 and, in turn, the host to be able to accept responses to the commands
 sent to the interface, even when RTS/CTS handshaking is used.
 
-Workaround 2
-~~~~~~~~~~~~
+### []{#anchor-41}Workaround 2
 
 Pin 9 of the CH340G needs to be connected to GND. This will keep CTS
 signal asserted on the Arduino at all times, so again, proper
@@ -1465,8 +1417,7 @@ EZGPIB program, for informing me that the CH340G exposes the RTS/CTS
 signals via pins and that it might be possible to make use of these pins
 to devise a solution.
 
-FTDI UART (FT232RL)
--------------------
+## []{#anchor-42}FTDI UART (FT232RL)
 
 Arduino boards that contain the ATMEGA MEGA 16u2 chip are recognized as
 FTDI serial devices. The functionality provided by the FTDI chip is
@@ -1479,20 +1430,18 @@ with the KE5FX GPIB toolkit, but for some reason.
 For some reason, Arduino boards running the 16u2 chip are not recognized
 by the EZGPIB program.
 
-CP2102 UART
------------
+## []{#anchor-43}CP2102 UART
 
 Boards such as the ESP32 that have the CP2102 chip on board should work
 fine over USB, although, of course, it would no doubt be desirable to
 operate over WiFi.
 
-AR488 Bluetooth Support
-=======================
+# []{#anchor-44}AR488 Bluetooth Support
 
-The HC05 and HC06 Modules
--------------------------
+## []{#anchor-45}The HC05 and HC06 Modules
 
-|image2|\ Bluetooth is a common short range wireless connection
+![](/Pictures/100000000000007400000069F92BE8EE69051CE2.jpg){width="3.073cm"
+height="2.794cm"}Bluetooth is a common short range wireless connection
 technology for connecting devices and sending data. Bluetooth devices
 can typically communicate over distances not exceeding 10 metres,
 although some devices can communicate over greater distances. In order
@@ -1501,11 +1450,12 @@ paired, the device facilities can be discovered and a connection
 established.
 
 Bluetooth transceiver modules such as the HC05 and HC06 can be
-connected\ |image3| to an Arduino quite easily and manually configured
-to provide a wireless connection in place of the USB cable. These boards
+connected![](/Pictures/1000000100000185000001453D0409351003642B.png){width="5.502cm"
+height="4.597cm"} to an Arduino quite easily and manually configured to
+provide a wireless connection in place of the USB cable. These boards
 come as either the transceiver board itself with soldered edge
 connectors only and requiring a DC 3.3V supply, or, mounted on an
-“adapter” or “breakout” board (as shown opposite) with external pin
+"adapter" or "breakout" board (as shown opposite) with external pin
 connectors at one end and which can be supplied directly with 5V.
 
 The AR488 supports auto-configuration of the HC05 Bluetooth breakout
@@ -1524,22 +1474,23 @@ can be identified by the fact that it has six pins, while the HC06 has
 only four. There is no EN or STATUS pin on the HC06.
 
 Unlike most Arduino boards, which are supplied with 5V DC as
-is\ |image4| common to all USB devices, the HC05 module requires a 3.3V
-supply. The “adapter” or “breakout” board provides a 3.3V regulator for
-this purpose so it can be supplied with 5V, however, the serial input
-and output as well as the enable pin still operate at a 3.3V signalling
-level as indicated by the ‘LEVEL:3.3V’ marked on the board. Applying 5V
-to these pins can damage the module and while some tutorials do show
-these connected directly to the RX/TX pins on the Arduino, this is not
-recommended and ideally, a level shifter should be used. This can be
-made quite easily but ready made boards such as the one shown opposite
-can also be purchased. Such boards usually have 4 “channels” (HV1-HV4
-and corresponding LV1-LV4) which is sufficient for our purposes. There
-are 4 transistors across the centre and 6 soldered connectors along each
-edge. They board is usually supplied with a row of pins which can be
-soldered to the connectors if required or wires can be soldered to the
-board directly. The HV side is connected to the Arduino and the LV side
-to the HC05.
+is![](/Pictures/10000001000000EB000000CDFD3109BC3C75DC28.png){width="2.718cm"
+height="2.362cm"} common to all USB devices, the HC05 module requires a
+3.3V supply. The "adapter" or "breakout" board provides a 3.3V regulator
+for this purpose so it can be supplied with 5V, however, the serial
+input and output as well as the enable pin still operate at a 3.3V
+signalling level as indicated by the 'LEVEL:3.3V' marked on the board.
+Applying 5V to these pins can damage the module and while some tutorials
+do show these connected directly to the RX/TX pins on the Arduino, this
+is not recommended and ideally, a level shifter should be used. This can
+be made quite easily but ready made boards such as the one shown
+opposite can also be purchased. Such boards usually have 4 "channels"
+(HV1-HV4 and corresponding LV1-LV4) which is sufficient for our
+purposes. There are 4 transistors across the centre and 6 soldered
+connectors along each edge. They board is usually supplied with a row of
+pins which can be soldered to the connectors if required or wires can be
+soldered to the board directly. The HV side is connected to the Arduino
+and the LV side to the HC05.
 
 The level shifter board is easily supplied from the 5V and 3.3V pins on
 the Arduino with the 5V pin connected to HV and 3.3V pin connected to
@@ -1556,7 +1507,7 @@ connections being made via correspondingly numbered HV/LV channel on the
 level shifter.
 
 The HC05 breakout board requires 5 connections in total including 5V DC
-power to VCC, GND, TXD, RXD and EN or “Enable” that enables the Arduino
+power to VCC, GND, TXD, RXD and EN or "Enable" that enables the Arduino
 master mode required for configuration. In the example shown below, the
 EN pin is connected via the level shifter to pin 6 on the Uno, but any
 spare Arduino GPIO pin can be used. The pin marked STATE is left
@@ -1571,36 +1522,34 @@ The Bluetooth HC05 transceiver breakout board requires three channels.
 The diagram below is an example of how an Arduino Uno might be wired to
 the HC05 module:
 
-.. image:: /Pictures/100000010000031F000002727B3471D034BFB7A8.png
-   :width: 14.766cm
-   :height: 11.559cm
+![](/Pictures/100000010000031F000002727B3471D034BFB7A8.png){width="14.766cm"
+height="11.559cm"}
 
 *Diagram of the Arduino to HC05 connections*
 
 Clones of the Pro Micro board do not have a 3.3V regulator on board, so
 a 3.3V supply will have to be provided separately.
 
-Enabling Bluetooth on the AR488
--------------------------------
+## []{#anchor-46}Enabling Bluetooth on the AR488
 
 The Bluetooth feature is disabled by default, but can be enabled by
-removing the comment characters ‘//’ preceding the definition for
+removing the comment characters '//' preceding the definition for
 AR_SERIAL_BT_ENABLE within the data port configuration section within
 the AR488_Config.h file:
 
 //#define AR_SERIAL_BT_ENABLE 12 // HC05 enable pin
 
-//#define AR_SERIAL_BT_NAME "AR488-BT" // Bluetooth device name
+//#define AR_SERIAL_BT_NAME \"AR488-BT\" // Bluetooth device name
 
-//#define AR_SERIAL_BT_CODE "488488" // Bluetooth pairing code
+//#define AR_SERIAL_BT_CODE \"488488\" // Bluetooth pairing code
 
 so that it becomes:
 
 #define AR_SERIAL_BT_ENABLE 12 // HC05 enable pin
 
-#define AR_SERIAL_BT_NAME "AR488-BT" // Bluetooth device name
+#define AR_SERIAL_BT_NAME \"AR488-BT\" // Bluetooth device name
 
-#define AR_SERIAL_BT_CODE "488488" // Bluetooth pairing code
+#define AR_SERIAL_BT_CODE \"488488\" // Bluetooth pairing code
 
 This will activate the Bluetooth auto-configuration. Set the pin number
 to the number of the GPIO pin that will be used to control the EN pin on
@@ -1613,14 +1562,14 @@ around this parameter.
 The default pairing device name is *AR488-BT*, but this can be changed
 to anything desired by the following line:
 
-#define AR_SERIAL_BT_NAME "AR488-BT"
+#define AR_SERIAL_BT_NAME \"AR488-BT\"
 
 where *AR488-BT* is replaced by whatever string is desired.
 
 The default paring code is *488488*, but this can be changed by
 modifying the number in quotes after the *AR_BT_CODE* keyword:
 
-#define AR_SERIAL_BT_CODE “488488”
+#define AR_SERIAL_BT_CODE "488488"
 
 The code must be enclosed in double quotes and must be at least 6 digits
 long.
@@ -1637,15 +1586,14 @@ problem where an Arduino has additional serial ports available such as
 the 32u4 and the Mega 2560. The HC05 can be connected to a secondary
 port and the USB port used to program as normal.
 
-Power-up and Detection
-----------------------
+## []{#anchor-47}Power-up and Detection
 
 Once the sketch has been configured and uploaded to the board and the
 HC05 Bluetooth module connected up, the AR488 can be powered up. On
 start-up it will automatically detect the baud rate of the HC05 module
 and configure it. By default, the AR488 will appear as a Bluetooth
-device called *AR488-BT,*\ but otherwise should appear with the
-configured name. On Windows, it may appear as “Other device” until the
+device called *AR488-BT, *but otherwise should appear with the
+configured name. On Windows, it may appear as "Other device" until the
 screen is refreshed.
 
 The first time that the HC05 board is used, the LED on the HC05 board
@@ -1671,54 +1619,46 @@ HC05 board just goes into slave mode.
 Once paired, the LED on the HC05 board will blink twice every few
 seconds.
 
-Pairing the AR488 Bluetooth Interface
--------------------------------------
+## []{#anchor-48}Pairing the AR488 Bluetooth Interface
 
-Windows 10
-~~~~~~~~~~
+### []{#anchor-49}Windows 10
 
 Go to *Windows Settings* (the cog icon on the left of the windows menu)
 and select *Devices*:
 
-.. image:: /Pictures/1000000000000387000002795090A45C31489004.png
-   :width: 13.681cm
-   :height: 9.59cm
+![](/Pictures/1000000000000387000002795090A45C31489004.png){width="13.681cm"
+height="9.59cm"}
 
 This opens the *Bluetooth & other devices* dialogue:
 
-.. image:: /Pictures/100000000000038700000279E7C5E0CBAB640F09.png
-   :width: 14.376cm
-   :height: 10.077cm
+![](/Pictures/100000000000038700000279E7C5E0CBAB640F09.png){width="14.376cm"
+height="10.077cm"}
 
 Make sure that Bluetooth is turned on. Click *Add Bluetooth or other
 device*. This will open another Window:
 
-.. image:: /Pictures/100000000000022600000279F0FCE39521430EE2.png
-   :width: 14.552cm
-   :height: 16.748cm
+![](/Pictures/100000000000022600000279F0FCE39521430EE2.png){width="14.552cm"
+height="16.748cm"}
 
 Click *Bluetooth*. Windows should now look for devices. It should
 momentarily show the AR488-BT device as *unknown device*, but this
 should quickly change to *AR488-BT.*
 
-.. image:: /Pictures/100000000000022600000279CF99B0AFFC723636.png
-   :width: 14.552cm
-   :height: 16.748cm
+![](/Pictures/100000000000022600000279CF99B0AFFC723636.png){width="14.552cm"
+height="16.748cm"}
 
 Click the AR488-BT device. After a few moments prompt will appear
 requesting the pin.
 
-.. image:: /Pictures/100000000000022600000279CC94351C58758475.png
-   :width: 14.552cm
-   :height: 16.748cm
+![](/Pictures/100000000000022600000279CC94351C58758475.png){width="14.552cm"
+height="16.748cm"}
 
 Enter the pin and click *Connect*. If it times out, the dialogue may
-show *“Try connecting your device again”*. Click on the device again to
+show *"Try connecting your device again"*. Click on the device again to
 try once more. Once successful, this will be clearly confirmed:
 
-.. image:: /Pictures/1000000000000226000002795D613ED5E30EB243.png
-   :width: 14.552cm
-   :height: 16.748cm
+![](/Pictures/1000000000000226000002795D613ED5E30EB243.png){width="14.552cm"
+height="16.748cm"}
 
 The device status should now be shown as *Paired*. Click the *Done*
 button to close the device configuration window.
@@ -1728,28 +1668,25 @@ AR488-BT device should be listed under *Other Devices*. The window can
 now be closed.
 
 Right-click *This PC* and select *Manage*. Click on *Device Manager* and
-expand the *Port (COM & LPT)*\ section. The device should be shown as
+expand the *Port (COM & LPT) *section. The device should be shown as
 *Standard Serial over Bluetooth link (COMx)* where COMx will be the
 assigned COM port.
 
 Open a terminal session to the assigned COM port and test communication
 with the device:
 
-.. image:: /Pictures/1000000000000295000001A273C86166F252AFA9.png
-   :width: 15.921cm
-   :height: 10.068cm
+![](/Pictures/1000000000000295000001A273C86166F252AFA9.png){width="15.921cm"
+height="10.068cm"}
 
 The interface should respond as normal.
 
-Linux
-~~~~~
+### []{#anchor-50}Linux
 
 These instructions should work on most Linux distributions. Depending on
-your distro of Linux, the *bluez*\ or *bluez5*\ Bluetooth tools
-packagemay already be installed by default, or you may be able to
-download and install it from the distribution repository using apt or
-other package manager. Otherwise it will need to be compiled from
-source.
+your distro of Linux, the *bluez *or *bluez5 *Bluetooth tools package*
+*may already be installed by default, or you may be able to download and
+install it from the distribution repository using apt or other package
+manager. Otherwise it will need to be compiled from source.
 
 First, make sure that your Bluetooth dongle or built-in device is
 working correctly on your computer or laptop.
@@ -1760,22 +1697,22 @@ Bluetooth hardware.
 Once you have confirmed that your Bluetooth hardware is working, open a
 terminal and at the command prompt type:
 
-% bluetoothctl
+\% bluetoothctl
 
 This should list any known Bluetooth devices, show *Agent registered* at
-the end of the list, and a [bluetooth]# prompt:
+the end of the list, and a \[bluetooth\]# prompt:
 
-$ bluetoothctl
+\$ bluetoothctl
 
-[NEW] Controller 00:80:98:94:AB:7E agabus [default]
+\[NEW\] Controller 00:80:98:94:AB:7E agabus \[default\]
 
-[NEW] Device 78:3A:84:93:BC:B9 iPad
+\[NEW\] Device 78:3A:84:93:BC:B9 iPad
 
-[NEW] Device 10:2F:6B:BD:49:F1 N930 phone
+\[NEW\] Device 10:2F:6B:BD:49:F1 N930 phone
 
 Agent registered
 
-[bluetooth]#
+\[bluetooth\]#
 
 If your device is not listed, then at the prompt type:
 
@@ -1784,31 +1721,31 @@ scan on
 This should initiate a scan for new devices. In a few seconds any new
 devices should be listed:
 
-[bluetooth]# scan on
+\[bluetooth\]# scan on
 
 Discovery started
 
-[CHG] Controller 00:80:98:94:AB:7E Discovering: yes
+\[CHG\] Controller 00:80:98:94:AB:7E Discovering: yes
 
-[NEW] Device 98:D3:31:F9:4E:6D AR488-BT
+\[NEW\] Device 98:D3:31:F9:4E:6D AR488-BT
 
 The AR488-BT device should be detected and its mac address listed. To
 pair the device type:
 
-[bluetooth]# pair 98:D3:31:F9:4E:6D
+\[bluetooth\]# pair 98:D3:31:F9:4E:6D
 
 where the MAC address is the address of YOUR Bluetooth device. The
 *bluetoothctl* utility should respond with something like:
 
-[bluetooth]# pair 98:D3:31:F9:4E:6D
+\[bluetooth\]# pair 98:D3:31:F9:4E:6D
 
 Attempting to pair with 98:D3:31:F9:4E:6D
 
-[CHG] Device 98:D3:31:F9:4E:6D Connected: yes
+\[CHG\] Device 98:D3:31:F9:4E:6D Connected: yes
 
 Request PIN code
 
-[AR481m[agent] Enter PIN code:
+\[AR481m\[agent\] Enter PIN code:
 
 Enter the pairing code configured on the HC05 device. The default
 pairing code is *488488*, but if a custom six digit code has been
@@ -1816,74 +1753,72 @@ configured then that should be provided instead. The *bluetoothctl*
 utility will now attempt to pair with the device. If successful, the
 output should be something like:
 
-[AR481m[agent] Enter PIN code: 488488
+\[AR481m\[agent\] Enter PIN code: 488488
 
-[CHG] Device 98:D3:31:F9:4E:6D UUIDs:
+\[CHG\] Device 98:D3:31:F9:4E:6D UUIDs:
 00001101-0000-1000-8000-00805f9b34fb
 
-[CHG] Device 98:D3:31:F9:4E:6D ServicesResolved: yes
+\[CHG\] Device 98:D3:31:F9:4E:6D ServicesResolved: yes
 
-[CHG] Device 98:D3:31:F9:4E:6D Paired: yes
+\[CHG\] Device 98:D3:31:F9:4E:6D Paired: yes
 
 Pairing successful
 
-[AR488-BT]#
+\[AR488-BT\]#
 
 At this point the device is paired, but there is no serial port
 associated with it. Another tool called *rfcomm* can be used to
 associate a serial port with the Bluetooth device. First exit the
 *bluetoothctl* utility by typing:
 
-[bluetooth]# exit
+\[bluetooth\]# exit
 
 The utiltity will respond with the following and return to the system
 prompt:
 
 Agent unregistered
 
-[DEL] Controller 00:80:98:94:AB:7E agabus [default]
+\[DEL\] Controller 00:80:98:94:AB:7E agabus \[default\]
 
-$
+\$
 
 Type the following to associate a serial port with the Bluetooth device:
 
-$ sudo rfcomm bind 0 98:D3:31:F9:4E:6D 1
+\$ sudo rfcomm bind 0 98:D3:31:F9:4E:6D 1
 
 You may be prompted for the sudo password. After this has command has
 completed, a serial port called */dev/rfcomm0* will be created. To
 confirm that the port binding has been established can be done with the
 following command:
 
-$ ls /dev/rfcomm\*
+\$ ls /dev/rfcomm\*
 
 /dev/rfcomm0
 
 The repose confirms that the port is now available, so we can open a TTY
 terminal such as PuTTY and try to establish a connection to it:
 
-.. image:: /Pictures/10000001000001EF00000153087828838CAF38F9.png
-   :width: 13.097cm
-   :height: 8.969cm
+![](/Pictures/10000001000001EF00000153087828838CAF38F9.png){width="13.097cm"
+height="8.969cm"}
 
 The terminal should connect and the device should respond in the usual
 manner.
 
 To unbind the /dev/rfcomm0 port at the end of the session, from the
-system $ prompt type:
+system \$ prompt type:
 
-$ sudo rfcomm unbind 0 98:D3:31:F9:4E:6D 1
+\$ sudo rfcomm unbind 0 98:D3:31:F9:4E:6D 1
 
-Troubleshooting Information for Linux
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-51}Troubleshooting Information for Linux
 
 A noteworthy point is that *bluetoothctl* is launched while a connected
 session is in progress, then the prompt will show the name of the
 currently connected device:
 
-[AR488-BT]#
+\[AR488-BT\]#
 
 To get further information about a device in *bluetoothctl*, when at the
-[bluetooth]# prompt type:
+\[bluetooth\]# prompt type:
 
 info 98:D3:31:F9:4E:6D
 
@@ -1891,7 +1826,7 @@ where the MAC address is the address of the device you would like
 further information on. The program should respond with something like
 this:
 
-[bluetooth]# info 98:D3:31:F9:4E:6D
+\[bluetooth\]# info 98:D3:31:F9:4E:6D
 
 Device 98:D3:31:F9:4E:6D (public)
 
@@ -1913,27 +1848,27 @@ LegacyPairing: yes
 
 UUID: Serial Port (00001101-0000-1000-8000-00805f9b34fb)
 
-[bluetooth]#
+\[bluetooth\]#
 
 You can also list all the devices that have been paired with:
 
-[bluetooth]# paired-devices
+\[bluetooth\]# paired-devices
 
 Device 98:D3:31:F9:4E:6D AR488-BT
 
 Device 10:2F:6B:BD:49:F1 N930 phone
 
-[bluetooth]#
+\[bluetooth\]#
 
 To remove a paired device type:
 
-[bluetooth]# remove 98:D3:31:F9:4E:6D
+\[bluetooth\]# remove 98:D3:31:F9:4E:6D
 
-[DEL] Device 98:D3:31:F9:4E:6D AR488-BT
+\[DEL\] Device 98:D3:31:F9:4E:6D AR488-BT
 
 Device has been removed
 
-[bluetooth]#
+\[bluetooth\]#
 
 If *bluetoothctl* responds with:
 
@@ -1942,7 +1877,7 @@ Failed to start discovery: org.bluez.Error.NotReady
 This may indicate that the device is not powered on or blocked. Try this
 first:
 
-[bluetooth]# power on
+\[bluetooth\]# power on
 
 If this reports:
 
@@ -1951,7 +1886,7 @@ Failed to set power on: org.bluez.Error.Blocked
 Then exit *bluetoothctl* and run this command to check for blocked
 devices:
 
-$ rfkill list
+\$ rfkill list
 
 1: hci0: Bluetooth
 
@@ -1959,7 +1894,7 @@ Soft blocked: yes
 
 Hard blocked: no
 
-If, as shown above, Bluetooth is ‘Soft blocked’ then it might be
+If, as shown above, Bluetooth is 'Soft blocked' then it might be
 possible to unblock it with:
 
 rfkill unblock all
@@ -1968,15 +1903,13 @@ Now run *bluetoothctl* again.
 
 Otherwise check that device drivers were properly loaded.
 
-If a device is ‘Hard blocked’ then there is a hardware problem, e.g. a
+If a device is 'Hard blocked' then there is a hardware problem, e.g. a
 toggle switch may be in the wrong position, faulty cable, power off etc.
 or the device may be disabled in BIOS.
 
-Working With Third Party Software
-=================================
+# []{#anchor-52}Working With Third Party Software
 
-EZGPIB and the Arduino Bootloader
----------------------------------
+## []{#anchor-53}EZGPIB and the Arduino Bootloader
 
 EZGPIB is is a tool for easy GPIB, TCP or serial based data acquisition
 in conjunction with a Prologix GPIB to USB interface. It works with DLL
@@ -2010,18 +1943,17 @@ connection to the interface. Closing the program and immediately trying
 again usually results in a successful connection. There are a couple of
 possible solutions:
 
-Solution 1 - Capacitor
-~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-54}Solution 1 - Capacitor
 
 One option is to eliminate the delay caused by the board re-starting and
 the bootloader being re-loaded into memory. This can be done quite
 easily by placing a 10μF capacitor between the RST and GND pins on the
 Arduino. This causes the reset pulse, which is generated by activating
 the serial DTR signal, to be drained to ground without affecting the
-RESET input on the AtMega328P processor. Since it’s a capacitor, there
+RESET input on the AtMega328P processor. Since it's a capacitor, there
 is no direct DC coupling between RESET and GND. When the serial port is
 now opened, the interface will just respond without the delay caused by
-re-booting. Assuming the sequence “GPIB-USB” exists in the response to
+re-booting. Assuming the sequence "GPIB-USB" exists in the response to
 the *++ver* command, EZGPIB will now recognize it first time.
 
 The drawback of this approach is that placing a capacitor permanently in
@@ -2029,8 +1961,7 @@ this position will prevent the Arduino IDE from being able to program
 the board. The reset button now has to be used or a switch added to
 provide an on to run, off to program facility.
 
-Solution 2 – Hacking the EZGPIB Binary
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-55}Solution 2 -- Hacking the EZGPIB Binary
 
 If you are familiar with using a hex editor, there is another approach
 that involves editing the EZGPIB.EXE binary to prevent it looking for an
@@ -2046,45 +1977,40 @@ F6 04 24 10 74 06
 
 Note, that these instructions can also be found on
 http://www.dalton.ax/gpib/, but show the sequence as F6 **02** 24 10 74
-06. I found the sequence to be as above. I’m not sure whether this is an
+06. I found the sequence to be as above. I'm not sure whether this is an
 error or because my binary is different from the one that the author was
-working with. If you can’t find the sequence with 04, check for the one
+working with. If you can't find the sequence with 04, check for the one
 with 02.
 
-.. image:: /Pictures/10000001000002DE000000DEA2C3C27747CBEC6C.png
-   :width: 17cm
-   :height: 5.142cm
+![](/Pictures/10000001000002DE000000DEA2C3C27747CBEC6C.png){width="17cm"
+height="5.142cm"}
 
 That sequence is the check for RTS. Change the penultimate byte to 75,
 so that the sequence now reads:
 
 F6 04 24 10 **75** 06
 
-.. image:: /Pictures/10000001000002DF000000DF31284F031562E042.png
-   :width: 17cm
-   :height: 5.158cm
+![](/Pictures/10000001000002DF000000DF31284F031562E042.png){width="17cm"
+height="5.158cm"}
 
 Now look for sequence:
 
 24 04 10 0F 95
 
-.. image:: /Pictures/10000001000002E1000000E540AEE8F002520DA7.png
-   :width: 17cm
-   :height: 5.281cm
+![](/Pictures/10000001000002E1000000E540AEE8F002520DA7.png){width="17cm"
+height="5.281cm"}
 
 Change the last byte to 94 so that the sequence now reads:
 
 24 04 10 0F **94**
 
-.. image:: /Pictures/10000001000002E0000000DF008253CADCA266DF.png
-   :width: 17cm
-   :height: 5.151cm
+![](/Pictures/10000001000002E0000000DF008253CADCA266DF.png){width="17cm"
+height="5.151cm"}
 
 Save the file and close the hex editor. EZGPIB should now find your
 adapter.
 
-The KE5FX Toolkit
------------------
+## []{#anchor-56}The KE5FX Toolkit
 
 KE5FX by John Miles provides testing tools including a plotter emulator
 and Prologix configuration utility and can be used with various
@@ -2094,7 +2020,7 @@ The Prologix GPIB Configurator program that is part of the KE5FX GPIB
 tools package looks for a specific character sequence in the string
 returned by the *++ver* command in order to identify a Prologix
 interface. The response to the ++ver command must contain the sequence
-‘version 6’ somewhere in the returned version string.
+'version 6' somewhere in the returned version string.
 
 On the AR488, the version string displayed with the *++ver* command can
 be set to anything convenient by using the following example commands:
@@ -2103,10 +2029,10 @@ be set to anything convenient by using the following example commands:
 
 ++savecfg
 
-This will set the version string to 'AR488 GPIB-USB version 6' and
+This will set the version string to \'AR488 GPIB-USB version 6\' and
 should be enough to get the interface recognized by the Prologix GPIB
 Configurator program. The version number does not actually require a
-'.1' suffix, but:
+\'.1\' suffix, but:
 
 ++id verstr AR488 GPIB-USB version 6.1
 
@@ -2127,8 +2053,7 @@ the *AR488_Config.h* file. This will set the default version string in
 the compiled program which will be stored along with the code in program
 memory and will not require EEPROM storage.
 
-Command Reference
-=================
+# []{#anchor-57}Command Reference
 
 The controller identifies commands by prefixing them with a double plus
 *++* character sequence. The following sequence of characters is an
@@ -2149,8 +2074,7 @@ reference that follows will clearly indicate which commands are standard
 and which are additional custom commands as well as any enhancements to
 the original Prologix command set.
 
-+addr
------
+## []{#anchor-58}+addr
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -2179,7 +2103,7 @@ the original Prologix command set.
 |                        | command returns the currently set primary  |
 |                        | and optional secondary address.            |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++addr [ *pri*\ [*,sec*]]                  |
+| *Syntax:*              | ++addr \[ *pri *\[*,sec*\]* *\]            |
 +------------------------+--------------------------------------------+
 | *Comments:*            | *pri* is a GPIB primary address between 1  |
 |                        | (0x01) and 30 (0x1E)                       |
@@ -2194,26 +2118,18 @@ the original Prologix command set.
 |                        | 0x60 to the value.                         |
 +------------------------+--------------------------------------------+
 
-++allspoll
-----------
+## []{#anchor-59}++allspoll
 
-+------------------------+--------------------------------------------+
-| *Prologix compatible:* | no                                         |
-+------------------------+--------------------------------------------+
-| *Enhanced:*            | n/a                                        |
-+------------------------+--------------------------------------------+
-| *Modes:*               | controller                                 |
-+------------------------+--------------------------------------------+
-| *Description:*         | Alias equivalent to *++spoll all*. See     |
-|                        | *++spoll* for further details.             |
-+------------------------+--------------------------------------------+
-| *Syntax:*              | ++allspoll                                 |
-+------------------------+--------------------------------------------+
-| *Comments:*            |                                            |
-+------------------------+--------------------------------------------+
+  ------------------------ -----------------------------------------------------------------------
+  *Prologix compatible:*   no
+  *Enhanced:*              n/a
+  *Modes:*                 controller
+  *Description:*           Alias equivalent to *++spoll all*. See *++spoll* for further details.
+  *Syntax:*                ++allspoll
+  *Comments:*              
+  ------------------------ -----------------------------------------------------------------------
 
-++auto
-------
+## []{#anchor-60}++auto
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -2238,7 +2154,7 @@ the original Prologix command set.
 |                        | sequence that is not a controller command  |
 |                        | beginning with *++*, has been sent.        |
 |                        |                                            |
-|                        | When set to 2, auto is set to “on-query”   |
+|                        | When set to 2, auto is set to "on-query"   |
 |                        | mode. The controller will automatically    |
 |                        | attempt to read the response from the      |
 |                        | instrument after a character sequence that |
@@ -2248,7 +2164,7 @@ the original Prologix command set.
 |                        | that ends with the *?* character, such as, |
 |                        | for example *\*IDN?*.                      |
 |                        |                                            |
-|                        | When set to 3, auto is set to “continuous” |
+|                        | When set to 3, auto is set to "continuous" |
 |                        | mode. The controller will execute          |
 |                        | continuous read operations after the first |
 |                        | *++read* command is issued, returning a    |
@@ -2261,10 +2177,10 @@ the original Prologix command set.
 |                        | command returns the value of the current   |
 |                        | setting for auto.                          |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++auto [0|1|2|3]                           |
+| *Syntax:*              | ++auto \[0\|1\|2\|3\]                      |
 +------------------------+--------------------------------------------+
-| *Comments:*            | Some instruments generate a “Query         |
-|                        | unterminated” or “-420” error if they are  |
+| *Comments:*            | Some instruments generate a "Query         |
+|                        | unterminated" or "-420" error if they are  |
 |                        | addressed after sending an instrument      |
 |                        | command that does not generate a response. |
 |                        | This simply means that the instrument has  |
@@ -2275,49 +2191,29 @@ the original Prologix command set.
 |                        | command to read the instrument response.   |
 +------------------------+--------------------------------------------+
 
-++clr
------
+## []{#anchor-61}++clr
 
-+------------------------+--------------------------------------------+
-| *Prologix compatible:* | yes                                        |
-+------------------------+--------------------------------------------+
-| *Enhanced:*            | no                                         |
-+------------------------+--------------------------------------------+
-| *Modes:*               | controller                                 |
-+------------------------+--------------------------------------------+
-| *Description:*         | This command sends a Selected Device Clear |
-|                        | (SDC) command to the currently addressed   |
-|                        | instrument. Details of how the instrument  |
-|                        | should respond may be found in the         |
-|                        | instrument manual. Typically the           |
-|                        | instrument may perform a reset, but other  |
-|                        | behaviours are possible.                   |
-+------------------------+--------------------------------------------+
-| *Syntax:*              | ++clr                                      |
-+------------------------+--------------------------------------------+
-| *Comments:*            |                                            |
-+------------------------+--------------------------------------------+
+  ------------------------ ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  *Prologix compatible:*   yes
+  *Enhanced:*              no
+  *Modes:*                 controller
+  *Description:*           This command sends a Selected Device Clear (SDC) command to the currently addressed instrument. Details of how the instrument should respond may be found in the instrument manual. Typically the instrument may perform a reset, but other behaviours are possible.
+  *Syntax:*                ++clr
+  *Comments:*              
+  ------------------------ ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-++dcl
------
+## []{#anchor-62}++dcl
 
-+------------------------+--------------------------------------------+
-| *Prologix compatible:* | no                                         |
-+------------------------+--------------------------------------------+
-| *Enhanced:*            | n/a                                        |
-+------------------------+--------------------------------------------+
-| *Modes:*               | controller                                 |
-+------------------------+--------------------------------------------+
-| *Description:*         | Send Device Clear (DCL) to all devices on  |
-|                        | the GPIB bus.                              |
-+------------------------+--------------------------------------------+
-| *Syntax:*              | ++dcl                                      |
-+------------------------+--------------------------------------------+
-| *Comments:*            |                                            |
-+------------------------+--------------------------------------------+
+  ------------------------ ---------------------------------------------------------
+  *Prologix compatible:*   no
+  *Enhanced:*              n/a
+  *Modes:*                 controller
+  *Description:*           Send Device Clear (DCL) to all devices on the GPIB bus.
+  *Syntax:*                ++dcl
+  *Comments:*              
+  ------------------------ ---------------------------------------------------------
 
-++default
----------
+## []{#anchor-63}++default
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | no                                         |
@@ -2347,7 +2243,7 @@ the original Prologix command set.
 | *Comments:*            | After using the *++default* command and    |
 |                        | configuring new settings, the *++savecfg*  |
 |                        | command should be used to store the new    |
-|                        | settings in EEPROM*. Otherwise, the        |
+|                        | settings in EEPROM\*. Otherwise, the       |
 |                        | previously stored configuration will be    |
 |                        | re-loaded from non-volatile memory the     |
 |                        | next time that the interface is powered    |
@@ -2360,8 +2256,7 @@ the original Prologix command set.
 |                        | supports saving to EEPROM.                 |
 +------------------------+--------------------------------------------+
 
-++eoi
------
+## []{#anchor-64}++eoi
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -2394,15 +2289,14 @@ the original Prologix command set.
 |                        | corresponding to the current status of the |
 |                        | EOI feature will be returned.              |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++eoi [0|1]                                |
+| *Syntax:*              | ++eoi \[0\|1\]                             |
 +------------------------+--------------------------------------------+
 | *Comments:*            | 0 disables and 1 enables asserting of the  |
 |                        | EOI signal to indicate the last character  |
 |                        | sent.                                      |
 +------------------------+--------------------------------------------+
 
-++eor
------
+## []{#anchor-65}++eor
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | no                                         |
@@ -2441,13 +2335,12 @@ the original Prologix command set.
 |                        | port for onward transmission to the host   |
 |                        | computer.                                  |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++eor[0-9]                                 |
+| *Syntax:*              | ++eor\[0-9\]                               |
 +------------------------+--------------------------------------------+
 | *Comments:*            |                                            |
 +------------------------+--------------------------------------------+
 
-++eos
------
+## []{#anchor-66}++eos
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -2470,13 +2363,12 @@ the original Prologix command set.
 |                        | command will return the current            |
 |                        | configuration                              |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++eos [0|1|2|3]                            |
+| *Syntax:*              | ++eos \[0\|1\|2\|3\]                       |
 +------------------------+--------------------------------------------+
 | *Comments:*            | 0=CR+LF, 1=CR, 2=LF, 3=none                |
 +------------------------+--------------------------------------------+
 
-++eot_enable
-------------
+## []{#anchor-67}++eot_enable
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -2497,14 +2389,13 @@ the original Prologix command set.
 |                        | command will return the current            |
 |                        | configuration.                             |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++eot_enable [0|1]                         |
+| *Syntax:*              | ++eot_enable \[0\|1\]                      |
 +------------------------+--------------------------------------------+
 | *Comment:*             | 0 disables and 1 enables sending the EOT   |
 |                        | character to the USB output                |
 +------------------------+--------------------------------------------+
 
-++eot_char
-----------
+## []{#anchor-68}++eot_char
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -2526,16 +2417,13 @@ the original Prologix command set.
 |                        | corresponding to the ASCII character code  |
 |                        | of the current character.                  |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++eot_char [<char>]                        |
+| *Syntax:*              | ++eot_char \[\<char\>\]                    |
 +------------------------+--------------------------------------------+
-| *Comment:*             | <char> is a decimal number that is less    |
+| *Comment:*             | \<char\> is a decimal number that is less  |
 |                        | than 256                                   |
 +------------------------+--------------------------------------------+
 
-.. _eot_char-1:
-
-++eot_char
-----------
+## []{#anchor-69}++eot_char
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -2557,16 +2445,15 @@ the original Prologix command set.
 |                        | corresponding to the ASCII character code  |
 |                        | of the current character.                  |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++eot_char [<char>]                        |
+| *Syntax:*              | ++eot_char \[\<char\>\]                    |
 +------------------------+--------------------------------------------+
-| *Comment:*             | <char> is a decimal number that is less    |
+| *Comment:*             | \<char\> is a decimal number that is less  |
 |                        | than 256                                   |
 +------------------------+--------------------------------------------+
 
-.. _section-3:
+## 
 
-++flags
--------
+## []{#anchor-70}++flags
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | no                                         |
@@ -2589,8 +2476,9 @@ the original Prologix command set.
 |                        | value corresponding to its bit. To turn on |
 |                        | multiple flags, the corresponding values   |
 |                        | are added. For example to turn on both     |
-|                        | *Read^OK* and *Send^OK*, specify *++flags  |
-|                        | 6.* To turn on all flags, use *++flags 7*. |
+|                        | *Read\^OK* and *Send\^OK*, specify         |
+|                        | *++flags 6.* To turn on all flags, use     |
+|                        | *++flags 7*.                               |
 |                        |                                            |
 |                        | When turning on the *AR488-RDY* flag, it   |
 |                        | is necessary to save the setting using the |
@@ -2599,12 +2487,11 @@ the original Prologix command set.
 +------------------------+--------------------------------------------+
 | *Syntax:*              | ++flag value                               |
 +------------------------+--------------------------------------------+
-| *Comment:*             | Bit values are OR’ed (added) to enable     |
+| *Comment:*             | Bit values are OR'ed (added) to enable     |
 |                        | only the bits required.                    |
 +------------------------+--------------------------------------------+
 
-++fndl
-------
+## []{#anchor-71}++fndl
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | no                                         |
@@ -2630,7 +2517,7 @@ the original Prologix command set.
 |                        | secondary addresses will be presented as   |
 |                        | an extended address in the format pri:sec. |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++fndl addr, addr, addr….                  |
+| *Syntax:*              | ++fndl addr, addr, addr....                |
 |                        |                                            |
 |                        | ++fndl startaddr-endaddr                   |
 |                        |                                            |
@@ -2639,10 +2526,9 @@ the original Prologix command set.
 | *Comment:*             | Example oputput: 3,5:1,5:2,5:3,11,22       |
 +------------------------+--------------------------------------------+
 
-.. _section-4:
+## 
 
-++help
-------
+## []{#anchor-72}++help
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -2654,10 +2540,10 @@ the original Prologix command set.
 | *Description:*         | Returns a description of the command. The  |
 |                        | returned information is on the format:     |
 |                        |                                            |
-|                        | ++cmd: [P] Short description of command    |
+|                        | ++cmd: \[P\] Short description of command  |
 |                        |                                            |
 |                        | where ++cmd is the command for which       |
-|                        | information was requested, [P] or [C]      |
+|                        | information was requested, \[P\] or \[C\]  |
 |                        | indicate whether this is a Prologix        |
 |                        | command or an AR488 custom command, and    |
 |                        | the remaining text is the command          |
@@ -2668,14 +2554,13 @@ the original Prologix command set.
 |                        |                                            |
 |                        | Unrecognized command                       |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++help <command>                           |
+| *Syntax:*              | ++help \<command\>                         |
 +------------------------+--------------------------------------------+
-| *Comment:*             | <command> is a name of a valid command     |
+| *Comment:*             | \<command\> is a name of a valid command   |
 |                        | without the ++ prefix                      |
 +------------------------+--------------------------------------------+
 
-++id
-----
+## []{#anchor-73}++id
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | no                                         |
@@ -2689,18 +2574,18 @@ the original Prologix command set.
 |                        | name and optional serial number. This      |
 |                        | command also sets the information that can |
 |                        | be used by the interface to respond to a   |
-|                        | SCPI *\*idn?*\ which may be useful where   |
+|                        | SCPI *\*idn? *which may be useful where    |
 |                        | the instrument itself cannot provide such  |
 |                        | a response. For further information also   |
 |                        | see the *++idn* command.                   |
 +------------------------+--------------------------------------------+
 | *Syntax:*              | ++id fwver                                 |
 |                        |                                            |
-|                        | ++id name [name]                           |
+|                        | ++id name \[name\]                         |
 |                        |                                            |
-|                        | ++id serial [serialnum]                    |
+|                        | ++id serial \[serialnum\]                  |
 |                        |                                            |
-|                        | ++id verstr [version string]               |
+|                        | ++id verstr \[version string\]             |
 +------------------------+--------------------------------------------+
 | *Comment:*             | *++id name*                                |
 |                        |                                            |
@@ -2727,7 +2612,7 @@ the original Prologix command set.
 |                        | parameter, the command returns the         |
 |                        | currently configured serial number. By     |
 |                        | default no serial number is set so the     |
-|                        | command will return ‘000000000’.           |
+|                        | command will return '000000000'.           |
 |                        |                                            |
 |                        | When specified with a parameter, the       |
 |                        | command sets the serial number to the      |
@@ -2741,7 +2626,7 @@ the original Prologix command set.
 |                        | command. This may be helpful where         |
 |                        | software on the computer is expecting a    |
 |                        | specific string from a known controller,   |
-|                        | for example ‘GPIB-USB’. When no parameter  |
+|                        | for example 'GPIB-USB'. When no parameter  |
 |                        | is given, the command returns the current  |
 |                        | version string. When provided with a       |
 |                        | character string of up to 47 characters,   |
@@ -2766,59 +2651,29 @@ the original Prologix command set.
 |                        | ++id verstr                                |
 +------------------------+--------------------------------------------+
 
-++idn
------
+## []{#anchor-74}++idn
 
-+------------------------+--------------------------------------------+
-| *Prologix compatible:* | no                                         |
-+------------------------+--------------------------------------------+
-| *Enhanced:*            | n/a                                        |
-+------------------------+--------------------------------------------+
-| *Modes:*               | controller                                 |
-+------------------------+--------------------------------------------+
-| *Description:*         | This command is used to enable the         |
-|                        | facility for the interface to respond to a |
-|                        | SCPI \*idn? command. Older instruments     |
-|                        | that do not respond to SCPI commands will  |
-|                        | not return anything in response to \*idn?. |
-|                        | This feature will allow the AR488          |
-|                        | interface to respond on behalf of the      |
-|                        | instrument using parameters set with the   |
-|                        | *++id* command. When set to zero, response |
-|                        | to the SCPI *\*idn?* command is disabled   |
-|                        | and the request is passed to the           |
-|                        | instrument. When set to 1, the interface   |
-|                        | responds with the name set using the       |
-|                        | *++idn name* command. When set to 2, the   |
-|                        | instrument also appends the serial number  |
-|                        | using the format *name-99999999*.          |
-+------------------------+--------------------------------------------+
-| *Syntax:*              | ++idn[0-2]                                 |
-+------------------------+--------------------------------------------+
-| *Comment:*             |                                            |
-+------------------------+--------------------------------------------+
+  ------------------------ ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  *Prologix compatible:*   no
+  *Enhanced:*              n/a
+  *Modes:*                 controller
+  *Description:*           This command is used to enable the facility for the interface to respond to a SCPI \*idn? command. Older instruments that do not respond to SCPI commands will not return anything in response to \*idn?. This feature will allow the AR488 interface to respond on behalf of the instrument using parameters set with the *++id* command. When set to zero, response to the SCPI *\*idn?* command is disabled and the request is passed to the instrument. When set to 1, the interface responds with the name set using the *++idn name* command. When set to 2, the instrument also appends the serial number using the format *name-99999999*.
+  *Syntax:*                ++idn\[0-2\]
+  *Comment:*               
+  ------------------------ ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-++ifc
------
+## []{#anchor-75}++ifc
 
-+------------------------+--------------------------------------------+
-| *Prologix compatible:* | yes                                        |
-+------------------------+--------------------------------------------+
-| *Enhanced:*            | no                                         |
-+------------------------+--------------------------------------------+
-| *Modes:*               | controller                                 |
-+------------------------+--------------------------------------------+
-| *Description:*         | Asserts the GPIB IFC signal for 150        |
-|                        | microseconds, making the AR488 the         |
-|                        | Controller-in-Charge on the GPIB bus.      |
-+------------------------+--------------------------------------------+
-| *Syntax:*              | ++ifc                                      |
-+------------------------+--------------------------------------------+
-| *Comment:*             |                                            |
-+------------------------+--------------------------------------------+
+  ------------------------ --------------------------------------------------------------------------------------------------------------
+  *Prologix compatible:*   yes
+  *Enhanced:*              no
+  *Modes:*                 controller
+  *Description:*           Asserts the GPIB IFC signal for 150 microseconds, making the AR488 the Controller-in-Charge on the GPIB bus.
+  *Syntax:*                ++ifc
+  *Comment:*               
+  ------------------------ --------------------------------------------------------------------------------------------------------------
 
-++llo
------
+## []{#anchor-76}++llo
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -2859,14 +2714,14 @@ the original Prologix command set.
 |                        | and REN is already asserted, the command   |
 |                        | automatically takes remote control of the  |
 |                        | instrument. Most instruments will display  |
-|                        | REM or illuminate an indicatoron their     |
+|                        | REM or illuminate an indicator* *on their  |
 |                        | display or control panel to show that      |
 |                        | remote control is active and that          |
 |                        | front/rear panel controls are now          |
 |                        | disabled.                                  |
 |                        |                                            |
 |                        | If the ++llo command is issued with the    |
-|                        | ‘all’ parameter, this will send the LLO    |
+|                        | 'all' parameter, this will send the LLO    |
 |                        | signal to the bus, putting every           |
 |                        | instrument into remote control mode        |
 |                        | simultaneously. At this point, instruments |
@@ -2883,13 +2738,12 @@ the original Prologix command set.
 |                        | displayed and front/rear panel controls    |
 |                        | will be disabled.                          |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++llo [all]                                |
+| *Syntax:*              | ++llo \[all\]                              |
 +------------------------+--------------------------------------------+
 | *Comment:*             |                                            |
 +------------------------+--------------------------------------------+
 
-++loc
------
+## []{#anchor-77}++loc
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -2930,19 +2784,18 @@ the original Prologix command set.
 |                        | on the control panel on the currently      |
 |                        | addressed instrument and relinquish remote |
 |                        | control of the instrument. If issued with  |
-|                        | the ‘all’ parameter, it puts all devices   |
+|                        | the 'all' parameter, it puts all devices   |
 |                        | on the GPIB bus in local control state.    |
 |                        | The REM indicator should no longer be      |
 |                        | visible when the instrument has returned   |
 |                        | to local control state.                    |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++loc [all]                                |
+| *Syntax:*              | ++loc \[all\]                              |
 +------------------------+--------------------------------------------+
 | *Comment:*             |                                            |
 +------------------------+--------------------------------------------+
 
-++lon
------
+## []{#anchor-78}++lon
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -2961,23 +2814,22 @@ the original Prologix command set.
 |                        | currently set GPIB address. The interface  |
 |                        | can receive data in *LON* mode, but cannot |
 |                        | send data, so effectively becomes a        |
-|                        | “listen-only” device. When issued without  |
+|                        | "listen-only" device. When issued without  |
 |                        | a parameter, the command returns the       |
 |                        | current state of *LON* mode. When *LON*    |
 |                        | mode is enabled, *TON* mode is             |
 |                        | automatically disabled.                    |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++lon [0 \|1]                              |
+| *Syntax:*              | ++lon \[0 \|1\]                            |
 +------------------------+--------------------------------------------+
 | *Comment:*             | 0=disabled; 1=enabled                      |
 |                        |                                            |
 |                        | See also *++ton* and *++prom* commands.    |
 +------------------------+--------------------------------------------+
 
-.. _section-5:
+## 
 
-++macro
--------
+## []{#anchor-79}++macro
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | no                                         |
@@ -3011,15 +2863,14 @@ the original Prologix command set.
 |                        | instrument or its programming language or  |
 |                        | protocol.                                  |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++macro [1-9]                              |
+| *Syntax:*              | ++macro \[1-9\]**                          |
 +------------------------+--------------------------------------------+
 | *Comment:*             |                                            |
 +------------------------+--------------------------------------------+
 
-.. _section-6:
+## 
 
-++mode
-------
+## []{#anchor-80}++mode
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -3070,13 +2921,12 @@ the original Prologix command set.
 |                        | If the command is issued without a         |
 |                        | parameter, the current mode is returned.   |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++mode [0|1]                               |
+| *Syntax:*              | ++mode \[0\|1\]                            |
 +------------------------+--------------------------------------------+
 | *Comment:*             |                                            |
 +------------------------+--------------------------------------------+
 
-++ppoll
--------
+## []{#anchor-81}++ppoll
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | no                                         |
@@ -3095,7 +2945,7 @@ the original Prologix command set.
 |                        | to get an unambiguous response, each       |
 |                        | device should ideally be assigned a        |
 |                        | separate data line. Devices assigned to    |
-|                        | the same line are simply OR’ed. Devices    |
+|                        | the same line are simply OR'ed. Devices    |
 |                        | respond to the parallel poll by asserting  |
 |                        | the DIO line they have been assigned.      |
 |                        |                                            |
@@ -3121,38 +2971,18 @@ the original Prologix command set.
 | *Comment:*             |                                            |
 +------------------------+--------------------------------------------+
 
-++prom
-------
+## []{#anchor-82}++prom
 
-+------------------------+--------------------------------------------+
-| *Prologix compatible:* | no                                         |
-+------------------------+--------------------------------------------+
-| *Enhanced:*            | n/a                                        |
-+------------------------+--------------------------------------------+
-| *Modes:*               | device                                     |
-+------------------------+--------------------------------------------+
-| *Description:*         | Promiscuous mode allows data sent between  |
-|                        | a controller and device on the bus to be   |
-|                        | monitored. It is similar to LON mode,      |
-|                        | except that LON mode is a non-addressed    |
-|                        | mode that receives data from a *Talk-Only* |
-|                        | node and where no controller is present on |
-|                        | the GPIB bus. On the other hand *prom*     |
-|                        | mode can receive when a controller is      |
-|                        | present and addressing is used. Command    |
-|                        | bytes are ignored but the interface will   |
-|                        | receive data sent across the bus between   |
-|                        | the controller and any other device. When  |
-|                        | *prom* mode is enabled, LON and TON modes  |
-|                        | are automatically disabled.                |
-+------------------------+--------------------------------------------+
-| *Syntax:*              | ++prom [0|1]                               |
-+------------------------+--------------------------------------------+
-| *Comment:*             |                                            |
-+------------------------+--------------------------------------------+
+  ------------------------ -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  *Prologix compatible:*   no
+  *Enhanced:*              n/a
+  *Modes:*                 device
+  *Description:*           Promiscuous mode allows data sent between a controller and device on the bus to be monitored. It is similar to LON mode, except that LON mode is a non-addressed mode that receives data from a *Talk-Only* node and where no controller is present on the GPIB bus. On the other hand *prom* mode can receive when a controller is present and addressing is used. Command bytes are ignored but the interface will receive data sent across the bus between the controller and any other device. When *prom* mode is enabled, LON and TON modes are automatically disabled.
+  *Syntax:*                ++prom \[0\|1\]
+  *Comment:*               
+  ------------------------ -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-++read
-------
+## []{#anchor-83}++read
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -3178,53 +3008,40 @@ the original Prologix command set.
 |                        | Depending on the parameters passed, data   |
 |                        | can be read until:                         |
 |                        |                                            |
-|                        | | Timeout can be set using the             |
-|                        |   *++read_tmo_ms* command which specifies  |
-|                        |   the maximum permitted delay for a single |
-|                        |   character to be read. This value does    |
-|                        |   not relate to the time taken overall to  |
-|                        |   read all of the transmitted data. For    |
-|                        |   details see the description of the       |
-|                        | | *++read_tmo_ms* command.                 |
+|                        | Timeout can be set using the               |
+|                        | *++read_tmo_ms* command which specifies    |
+|                        | the maximum permitted delay for a single   |
+|                        | character to be read. This value does not  |
+|                        | relate to the time taken overall to read   |
+|                        | all of the transmitted data. For details   |
+|                        | see the description of the\                |
+|                        | *++read_tmo_ms* command.                   |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++read [eoi|<char>]                        |
+| *Syntax:*              | ++read \[eoi\|\<char\>\]                   |
 |                        |                                            |
-|                        | ++read pri [sec] [eoi|<char>]              |
+|                        | ++read pri \[sec\] \[eoi\|\<char\>\]       |
 +------------------------+--------------------------------------------+
 | *Comment:*             | *eoi* specifies that data is read until    |
 |                        | and EOI signal is detected                 |
 |                        |                                            |
-|                        | *<char>* is a decimal number corresponding |
-|                        | to the ASCII character to be used as a     |
-|                        | terminator and must be less than 256.      |
+|                        | *\<char\>* is a decimal number             |
+|                        | corresponding to the ASCII character to be |
+|                        | used as a terminator and must be less than |
+|                        | 256.                                       |
 +------------------------+--------------------------------------------+
 
-++read_tmo_ms
--------------
+## []{#anchor-84}++read_tmo_ms
 
-+------------------------+--------------------------------------------+
-| *Prologix compatible:* | yes                                        |
-+------------------------+--------------------------------------------+
-| *Enhanced:*            | no                                         |
-+------------------------+--------------------------------------------+
-| *Modes:*               | controller                                 |
-+------------------------+--------------------------------------------+
-| *Description:*         | Specifies the timeout value, in            |
-|                        | milliseconds, that is used by the ++read   |
-|                        | (and ++spoll) commands to wait for a       |
-|                        | character to be transmitted while reading  |
-|                        | data from the GPIB bus. The timeout value  |
-|                        | may be set between 0 and 32,000            |
-|                        | milliseconds (32 seconds).                 |
-+------------------------+--------------------------------------------+
-| *Syntax:*              | ++read_tmo_ms <time>                       |
-+------------------------+--------------------------------------------+
-| *Comment:*             | <time> is a decimal number between 0 and   |
-|                        | 32000 representing milliseconds            |
-+------------------------+--------------------------------------------+
+  ------------------------ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  *Prologix compatible:*   yes
+  *Enhanced:*              no
+  *Modes:*                 controller
+  *Description:*           Specifies the timeout value, in milliseconds, that is used by the ++read (and ++spoll) commands to wait for a character to be transmitted while reading data from the GPIB bus. The timeout value may be set between 0 and 32,000 milliseconds (32 seconds).
+  *Syntax:*                ++read_tmo_ms \<time\>
+  *Comment:*               \<time\> is a decimal number between 0 and 32000 representing milliseconds
+  ------------------------ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-++ren
------
+## []{#anchor-85}++ren
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | no                                         |
@@ -3253,14 +3070,13 @@ the original Prologix command set.
 |                        | returns the current status of the REN      |
 |                        | signal.                                    |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++ren [0|1]                                |
+| *Syntax:*              | ++ren \[0\|1\]                             |
 +------------------------+--------------------------------------------+
-| *Comment:*             | 0 = REN un-asserted                        |
+| *Comment:*             | 0 = REN un-asserted\                       |
 |                        | 1 = REN asserted                           |
 +------------------------+--------------------------------------------+
 
-++repeat
---------
+## []{#anchor-86}++repeat
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | no                                         |
@@ -3299,26 +3115,18 @@ the original Prologix command set.
 |                        | *cmdstring* is the command to execute      |
 +------------------------+--------------------------------------------+
 
-++rst
------
+## []{#anchor-87}++rst
 
-+------------------------+--------------------------------------------+
-| *Prologix compatible:* | yes                                        |
-+------------------------+--------------------------------------------+
-| *Enhanced:*            | no                                         |
-+------------------------+--------------------------------------------+
-| *Modes:*               | controller, device                         |
-+------------------------+--------------------------------------------+
-| *Description:*         | Performs a reset of the controller.        |
-+------------------------+--------------------------------------------+
-| *Syntax:*              | ++rst                                      |
-+------------------------+--------------------------------------------+
-| *Comment:*             | Reset may fail and hang the board under    |
-|                        | certain circumstances. These include:      |
-+------------------------+--------------------------------------------+
+  ------------------------ -------------------------------------------------------------------------------
+  *Prologix compatible:*   yes
+  *Enhanced:*              no
+  *Modes:*                 controller, device
+  *Description:*           Performs a reset of the controller.
+  *Syntax:*                ++rst
+  *Comment:*               Reset may fail and hang the board under certain circumstances. These include:
+  ------------------------ -------------------------------------------------------------------------------
 
-++savecfg
----------
+## []{#anchor-88}++savecfg
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | no                                         |
@@ -3340,8 +3148,8 @@ the original Prologix command set.
 |                        | of 100,000 writes. In order to minimize    |
 |                        | writes and preserve the longevity of the   |
 |                        | EEPROM memory, the AR488 does not write    |
-|                        | configuration parameters to EEPROM “on the |
-|                        | fly” every time they are changed. Instead, |
+|                        | configuration parameters to EEPROM "on the |
+|                        | fly" every time they are changed. Instead, |
 |                        | issuing the *++savecfg* command saves a    |
 |                        | snapshot of the complete and current       |
 |                        | configuration.                             |
@@ -3372,8 +3180,7 @@ the original Prologix command set.
 | *Comment:*             |                                            |
 +------------------------+--------------------------------------------+
 
-++send
-------
+## []{#anchor-89}++send
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | no                                         |
@@ -3389,16 +3196,16 @@ the original Prologix command set.
 |                        |                                            |
 |                        | Ordinarily one might send:                 |
 |                        |                                            |
-|                        | [++unt]                                    |
+|                        | \[++unt\]                                  |
 |                        |                                            |
-|                        | [++unl]                                    |
+|                        | \[++unl\]                                  |
 |                        |                                            |
 |                        | ++addr pri,sec                             |
 |                        |                                            |
 |                        | some_data                                  |
 |                        |                                            |
 |                        | This command combines that sequence into a |
-|                        | single command. In addition *++auto*\ is   |
+|                        | single command. In addition *++auto *is    |
 |                        | set to 1, then a read will be              |
 |                        | automatically performed after the data is  |
 |                        | sent to retrieve the response. In this     |
@@ -3406,14 +3213,13 @@ the original Prologix command set.
 |                        | read) can be performed using just one      |
 |                        | command.                                   |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++send pri [sec] data                      |
+| *Syntax:*              | ++send pri \[sec\] data                    |
 +------------------------+--------------------------------------------+
 | *Comment:*             | Addresses and data can be separated by a   |
 |                        | comma, space or tab                        |
 +------------------------+--------------------------------------------+
 
-++spoll
--------
+## []{#anchor-90}++spoll
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -3427,7 +3233,9 @@ the original Prologix command set.
 |                        | serial poll of the currently addressed     |
 |                        | instrument. If a GPIB address is           |
 |                        | specified, then a serial                   |
-|                        | p\ **+**\ **+srq**                         |
+|                        | p**+**[]{#anch                             |
+|                        | or-91}[]{#anchor-92}[]{#anchor-93}[]{#anch |
+|                        | or-94}[]{#anchor-95}[]{#anchor-96}**+srq** |
 |                        |                                            |
 |                        | oll of the instrument at the specified     |
 |                        | address is performed. The command returns  |
@@ -3466,39 +3274,30 @@ the original Prologix command set.
 |                        | that raised the request are automatically  |
 |                        | returned in the format above.              |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++spoll [<PAD>|all|<PAD1> <PAD2>           |
-|                        | <PAD3>...]                                 |
+| *Syntax:*              | ++spoll \[\<PAD\>\|all\|\<PAD1\> \<PAD2\>  |
+|                        | \<PAD3\>\...\]                             |
 +------------------------+--------------------------------------------+
-| *Comment:*             | | <PAD> and <PADx> are the primary GPIB    |
-|                        |   addresses.                               |
-|                        | | *all* specifies that all instruments     |
-|                        |   should be polled.                        |
+| *Comment:*             | \<PAD\> and \<PADx\> are the primary GPIB  |
+|                        | addresses.\                                |
+|                        | *all* specifies that all instruments       |
+|                        | should be polled.                          |
 |                        |                                            |
 |                        | See also the *++allspoll* and *++srqauto*  |
 |                        | commands.                                  |
 +------------------------+--------------------------------------------+
 
-++srq
------
+## []{#anchor-97}++srq
 
-+------------------------+--------------------------------------------+
-| *Prologix compatible:* | yes                                        |
-+------------------------+--------------------------------------------+
-| *Enhanced:*            | no                                         |
-+------------------------+--------------------------------------------+
-| *Modes:*               | controller                                 |
-+------------------------+--------------------------------------------+
-| *Description:*         | Returns the present status of the SRQ      |
-|                        | signal line. It returns 0 if SRQ is not    |
-|                        | asserted and 1 if SRQ is asserted.         |
-+------------------------+--------------------------------------------+
-| *Syntax:*              | ++srq                                      |
-+------------------------+--------------------------------------------+
-| *Comment:*             |                                            |
-+------------------------+--------------------------------------------+
+  ------------------------ ------------------------------------------------------------------------------------------------------------------
+  *Prologix compatible:*   yes
+  *Enhanced:*              no
+  *Modes:*                 controller
+  *Description:*           Returns the present status of the SRQ signal line. It returns 0 if SRQ is not asserted and 1 if SRQ is asserted.
+  *Syntax:*                ++srq
+  *Comment:*               
+  ------------------------ ------------------------------------------------------------------------------------------------------------------
 
-++srqauto
----------
+## []{#anchor-98}++srqauto
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | no                                         |
@@ -3554,13 +3353,12 @@ the original Prologix command set.
 |                        | automatically executed (default) and 1 if  |
 |                        | a serial poll is automatically executed.   |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++srqauto [0|1]                            |
+| *Syntax:*              | ++srqauto \[0\|1\]                         |
 +------------------------+--------------------------------------------+
 | *Comment:*             | 0=disabled, 1=enabled                      |
 +------------------------+--------------------------------------------+
 
-++status
---------
+## []{#anchor-99}++status
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -3592,39 +3390,24 @@ the original Prologix command set.
 |                        | value of 65 might be used in the event of  |
 |                        | the error occurring.                       |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++status [byte]                            |
+| *Syntax:*              | ++status \[byte\]                          |
 +------------------------+--------------------------------------------+
-| *Comment:*             | [byte] is a decimal number between 0 and   |
+| *Comment:*             | \[byte\] is a decimal number between 0 and |
 |                        | 255.                                       |
 +------------------------+--------------------------------------------+
 
-++tct
------
+## []{#anchor-100}++tct
 
-+------------------------+--------------------------------------------+
-| *Prologix compatible:* | no                                         |
-+------------------------+--------------------------------------------+
-| *Enhanced:*            | n/a                                        |
-+------------------------+--------------------------------------------+
-| *Modes:*               | controller                                 |
-+------------------------+--------------------------------------------+
-| *Description:*         | The *++tct* command sends a command to     |
-|                        | another device on the GPIB bus to signal   |
-|                        | it to become the controller and take       |
-|                        | control of the bus. To send the command,   |
-|                        | the sender must be in controller mode. On  |
-|                        | successfully transmitting the command, the |
-|                        | interface then relinquishes control and    |
-|                        | switches into device mode.                 |
-+------------------------+--------------------------------------------+
-| *Syntax:*              | ++tct ADDR                                 |
-+------------------------+--------------------------------------------+
-| *Comment:*             | *ADDR* is the GPIB address of the device   |
-|                        | being requested to take control            |
-+------------------------+--------------------------------------------+
+  ------------------------ -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  *Prologix compatible:*   no
+  *Enhanced:*              n/a
+  *Modes:*                 controller
+  *Description:*           The *++tct* command sends a command to another device on the GPIB bus to signal it to become the controller and take control of the bus. To send the command, the sender must be in controller mode. On successfully transmitting the command, the interface then relinquishes control and switches into device mode.
+  *Syntax:*                ++tct ADDR
+  *Comment:*               *ADDR* is the GPIB address of the device being requested to take control
+  ------------------------ -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-++ton
------
+## []{#anchor-101}++ton
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | no                                         |
@@ -3644,11 +3427,11 @@ the original Prologix command set.
 |                        | (LON) mode can listen to and accept the    |
 |                        | transmitted data. In TON mode, the         |
 |                        | interface can send, but not receive, so    |
-|                        | effectively becomes a “talk-only” device.  |
+|                        | effectively becomes a "talk-only" device.  |
 |                        |                                            |
 |                        | There are two talk modes:                  |
 |                        |                                            |
-|                        | *Unbuffered* mode (1) – this is the        |
+|                        | *Unbuffered* mode (1) -- this is the       |
 |                        | default. In this mode, characters sent to  |
 |                        | the serial port are immediately            |
 |                        | transmitted to the GPIB bus. No attempt is |
@@ -3658,13 +3441,13 @@ the original Prologix command set.
 |                        | the interface or pressing the *reset*      |
 |                        | button) to exit the mode.                  |
 |                        |                                            |
-|                        | *Buffered* mode (2) – in this mode, data   |
+|                        | *Buffered* mode (2) -- in this mode, data  |
 |                        | sent over USB is buffered in the same way  |
 |                        | as in controller mode. Special characters  |
 |                        | such as carriage return (CR, hex 0D,       |
-|                        | decimal 13), newline [a.k.a linefeed] (LF, |
-|                        | hex 0A, decimal 10), escape (hex 1B,       |
-|                        | decimal 27) and ‘+’ (hex 2B, decimal 43)   |
+|                        | decimal 13), newline \[a.k.a linefeed\]    |
+|                        | (LF, hex 0A, decimal 10), escape (hex 1B,  |
+|                        | decimal 27) and '+' (hex 2B, decimal 43)   |
 |                        | all need to be escaped with the Escape     |
 |                        | character hex 0x1B. In this mode, the      |
 |                        | interface will continue to parse the       |
@@ -3676,14 +3459,13 @@ the original Prologix command set.
 |                        | command returns the current state of the   |
 |                        | *ton* mode.                                |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++ton [0|1|2]                              |
+| *Syntax:*              | ++ton \[0\|1\|2\]                          |
 +------------------------+--------------------------------------------+
 | *Comment:*             | 0=disabled; 1=enabled, unbuffered;         |
-|                        | 2=enabled, buffered;                       |
+|                        | 2=enabled, buffered;**                     |
 +------------------------+--------------------------------------------+
 
-++trg
------
+## []{#anchor-102}++trg
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -3704,15 +3486,14 @@ the original Prologix command set.
 |                        | triggered and the result read with         |
 |                        | *++read*.                                  |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++trg [pad1 … pad15]                       |
+| *Syntax:*              | ++trg \[pad1 ... pad15\]                   |
 +------------------------+--------------------------------------------+
 | *Comment:*             | Padx is an optional primary address.       |
 |                        |                                            |
 |                        | See also *++trg* and *++read.*             |
 +------------------------+--------------------------------------------+
 
-++ver
------
+## []{#anchor-103}++ver
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | yes                                        |
@@ -3725,7 +3506,7 @@ the original Prologix command set.
 |                        | If the version string has been customized  |
 |                        | with *++id verstr*, then *++ver* will      |
 |                        | display the custom version string. Issuing |
-|                        | the command with the parameter ‘real’ will |
+|                        | the command with the parameter 'real' will |
 |                        | always display the default AR488 version   |
 |                        | string. The custom version string is saved |
 |                        | when using the *++savecfg* command.        |
@@ -3735,17 +3516,16 @@ the original Prologix command set.
 |                        | version string in order to identify the    |
 |                        | interface.                                 |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++ver [real]                               |
+| *Syntax:*              | ++ver \[real\]                             |
 +------------------------+--------------------------------------------+
-| *Comment:*             | The [real] keyword refers to the default   |
+| *Comment:*             | The \[real\] keyword refers to the default |
 |                        | version string.                            |
 |                        |                                            |
 |                        | See also the *++id*, *++ver* and           |
 |                        | *++savecfg* commands.                      |
 +------------------------+--------------------------------------------+
 
-++verbose
----------
+## []{#anchor-104}++verbose
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | no                                         |
@@ -3760,7 +3540,7 @@ the original Prologix command set.
 |                        | is issued, it will turn verbose mode on.   |
 |                        | When verbose mode is on, additional        |
 |                        | information will be provided in response   |
-|                        | to some commands. A command prompt ‘>’     |
+|                        | to some commands. A command prompt '\>'    |
 |                        | will also appear and provide confirmation  |
 |                        | that a command has been completed.         |
 |                        |                                            |
@@ -3773,8 +3553,7 @@ the original Prologix command set.
 |                        | each time it is issued.                    |
 +------------------------+--------------------------------------------+
 
-++xdiag
--------
+## []{#anchor-105}++xdiag
 
 +------------------------+--------------------------------------------+
 | *Prologix compatible:* | no                                         |
@@ -3820,7 +3599,7 @@ the original Prologix command set.
 |                        | when inactive (un-asserted), LOW (0) when  |
 |                        | active (asserted).                         |
 +------------------------+--------------------------------------------+
-| *Syntax:*              | ++xdiag mode [value]                       |
+| *Syntax:*              | ++xdiag mode \[value\]                     |
 |                        |                                            |
 |                        | ++xdiag pins                               |
 +------------------------+--------------------------------------------+
@@ -3833,85 +3612,80 @@ the original Prologix command set.
 +------------------------+--------------------------------------------+
 |                        |                                            |
 +------------------------+--------------------------------------------+
-| **Data bits:**         | Output:                                    |
+| ***Data bits:***       | Output:                                    |
 |                        |                                            |
-|                        | DIO1: [14] 1                               |
+|                        | DIO1: \[14\] 1                             |
 |                        |                                            |
-|                        | DIO2: [15] 1                               |
+|                        | DIO2: \[15\] 1                             |
 |                        |                                            |
-|                        | DIO3: [16] 1                               |
+|                        | DIO3: \[16\] 1                             |
 |                        |                                            |
-|                        | DIO4: [17] 1                               |
+|                        | DIO4: \[17\] 1                             |
 |                        |                                            |
-|                        | DIO5: [18] 1                               |
+|                        | DIO5: \[18\] 1                             |
 |                        |                                            |
-|                        | DIO6: [19] 1                               |
+|                        | DIO6: \[19\] 1                             |
 |                        |                                            |
-|                        | DIO7: [4] 1                                |
+|                        | DIO7: \[4\] 1                              |
 |                        |                                            |
-|                        | DIO8: [5] 1                                |
+|                        | DIO8: \[5\] 1                              |
 +------------------------+--------------------------------------------+
-| **Command signals:**   | **Output**\ *\ *\ **:**                    |
+| ***Command signals:*** | ***Output****:***                          |
 |                        |                                            |
-|                        | IFC: [8] 1                                 |
+|                        | IFC: \[8\] 1                               |
 |                        |                                            |
-|                        | NDAC: [9] 0                                |
+|                        | NDAC: \[9\] 0                              |
 |                        |                                            |
-|                        | NRFD: [10] 0                               |
+|                        | NRFD: \[10\] 0                             |
 |                        |                                            |
-|                        | DAV: [11] 1                                |
+|                        | DAV: \[11\] 1                              |
 |                        |                                            |
-|                        | EOI: [12] 1                                |
+|                        | EOI: \[12\] 1                              |
 |                        |                                            |
-|                        | SRQ: [2] 1                                 |
+|                        | SRQ: \[2\] 1                               |
 |                        |                                            |
-|                        | REN: [3] 0                                 |
+|                        | REN: \[3\] 0                               |
 |                        |                                            |
-|                        | ATN: [7] 1                                 |
+|                        | ATN: \[7\] 1                               |
 +------------------------+--------------------------------------------+
 
-Appendices
-==========
+# []{#anchor-106}Appendices
 
-.. _section-7:
+# 
 
-A – ATMega328P Boards
----------------------
+## []{#anchor-107}A -- ATMega328P Boards
 
-Connection details for UNO and Nano
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-108}Connection details for UNO and Nano
 
 These connections are required between the Arduino UNO/Nano and the
 IEEE488 connector:
 
-========== ================= ===========
-*Arduino:* *GPIB connector:* *Function:*
-D2         10                SRQ
-D3         17                REN
-D7         11                ATN
-D8         9                 IFC
-D9         8                 NDAC
-D10        7                 NRFD
-D11        6                 DAV
-D12        5                 EOI
-A0         1                 DIO1
-A1         2                 DIO2
-A2         3                 DIO3
-A3         4                 DIO4
-A4         13                DIO5
-A5         14                DIO6
-D4         15                DIO7
-D5         16                DIO8
-GND        12                Shield
-GND        18,19,20,21,22,23 GND
-========== ================= ===========
+  ------------ ------------------- -------------
+  *Arduino:*   *GPIB connector:*   *Function:*
+  D2           10                  SRQ
+  D3           17                  REN
+  D7           11                  ATN
+  D8           9                   IFC
+  D9           8                   NDAC
+  D10          7                   NRFD
+  D11          6                   DAV
+  D12          5                   EOI
+  A0           1                   DIO1
+  A1           2                   DIO2
+  A2           3                   DIO3
+  A3           4                   DIO4
+  A4           13                  DIO5
+  A5           14                  DIO6
+  D4           15                  DIO7
+  D5           16                  DIO8
+  GND          12                  Shield
+  GND          18,19,20,21,22,23   GND
+  ------------ ------------------- -------------
 
-Wiring diagram
-~~~~~~~~~~~~~~
+### []{#anchor-109}Wiring diagram
 
-.. image:: /Pictures/100000010000023A0000036DBC39DA94AACB0FAB.png
-   :width: 14.529cm
-   :height: 22.357cm
+![](/Pictures/100000010000023A0000036DBC39DA94AACB0FAB.png){width="14.529cm"
+height="22.357cm"}
 
 When using SN75160 and SN75161 integrated circuits, the connections
 involve at least one extra pin to control the talk-enable (TE) pin of
@@ -3923,40 +3697,37 @@ On the SN75161, the DC pin can be connected to a separate GPIO pin on
 the Uno/Nano, or, since ren is always asserted when in controller mode
 and de-asserted in device mode, to the GPIO pin used for the REN signal.
 
-.. image:: /Pictures/100000010000026C000003267442B1DEA224E24C.png
-   :width: 15.886cm
-   :height: 20.653cm
+![](/Pictures/100000010000026C000003267442B1DEA224E24C.png){width="15.886cm"
+height="20.653cm"}
 
-B - ATMega2560 boards
----------------------
+## []{#anchor-110}B - ATMega2560 boards
 
-Connection details for layout AR488_MEGA2560_D
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-111}Connection details for layout AR488_MEGA2560_D
 
 The pinout for the Mega 2560 default layout AR488_MEGA2560_D is as
 follows:
 
-========== ================= ===========
-*Arduino:* *GPIB connector:* *Function:*
-D6         7                 NRFD
-D7         6                 DAV
-D8         5                 EOI
-D9         17                REN
-D10        10                SRQ
-D11        11                ATN
-D16        8                 NDAC
-D17        9                 IFC
-A0         1                 DIO1
-A1         2                 DIO2
-A2         3                 DIO3
-A3         4                 DIO4
-A4         13                DIO5
-A5         14                DIO6
-A6         15                DIO7
-A7         16                DIO8
-GND        12                Shield
-GND        18,19,20,21,22,23 GND
-========== ================= ===========
+  ------------ ------------------- -------------
+  *Arduino:*   *GPIB connector:*   *Function:*
+  D6           7                   NRFD
+  D7           6                   DAV
+  D8           5                   EOI
+  D9           17                  REN
+  D10          10                  SRQ
+  D11          11                  ATN
+  D16          8                   NDAC
+  D17          9                   IFC
+  A0           1                   DIO1
+  A1           2                   DIO2
+  A2           3                   DIO3
+  A3           4                   DIO4
+  A4           13                  DIO5
+  A5           14                  DIO6
+  A6           15                  DIO7
+  A7           16                  DIO8
+  GND          12                  Shield
+  GND          18,19,20,21,22,23   GND
+  ------------ ------------------- -------------
 
 The layout on the Mega was chosen so as to leave pins A8-A15 and the two
 rows of pins at the top of the board free for expansion including for
@@ -3969,120 +3740,110 @@ will be enabled for serial communication and will no longer function as
 GPIB control signals. In addition to the default serial port (RX0 and
 TX0), Serial1 and Serial3 are still available for expansion if required.
 These two pins were chosen for GPIB signals as they belong to port H
-along with pins 6 – 9.
+along with pins 6 -- 9.
 
-Connection details for layout AR488_MEGA2560_E1
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-112}Connection details for layout AR488_MEGA2560_E1
 
 The pinout on the Mega 2560 layout AR488_MEGA2560_E1 is as follows:
 
-========== ================= ===========
-*Arduino:* *GPIB connector:* *Function:*
-D44        7                 NRFD
-D42        6                 DAV
-D40        5                 EOI
-D38        17                REN
-D50        10                SRQ
-D52        11                ATN
-D46        8                 NDAC
-D48        9                 IFC
-D30        1                 DIO1
-D32        2                 DIO2
-D34        3                 DIO3
-D36        4                 DIO4
-D22        13                DIO5
-D24        14                DIO6
-D26        15                DIO7
-D28        16                DIO8
-GND        12                Shield
-GND        18,19,20,21,22,23 GND
-========== ================= ===========
+  ------------ ------------------- -------------
+  *Arduino:*   *GPIB connector:*   *Function:*
+  D44          7                   NRFD
+  D42          6                   DAV
+  D40          5                   EOI
+  D38          17                  REN
+  D50          10                  SRQ
+  D52          11                  ATN
+  D46          8                   NDAC
+  D48          9                   IFC
+  D30          1                   DIO1
+  D32          2                   DIO2
+  D34          3                   DIO3
+  D36          4                   DIO4
+  D22          13                  DIO5
+  D24          14                  DIO6
+  D26          15                  DIO7
+  D28          16                  DIO8
+  GND          12                  Shield
+  GND          18,19,20,21,22,23   GND
+  ------------ ------------------- -------------
 
 This layout was chosen to use the inside (even numbered) row of the end
 connector on the Mega2560, leaving remaining pins available for other
 purposes including shields.
 
-Connection details for layout AR488_MEGA2560_E2
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-113}Connection details for layout AR488_MEGA2560_E2
 
 The pinout on the Mega 2560 layout AR488_MEGA2560_E2 is as follows:
 
-========== ================= ===========
-*Arduino:* *GPIB connector:* *Function:*
-D45        7                 NRFD
-D43        6                 DAV
-D41        5                 EOI
-D39        17                REN
-D51        10                SRQ
-D53        11                ATN
-D47        8                 NDAC
-D49        9                 IFC
-D31        1                 DIO1
-D33        2                 DIO2
-D35        3                 DIO3
-D37        4                 DIO4
-D23        13                DIO5
-D25        14                DIO6
-D27        15                DIO7
-D29        16                DIO8
-GND        12                Shield
-GND        18,19,20,21,22,23 GND
-========== ================= ===========
+  ------------ ------------------- -------------
+  *Arduino:*   *GPIB connector:*   *Function:*
+  D45          7                   NRFD
+  D43          6                   DAV
+  D41          5                   EOI
+  D39          17                  REN
+  D51          10                  SRQ
+  D53          11                  ATN
+  D47          8                   NDAC
+  D49          9                   IFC
+  D31          1                   DIO1
+  D33          2                   DIO2
+  D35          3                   DIO3
+  D37          4                   DIO4
+  D23          13                  DIO5
+  D25          14                  DIO6
+  D27          15                  DIO7
+  D29          16                  DIO8
+  GND          12                  Shield
+  GND          18,19,20,21,22,23   GND
+  ------------ ------------------- -------------
 
 This layout was designed to use only the even outer (odd numbered) row
 of the end connector on the Mega2560, leaving remaining pins available
 for other purposes including shields.
 
-Wiring Diagram for layout - AR488_MEGA2560_D
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-114}Wiring Diagram for layout - AR488_MEGA2560_D
 
-.. image:: /Pictures/100000010000025300000349CBFF24ACD50CC214.png
-   :width: 16.602cm
-   :height: 23.47cm
+![](/Pictures/100000010000025300000349CBFF24ACD50CC214.png){width="16.602cm"
+height="23.47cm"}
 
-Wiring Diagram - layout E1 and E2
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-115}Wiring Diagram - layout E1 and E2
 
-.. image:: /Pictures/10000001000001D800000406DFA77CC468F79369.png
-   :width: 12.215cm
-   :height: 25.068cm
+![](/Pictures/10000001000001D800000406DFA77CC468F79369.png){width="12.215cm"
+height="25.068cm"}
 
-E1/E2 layout end header pinout details
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-116}E1/E2 layout end header pinout details
 
-.. image:: /Pictures/10000001000002360000010D64FA997B2368BC5B.png
-   :width: 17cm
-   :height: 8.077cm
+![](/Pictures/10000001000002360000010D64FA997B2368BC5B.png){width="17cm"
+height="8.077cm"}
 
-C – ATMega32u4 Boards
----------------------
+## []{#anchor-117}C -- ATMega32u4 Boards
 
-Connection details for the Arduino Micro
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-118}Connection details for the Arduino Micro
 
 The pinout on the Arduino Micro is as follows:
 
-========== ================= ===========
-*Arduino:* *GPIB connector:* *Function:*
-A2         7                 NRFD
-A1         6                 DAV
-A0         5                 EOI
-D5         17                REN
-D7         10                SRQ
-D2         11                ATN
-A3         8                 NDAC
-D4         9                 IFC
-D3         1                 DIO1
-D15        2                 DIO2
-D16        3                 DIO3
-D14        4                 DIO4
-D8         13                DIO5
-D9         14                DIO6
-D10        15                DIO7
-D6         16                DIO8
-GND        12                Shield
-GND        18,19,20,21,22,23 GND
-========== ================= ===========
+  ------------ ------------------- -------------
+  *Arduino:*   *GPIB connector:*   *Function:*
+  A2           7                   NRFD
+  A1           6                   DAV
+  A0           5                   EOI
+  D5           17                  REN
+  D7           10                  SRQ
+  D2           11                  ATN
+  A3           8                   NDAC
+  D4           9                   IFC
+  D3           1                   DIO1
+  D15          2                   DIO2
+  D16          3                   DIO3
+  D14          4                   DIO4
+  D8           13                  DIO5
+  D9           14                  DIO6
+  D10          15                  DIO7
+  D6           16                  DIO8
+  GND          12                  Shield
+  GND          18,19,20,21,22,23   GND
+  ------------ ------------------- -------------
 
 The Micro is a very small form factor board that can be adapted to fit
 on the back of an IEEE488 connector. The design was contributed by
@@ -4094,32 +3855,31 @@ Adapter boards are available from:
 
 https://oshpark.com/shared_projects/HrS1HLSE
 
-Connection details for the Leonardo R3
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-119}Connection details for the Leonardo R3
 
-The pinout on the Arduino Leonardo R3 is as follows:
+[]{#anchor-120}The pinout on the Arduino Leonardo R3 is as follows:
 
-========== ================= ===========
-*Arduino:* *GPIB connector:* *Function:*
-D2         10                SRQ
-D3         17                REN
-D7         11                ATN
-D8         9                 IFC
-D9         8                 NDAC
-D10        7                 NRFD
-D11        6                 DAV
-D12        5                 EOI
-A0         1                 DIO1
-A1         2                 DIO2
-A2         3                 DIO3
-A3         4                 DIO4
-A4         13                DIO5
-A5         14                DIO6
-D4         15                DIO7
-D5         16                DIO8
-GND        12                Shield
-GND        18,19,20,21,22,23 GND
-========== ================= ===========
+  ------------ ------------------- -------------
+  *Arduino:*   *GPIB connector:*   *Function:*
+  D2           10                  SRQ
+  D3           17                  REN
+  D7           11                  ATN
+  D8           9                   IFC
+  D9           8                   NDAC
+  D10          7                   NRFD
+  D11          6                   DAV
+  D12          5                   EOI
+  A0           1                   DIO1
+  A1           2                   DIO2
+  A2           3                   DIO3
+  A3           4                   DIO4
+  A4           13                  DIO5
+  A5           14                  DIO6
+  D4           15                  DIO7
+  D5           16                  DIO8
+  GND          12                  Shield
+  GND          18,19,20,21,22,23   GND
+  ------------ ------------------- -------------
 
 The Leonardo R3 has a similar form factor to the Uno. It uses a 32u4 MCU
 rather than a 328P and has a micro USB port. Instead of a CH340 UART it
@@ -4129,113 +3889,86 @@ USB. It requires no modification to work with KE5FX tools. The board pin
 layout is the same as the Uno and the above pinout is identical to the
 Uno.
 
-D – Raspberry RP2040/RP2350 Boards
-----------------------------------
+## []{#anchor-121}D -- Raspberry RP2040/RP2350 Boards
 
-Connection details for Raspberry Pico/W layout RAS_PICO_L1
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-122}Connection details for Raspberry Pico/W layout RAS_PICO_L1
 
 The pinout on the Pico layout RAS_PICO_L1 is as follows:
 
-======= ================= ===========
-*Pico:* *GPIB connector:* *Function:*
-GP14    9                 IFC
-GP15    8                 NDAC
-GP16    7                 NRFD
-GP17    6                 DAV
-GP18    5                 EOI
-GP19    17                REN
-GP20    10                SRQ
-GP21    11                ATN
-GP6     1                 DIO1
-GP7     2                 DIO2
-GP8     3                 DIO3
-GP9     4                 DIO4
-GP10    13                DIO5
-GP11    14                DIO6
-GP12    15                DIO7
-GP13    16                DIO8
-GND     12                Shield
-GND     18,19,20,21,22,23 GND
-======= ================= ===========
+  --------- ------------------- -------------
+  *Pico:*   *GPIB connector:*   *Function:*
+  GP14      9                   IFC
+  GP15      8                   NDAC
+  GP16      7                   NRFD
+  GP17      6                   DAV
+  GP18      5                   EOI
+  GP19      17                  REN
+  GP20      10                  SRQ
+  GP21      11                  ATN
+  GP6       1                   DIO1
+  GP7       2                   DIO2
+  GP8       3                   DIO3
+  GP9       4                   DIO4
+  GP10      13                  DIO5
+  GP11      14                  DIO6
+  GP12      15                  DIO7
+  GP13      16                  DIO8
+  GND       12                  Shield
+  GND       18,19,20,21,22,23   GND
+  --------- ------------------- -------------
 
-.. image:: /Pictures/100000010000031A000001EBD2B372EC231F96EF.png
-   :width: 17.944cm
-   :height: 11.097cm
+![](/Pictures/100000010000031A000001EBD2B372EC231F96EF.png){width="17.944cm"
+height="11.097cm"}
 
-Connection details for Raspberry Pico/W layout RAS_PICO_L2
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-123}Connection details for Raspberry Pico/W layout RAS_PICO_L2
 
 The pinout on the Pico layout RAS_PICO_L2 is as follows:
 
-======= ================= ===========
-*Pico:* *GPIB connector:* *Function:*
-GP6     9                 IFC
-GP7     8                 NDAC
-GP8     7                 NRFD
-GP9     6                 DAV
-GP10    5                 EOI
-GP11    17                REN
-GP12    10                SRQ
-GP13    11                ATN
-GP14    1                 DIO1
-GP15    2                 DIO2
-GP16    3                 DIO3
-GP17    4                 DIO4
-GP18    13                DIO5
-GP19    14                DIO6
-GP20    15                DIO7
-GP21    16                DIO8
-GND     12                Shield
-GND     18,19,20,21,22,23 GND
-======= ================= ===========
+  --------- ------------------- -------------
+  *Pico:*   *GPIB connector:*   *Function:*
+  GP6       9                   IFC
+  GP7       8                   NDAC
+  GP8       7                   NRFD
+  GP9       6                   DAV
+  GP10      5                   EOI
+  GP11      17                  REN
+  GP12      10                  SRQ
+  GP13      11                  ATN
+  GP14      1                   DIO1
+  GP15      2                   DIO2
+  GP16      3                   DIO3
+  GP17      4                   DIO4
+  GP18      13                  DIO5
+  GP19      14                  DIO6
+  GP20      15                  DIO7
+  GP21      16                  DIO8
+  GND       12                  Shield
+  GND       18,19,20,21,22,23   GND
+  --------- ------------------- -------------
 
-.. image:: /Pictures/100000010000031A000001EB76BF0BA52DFF98F6.png
-   :width: 17.944cm
-   :height: 11.097cm
+![](/Pictures/100000010000031A000001EB76BF0BA52DFF98F6.png){width="17.944cm"
+height="11.097cm"}
 
-E – Espressif ESP32 Boards
---------------------------
+## []{#anchor-124}E -- Espressif ESP32 Boards
 
-Connection details for layout ESP32_DEVKIT1_WROOM_32
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-125}Connection details for layout ESP32_DEVKIT1_WROOM_32
 
 This is the connection detail the ESP32 WROOM Devkit 1 board.
 
-Connection details for layout ESP32_TTGO_T8_161
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-126}Connection details for layout ESP32_TTGO_T8_161
 
-Connection details for layout ESP32_LOLIN32_161
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-127}Connection details for layout ESP32_LOLIN32_161
 
-Connection details for layout ESP32_ESP32DEV
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-128}Connection details for layout ESP32_ESP32DEV
 
-F – MightyCore ATMega644/1284 Boards
-------------------------------------
+## []{#anchor-129}F -- MightyCore ATMega644/1284 Boards
 
-Connection Details for layout AR488_MEGA644P_MCGRAW
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### []{#anchor-130}Connection Details for layout AR488_MEGA644P_MCGRAW
 
 This is the connection detail for the MightyCore ATMega644 and
 ATMega1284 boards used for layout AR488_MEGA644P_MCGRAW.
 
-G - IEEE Connector Pinout
--------------------------
+## []{#anchor-131}G - IEEE Connector Pinout
 
-.. image:: /Pictures/10000000000001C70000012D993BA4E0F7BB0063.png
-   :width: 12.037cm
-   :height: 7.962cm
-
-.. |image1| image:: /Pictures/10000000000003E9000003E9E97A43BBC0C067AA.png
-   :width: 4.761cm
-   :height: 4.191cm
-.. |image2| image:: /Pictures/100000000000007400000069F92BE8EE69051CE2.jpg
-   :width: 3.073cm
-   :height: 2.794cm
-.. |image3| image:: /Pictures/1000000100000185000001453D0409351003642B.png
-   :width: 5.502cm
-   :height: 4.597cm
-.. |image4| image:: /Pictures/10000001000000EB000000CDFD3109BC3C75DC28.png
-   :width: 2.718cm
-   :height: 2.362cm
+![](/Pictures/10000000000001C70000012D993BA4E0F7BB0063.png){width="12.037cm"
+height="7.962cm"}
