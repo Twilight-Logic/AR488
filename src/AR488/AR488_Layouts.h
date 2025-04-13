@@ -6,7 +6,7 @@
 #include "AR488_Config.h"
 
 
-/***** AR488_Hardware.h, ver. 0.53.02, 04/04/2025 *****/
+/***** AR488_Hardware.h, ver. 0.53.04, 13/04/2025 *****/
 
 
 ///=================================///
@@ -312,6 +312,38 @@ uint8_t getMcpIntAReg();
 /***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
 /***** PANDUINO/MIGHTYCORE MCGRAW LAYOUT DEFINITION *****/
 /********************************************************/
+
+
+
+/******************************************/
+/***** POLOLU A-STAR 328PB ALT LAYOUT *****/
+/***** vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *****/
+#ifdef AR488_328PB_ALT
+
+/***** NOTE: UNO/NANO pinout *****/
+#define DIO1_PIN  A0  /* GPIB 1  : PORTC bit 0 */
+#define DIO2_PIN  A1  /* GPIB 2  : PORTC bit 1 */
+#define DIO3_PIN  A2  /* GPIB 3  : PORTC bit 2 */
+#define DIO4_PIN  A3  /* GPIB 4  : PORTC bit 3 */
+#define DIO5_PIN  A4  /* GPIB 13 : PORTC bit 4 */
+#define DIO6_PIN  A5  /* GPIB 14 : PORTC bit 5 */
+#define DIO7_PIN  A6  /* GPIB 15 : PORTD bit 4 */
+#define DIO8_PIN  A7  /* GPIB 16 : PORTD bit 5 */
+
+#define IFC_PIN    5  /* GPIB 9  : PORTD bit 5 */
+#define NDAC_PIN   6  /* GPIB 8  : PORTD bit 6 */
+#define NRFD_PIN   7  /* GPIB 7  : PORTD bit 7 */
+#define DAV_PIN    8  /* GPIB 6  : PORTB bit 0 */
+#define EOI_PIN    9  /* GPIB 5  : PORTB bit 1 */
+
+#define SRQ_PIN    3  /* GPIB 10 : PORTD bit 3 */
+#define REN_PIN    2  /* GPIB 17 : PORTD bit 2 */
+#define ATN_PIN    4  /* GPIB 11 : PORTD bit 4 */
+
+#endif
+/***** ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *****/
+/***** POLOLU A-STAR 328PB ALT LAYOUT *****/
+/******************************************/
 
 
 

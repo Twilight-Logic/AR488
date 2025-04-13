@@ -7,7 +7,7 @@
 
 
 /***** Firmware version *****/
-#define FWVER "AR488 GPIB controller, ver. 0.53.03, 08/04/2025"
+#define FWVER "AR488 GPIB controller, ver. 0.53.04, 13/04/2025"
 
 
 /***** BOARD CONFIGURATION *****/
@@ -35,8 +35,6 @@
    * Define board layout in the AR488 CUSTOM LAYOUT
    * section below
    */
-  /* Default serial port type */
-  #define AR_SERIAL_TYPE_HW
 
 /*** UNO and NANO boards ***/
 #elif __AVR_ATmega328P__
@@ -64,9 +62,10 @@
   #define AR488_MEGA644P_MCGRAW
 
 /***** Pololu 328PB board *****/
-#elif defined(__AVR_ATmega328PB__)
+#elif __AVR_ATmega328PB__
   /* Board/layout selection */
-  #define AR488_UNO
+  //#define AR488_UNO
+  #define AR488_328PB_ALT
 
 /***** ESP32 boards *****/
 #elif defined(ESP32)
