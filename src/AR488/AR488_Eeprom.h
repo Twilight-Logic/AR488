@@ -13,12 +13,12 @@
  * ATmega644         2048   // MightyCore 644
  * ATmega328/32u4    1024   // Uno, Nano, Leonardo
  * ATmega168          512
- * ARmega4809         256   // Nano Every
+ * ATmega4809         256   // Nano Every
  * ESP8266/ESP32     none   // Emulated. 512kb assigned?
  */
 
 
-#define EESIZE 512
+#define EESIZE 256
 #define EESTART 2    // EEPROM start of data - min 4 for CRC32, min 2 for CRC16
 #define UPCASE true
 
