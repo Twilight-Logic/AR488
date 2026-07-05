@@ -5,7 +5,7 @@
 
 /*=============================================================*\
 ||                                                             ||
-||       AR488 GPIB Interface,  ver. 0.55.21, 21/06/2026       ||
+||       AR488 GPIB Interface,  ver. 0.55.22, 05/07/2026       ||
 ||   Twilight Logic, https://github.com/Twilight-Logic/AR488   ||
 ||                                                             ||
 ||                      MAIN SKETCH FILE                       ||
@@ -342,10 +342,10 @@ void loop() {
   if (dataPort.available()) prolParser.parse();
 
   #ifdef USE_PROLOGIX_DEVICE
+
     if (pDevice.isLonEnabled()) {
       pDevice.lonMode(dataPort);
-    }
-    if (pDevice.isTonEnabled()) {
+    }else if (pDevice.isTonEnabled()) {
 /*
       if (prolParser.ready()==2) {
         pDevice.tonMode(inBuffer.data(), inBuffer.count());
@@ -353,29 +353,24 @@ void loop() {
       }
 */      
       pDevice.tonMode(dataPort);
+    }else{
+      // Device mode (Respond to Attention) handler
+      #ifdef USE_RATTN_HANDLER
+        if (gpibBus.cfg.cmode == 1) {
+          if (gpibBus.isAsserted(ATN_PIN)) {
+            atnHandler.attnRequired();
+            if (atnHandler.resetParser()) prolParser.reset();
+          }
+        }
+      #endif  // USE_RATTN_HANDLER
+
     }
-  #endif
+
+  #endif  // USE_PROLOGIX_DEVICE
 
   #ifdef USE_MACRO_HANDLER_PM
     prolParser.parseMacro(mHandlerPm);
   #endif
-/*
-  // Device mode (Respond to Attention) handler
-  #ifdef USE_RATTN_HANDLER
-    bool ignoreATN = false;
-    #ifdef USE_PROLOGIX_DEVICE
-      if (pDevice.isLonEnabled() || pDevice.isTonEnabled()) ignoreATN = true;
-    #endif
-    if (!ignoreATN) {
-      if (gpibBus.cfg.cmode == 1) {
-        if (gpibBus.isAsserted(ATN_PIN)) {
-          atnHandler.attnRequired();
-          if (atnHandler.resetParser()) prolParser.reset();
-        }
-      }
-  }
-  #endif  // USE_RATTN_HANDLER
-*/
 
 #endif  // INTERFACE_PROLOGIX
 

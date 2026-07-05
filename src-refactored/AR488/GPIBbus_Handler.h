@@ -8,7 +8,7 @@
 
 /*=============================================================*\
 ||                                                             ||
-||       AR488 GPIB Interface,  ver. 0.55.21, 21/06/2026       ||
+||       AR488 GPIB Interface,  ver. 0.55.22, 05/07/2026       ||
 ||   Twilight Logic, https://github.com/Twilight-Logic/AR488   ||
 ||                                                             ||
 ||                      GPIB BUS HANDLER                       ||
@@ -210,12 +210,10 @@ public:
 
   void setStatus(uint8_t statusByte);
   bool sendCmd(uint8_t cmdByte);
-//  bool sendSecondaryCmd(uint8_t paddr, uint8_t saddr, char * data, uint8_t dsize);
   enum gpibHandshakeState readByte(uint8_t *db, bool readWithEoi, bool *eoi);
   enum gpibHandshakeState writeByte(uint8_t db, bool eoi);
   enum receiveState receiveData(Stream &dataStream, bool detectEoi, bool detectEndByte, uint8_t endByte, size_t maxSize = 0);
   void sendData(const char *data, size_t dsize, bool eoi);
-//  void clearDataBus();
   void setControlVal(uint8_t value);
   void setDataVal(uint8_t value);
 

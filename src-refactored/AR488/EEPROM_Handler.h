@@ -12,7 +12,7 @@
 
 /*=============================================================*\
 ||                                                             ||
-||       AR488 GPIB Interface,  ver. 0.55.21, 21/06/2026       ||
+||       AR488 GPIB Interface,  ver. 0.55.22, 05/07/2026       ||
 ||   Twilight Logic, https://github.com/Twilight-Logic/AR488   ||
 ||                                                             ||
 ||                        EEPROM HANDLER                       ||
@@ -75,9 +75,6 @@ class eepromHandler {
       void (eepromHandler::*handler)();
     };
 
-//    static void (eepromHandler::*eepFuncVoid[])();
-//    static void (eepromHandler::*eepFuncChar[])(char *);
-
     /***** Comand function record - parameter functions *****/
     struct eepCmdRecChar { 
       void (eepromHandler::*handler)(char *);
@@ -93,8 +90,6 @@ class eepromHandler {
 //    void printHelpInfo(const __FlashStringHelper * token, const __FlashStringHelper * desc);
 
     void epErase();
-//    void epWriteData(uint8_t cfgdata[], size_t cfgsize);
-//    bool epReadData(uint8_t cfgdata[], size_t cfgsize);
     void epViewData(Stream& outputStream);
     bool isEepromClear();
 
@@ -186,6 +181,9 @@ class eepromHandler {
 
     #endif  // ESP8266 || ESP32
 
+    /**********************************/
+    /***** MATHEMATICAL FUNCTIONS *****/
+    /**********************************/
 
     template <typename T> uint16_t getCRC16(const T& cfgdata){
       uint8_t x;

@@ -4,14 +4,14 @@
 
 /*=============================================================*\
 ||                                                             ||
-||       AR488 GPIB Interface,  ver. 0.55.21, 21/06/2026       ||
+||       AR488 GPIB Interface,  ver. 0.55.22, 05/07/2026       ||
 ||   Twilight Logic, https://github.com/Twilight-Logic/AR488   ||
 ||                                                             ||
 ||              AR488 CONFIGURATION HEADER FILE                ||
 ||                                                             ||
 \*=============================================================*/
 
-#define FW_VERSION "AR488 GPIB controller, ver. 0.55.22, 21/06/2026"
+#define FW_VERSION "AR488 GPIB controller, ver. 0.55.22, 05/07/2026"
 
 
 
@@ -147,7 +147,7 @@
 #endif
 
 /***** Debug port *****/
-#define DEBUG_ENABLE
+//#define DEBUG_ENABLE
 #ifdef DEBUG_ENABLE
   // Serial port device
   #define DB_SERIAL_PORT Serial

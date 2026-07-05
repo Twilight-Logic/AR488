@@ -5,7 +5,7 @@
 
 /*=============================================================*\
 ||                                                             ||
-||       AR488 GPIB Interface,  ver. 0.55.21, 21/06/2026       ||
+||       AR488 GPIB Interface,  ver. 0.55.22, 05/07/2026       ||
 ||   Twilight Logic, https://github.com/Twilight-Logic/AR488   ||
 ||                                                             ||
 ||                 PROLOGIX DEVICE FUNCTIONS                   ||
@@ -75,6 +75,7 @@ bool prologixDevice::isTonEnabled(){
 
 
 /***** Run Listen Only (LON) mode *****/
+// NEEDS FURTHER WORK!
 void prologixDevice::lonMode(Stream &dataStream){
   uint8_t db = 0;
   bool eoiDetected = false;
@@ -126,13 +127,13 @@ void prologixDevice::lonMode(Stream &dataStream){
 
 
 //    gpibBus.setControls(DINI);
-
+// NEEDS FURTHER WORK!
   }
 }
 
 
 /***** Run Talk only (TON) mode *****/
-//void prologixDevice::tonMode(char *buffr, uint8_t dsize){
+// MAY NEED FURTHER WORK!
 void prologixDevice::tonMode(Stream &dataStream){
   // Set bus for device taker active mode
   gpibBus.setControls(DTAS);
@@ -148,6 +149,7 @@ void prologixDevice::tonMode(Stream &dataStream){
   }
   // Set bus to idle
 //  gpibBus.setControls(DIDS);
+// MAY NEED FURTHER WORK!
 }
 
 
@@ -211,10 +213,6 @@ void prologixDevice::lon_h(char * params) {
       // Set bus to idle
       gpibBus.setControls(DIDS);
     }
-//    if (isVerb) {
-//      dataPort.print(F("LON: "));
-//      dataPort.println(lval ? "ON" : "OFF") ;
-//    }
   } else {
     dataPort.println(_isRO);
   }
@@ -244,7 +242,6 @@ void prologixDevice::ton_h(char *params) {
     _isTO = (uint8_t)toval;
     if (_isTO>0) {
       _isRO = false;   // Read-only mode must be disabled in TO mode!
-//      _isProm = false; // Promiscuous mode must be disabled in TO mode!
       // Set bus for device taker active mode
       gpibBus.setControls(DTAS);
     }else{
@@ -259,18 +256,6 @@ void prologixDevice::ton_h(char *params) {
       }else{
         DATA_RAW_PRINTLN(F("OFF"));
       }
-/*   
-      switch (_isTO) {
-        case 1:
-          dataPort.println(F("ON unbuffered"));
-          break;
-        case 2:
-          dataPort.println(F("ON buffered"));
-          break;
-        default:
-          dataPort.println(F("OFF"));
-      }
-*/
     }
     dataPort.println(_isTO);
   }
@@ -354,9 +339,6 @@ int prologixDevice::runCmd(char * cmd, char * params) {
     idx = idx & 0x3F;
     if (idx > paramCmdCnt) return -1;   // Invalid index
     void (prologixDevice::* mpc)(char *);
-//     void *mpcx;
-//     mpcx = (void*)pgm_read_ptr(&(comCmdHidxChar[idx].handler));
-//     memcpy( &mpc, &mpcx, sizeof(mpc) );
     mpc = devCmdHidxChar[idx].handler;
 
     // Call handler with parameters specified
@@ -397,46 +379,6 @@ int prologixDevice::runCmd(char * cmd, char * params) {
 /* <----------   PRIVATE FUNCTIONS   ----------> */
 /*************************************************/
 
-
-
-
-/***********************************/
-/***********************************/
-/***** PLACEMENT TO BE DECIDED *****/
-/***********************************/
-/***********************************/
-
-
-
-
-/***** Show state or enable/disable promiscuous mode *****/
-/*
-void prom_h(char *params) {
-  uint16_t pval;
-  if (params != NULL) {
-    if (_util.notInRange(params, 0, 1, pval)) return;
-    isProm = pval ? true : false;
-    if (isProm) {
-      isTO = 0;     // Talk-only mode must be disabled!
-      isRO = false; // Listen-only mode must be disabled!
-    }
-    if (isVerb) {
-      dataPort.print(F("PROM: "));
-      dataPort.println(pval ? "ON" : "OFF") ;
-    }
-  } else {
-    dataPort.println(isProm);
-  }
-}
-*/
-
-
-
-/***********************************/
-/***********************************/
-/***** PLACEMENT TO BE DECIDED *****/
-/***********************************/
-/***********************************/
 
 
 #endif    // USE_PROLOGIX_DEVICE

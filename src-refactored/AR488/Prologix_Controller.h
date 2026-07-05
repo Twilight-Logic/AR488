@@ -4,7 +4,7 @@
 
 /*=============================================================*\
 ||                                                             ||
-||       AR488 GPIB Interface,  ver. 0.55.21, 21/06/2026       ||
+||       AR488 GPIB Interface,  ver. 0.55.22, 05/07/2026       ||
 ||   Twilight Logic, https://github.com/Twilight-Logic/AR488   ||
 ||                                                             ||
 ||                PROLOGIX CONTROLLER FUNCTIONS                ||
@@ -53,10 +53,6 @@ class prologixController {
 
         // Utilities
         utilityHelper& _util;
-
-        // Diagnostics module
-//        Diagnostix diag;
-
 
         /***** Comand names and descriptions - void functions *****/    
         struct ctlCmdTxtIdx {
@@ -118,7 +114,6 @@ class prologixController {
         void unlisten_h();
         void untalk_h();
 
-        // Prologix compatible command handlers (with parameters)
         // Helpers
         uint16_t readFrom(char * params);
         bool validReadEndType(char * param);

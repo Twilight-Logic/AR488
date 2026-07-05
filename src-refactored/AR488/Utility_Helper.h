@@ -7,7 +7,7 @@
 
 /*=============================================================*\
 ||                                                             ||
-||       AR488 GPIB Interface,  ver. 0.55.21, 21/06/2026       ||
+||       AR488 GPIB Interface,  ver. 0.55.22, 05/07/2026       ||
 ||   Twilight Logic, https://github.com/Twilight-Logic/AR488   ||
 ||                                                             ||
 ||                       UTILITY HELPER                        ||
@@ -33,7 +33,6 @@ class utilityHelper {
     void errorMsg(int err);
     void showPrompt();
     void printHelpLine(const __FlashStringHelper * token, const __FlashStringHelper * desc);
-//    bool waitForPinState(uint8_t pin, uint8_t state, unsigned long tmo);
     bool waitForPinState(uint8_t pin, bool asserted, unsigned long tmo);
 
   private:

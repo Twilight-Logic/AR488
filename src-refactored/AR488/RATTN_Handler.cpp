@@ -5,7 +5,7 @@
 
 /*=============================================================*\
 ||                                                             ||
-||       AR488 GPIB Interface,  ver. 0.55.21, 21/06/2026       ||
+||       AR488 GPIB Interface,  ver. 0.55.22, 05/07/2026       ||
 ||   Twilight Logic, https://github.com/Twilight-Logic/AR488   ||
 ||                                                             ||
 ||               PROLOGIX DEVICE MODE FUNCTIONS                ||
@@ -200,15 +200,11 @@ void rattnHandler::processATN(uint8_t cmdbytes[], size_t bytecnt, uint8_t atnsta
 #else
     // Perform GPIB primary command actions
     if (_isAddressed & 0x20) {
-//      gpibBus.setControls(DLAS);  // Listen
       atn_listen_h();
     }
     if (_isAddressed & 0x40) {
-//      gpibBus.setControls(DTAS);  // Talk
       atn_talk_h();
-//      gpibBus.setControls(DLAS);  // Talk done - listening again
     }
-//      gpibBus.setControls(DINI);
 #endif
 
     if (ustat & 0x01) atn_unl_h();
@@ -305,16 +301,6 @@ void rattnHandler::execGpibCmd(uint8_t gpibcmd){
 
 /***** Wait for desired ATN pin state *****/
 
-//NOT NEEDED BECAUSE BY INFERENCE WE HAVE LEFT THE IF (isAsserted(ATN_PIN)) LOOP
-/*
-void rattnHandler::waitForATN() {
-  const unsigned long timeout = millis() + gpibBus.cfg.rtmo;
-  while (getGpibPinState(ATN_PIN) == LOW) {
-    if (millis() > timeout) break;    // timeout to prevent hung state
-    delayMicroseconds(20);
-  }
-}
-*/
 
 /***** Device is addressed to listen - so listen *****/
 void rattnHandler::atn_listen_h(){
@@ -333,23 +319,12 @@ void rattnHandler::atn_listen_h(){
 /***** Device is addressed to listen - so listen *****/
 void rattnHandler::atn_talk_h(){
   DB_PRINT(F("Talk sending: "), _inbuf.data());
-//  bool atnFree = !gpibBus.isAsserted(ATN_PIN);
-//  if (!atnFree) waitForATN();
-//  if (!atnFree) atnFree = _util.waitForPinState(ATN_PIN, 1, gpibBus.cfg.rtmo);
-//  if (atnFree && _inbuf.count()) {
-//  waitForATN();   // Wait for ATN to go high (unasserted)
   const char * buf = _inbuf.data();
   const size_t cnt = _inbuf.count();
   gpibBus.setControls(DTAS);    // Talk
-//  if (atnFree && cnt) {
-//  Serial.print(F("Buf: "));
-//  Serial.println((unsigned long)_inbuf.data());
-//  Serial.print(F("Cnt: "));
   if (cnt) {  
     Serial.println(cnt);
-//    delay(50);
     gpibBus.sendData(buf, cnt, true);
-//    _inbuf.flush();   // Clear and reset the input buffer
     _parserReset = true;
   }else{
     gpibBus.sendData("\0",1,true);
@@ -407,10 +382,6 @@ void rattnHandler::atn_spe_h() {
 
 /***** Unlisten *****/
 bool rattnHandler::atn_unl_h() {
-  // Stop receiving and go to idle
-/***** NEEDS TO BE FIXED *****/
-//  readWithEoi = false;
-/***** NEEDS TO BE FIXED *****/
   // Clear addressed state flag and set controls to idle
   if (gpibBus.isDeviceAddressedToListen()) {
     gpibBus.setControls(DIDS);

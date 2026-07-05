@@ -5,7 +5,7 @@
 
 /*=============================================================*\
 ||                                                             ||
-||       AR488 GPIB Interface,  ver. 0.55.21, 21/06/2026       ||
+||       AR488 GPIB Interface,  ver. 0.55.22, 05/07/2026       ||
 ||   Twilight Logic, https://github.com/Twilight-Logic/AR488   ||
 ||                                                             ||
 ||                       PROLOGIX PARSER                       ||
@@ -382,11 +382,6 @@ size_t prologixParser::count() {
 char * prologixParser::data() {
   return _inBuf.data();
 }
-
-
-//void prologixParser::setReadOnly(bool isro) {
-//  _isRO = isro;
-//}
 
 
 #ifdef USE_RATTN_HANDLER

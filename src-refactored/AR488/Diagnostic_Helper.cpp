@@ -4,7 +4,7 @@
 
 /*=============================================================*\
 ||                                                             ||
-||       AR488 GPIB Interface,  ver. 0.55.21, 21/06/2026       ||
+||       AR488 GPIB Interface,  ver. 0.55.22, 05/07/2026       ||
 ||   Twilight Logic, https://github.com/Twilight-Logic/AR488   ||
 ||                                                             ||
 ||                      DIAGNOSTIC HELPER                      ||
@@ -343,28 +343,6 @@ void Diagnostix::toggleSC(){
 void Diagnostix::hexOut(){
 
 }
-
-
-/***** Show state or enable/disable promiscuous mode *****/
-/*
-void prom_h(char *params) {
-  uint16_t pval;
-  if (params != NULL) {
-    if (notInRange(params, 0, 1, pval)) return;
-    isProm = pval ? true : false;
-    if (isProm) {
-      isTO = 0;     // Talk-only mode must be disabled!
-      isRO = false; // Listen-only mode must be disabled!
-    }
-    if (isVerb) {
-      dataPort.print(F("PROM: "));
-      dataPort.println(pval ? "ON" : "OFF") ;
-    }
-  } else {
-    dataPort.println(isProm);
-  }
-}
-*/
 
 
 /***** Bus diagnostics *****/

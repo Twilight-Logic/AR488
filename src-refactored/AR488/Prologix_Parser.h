@@ -12,7 +12,7 @@
 
 /*=============================================================*\
 ||                                                             ||
-||       AR488 GPIB Interface,  ver. 0.55.21, 21/06/2026       ||
+||       AR488 GPIB Interface,  ver. 0.55.22, 05/07/2026       ||
 ||   Twilight Logic, https://github.com/Twilight-Logic/AR488   ||
 ||                                                             ||
 ||                       PROLOGIX PARSER                       ||
@@ -66,9 +66,6 @@ class prologixParser {
 
   public:
 
-//    prologixParser(prologixCommon& pcommon, prologixController& pcontrol, prologixDevice& pdevice, utilityHelper& util) :
-//        _pcommon(pcommon), _pcontrol(pcontrol), _pdevice(pdevice), _util(util){}
-
     prologixParser(inputBuffer& inBuf, GPIBbus& bus, utilityHelper& utils, AR488modulesList& modules);
 
     void init();
@@ -101,7 +98,6 @@ class prologixParser {
     bool _isEsc;
     bool _isPlusEsc;
     bool _idnQuery;
-//    bool _isRO;
 
     #ifdef USE_RATTN_HANDLER
       bool _talk;
