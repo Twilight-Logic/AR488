@@ -32,7 +32,7 @@ Costs slightly more but has a design and layout that includes considerably more 
 
 <tr><td>RA4M1</td><td>Arduino Nano R4</td><td>A small compact board using the new Renesas RA4M1 MCU. This has much more flash memory -256kb - as well as 32kb sram and 8kb EEPROM. The Renesas has weaker pull-up resistors and will not function on the GPIB bus without the addition of SN7516x buffer ICs.</td></tr>
 
-<tr><td>i.MX RT1062</td><td>Teensy 4.1</td><td>A compact board with the i.MX RT1062 microcontroler from NXP. This has quite a bit of flash memory -1024kb and runs at 600MHz. The board includes an SD Card reader and an Ethernet interface and can also accomodate optional PSRAM. The Teensy is a 3.3V device and requires level shifters and/or SN7516x buffers to interface with the GPIB bus.</td></tr>
+<tr><td>i.MX RT1062</td><td>Teensy 4.1</td><td>A compact board with the i.MX RT1062 microcontroler from NXP. This has quite a bit of flash memory -1024kb and runs at 600MHz. The board includes an SD Card reader and an Ethernet interface and can also accommodate optional PSRAM. The Teensy is a 3.3V device and requires level shifters and/or SN7516x buffers to interface with the GPIB bus.</td></tr>
 
 </table>
 
@@ -54,7 +54,7 @@ Once uploaded, the firmware should respond to the ++ver command with its version
 
 The 32u4 and mega 2560 boards have additional serial ports which can be used to connect the ESP8266 WiFi add-on or the HC05 bluetooth module. The firmware sketch supports auto-configuration of the Bluetooth HC05 module, the details of which can be found in the AR488 manual <a href="https://github.com/Twilight-Logic/AR488/blob/master/AR488-Manual.pdf">AR488 Manual</a>. It is also possible to use a HC06 module, but since this module is capable of operating in slave mode only, automatic configuration is not possible. It will therefore need to be configured manually.
 
-Using these wireless modules in conjunction with the Uno or Nano is not advised as the only available serial UART is also used for USB communication. Serial protocols were not designed to accomodate multiple devices on a single UART. Communication problems may arise when both USB and a serial device on RX0/TX0 are connected and communicating with the MCU at the same time. It is possible instead to use SoftwareSerial (TX = pin 6, RX = pin 13) although at a speed of no more than 57600 baud.
+Using these wireless modules in conjunction with the Uno or Nano is not advised as the only available serial UART is also used for USB communication. Serial protocols were not designed to accommodate multiple devices on a single UART. Communication problems may arise when both USB and a serial device on RX0/TX0 are connected and communicating with the MCU at the same time. It is possible instead to use SoftwareSerial (TX = pin 6, RX = pin 13) although at a speed of no more than 57600 baud.
 
 The ESP32 is supported via the excellent work done by David Douard. Have a look at his <a href="https://github.com/douardda/AR488-ESP32">ESP-488 project</a>.
 
