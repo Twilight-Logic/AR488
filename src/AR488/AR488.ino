@@ -77,6 +77,85 @@
    For further information about the AR488 see the AR488 Manual. 
 */
 
+// decls necessary for arduino-makefile
+void addr_h(char *params);
+void amode_h(char *params);
+void aspoll_h();
+void clr_h();
+void cmode_h(char *params);
+void dcl_h();
+void default_h(char *params);
+void device_gtl_h();
+void device_listen_h();
+void device_llo_h();
+void device_sdc_h();
+void device_spd_h();
+void device_spe_h();
+void device_talk_h();
+void device_tct_h();
+void eoi_h(char *params);
+void eor_h(char *params);
+void eos_h(char *params);
+void eot_char_h(char *params);
+void eot_en_h(char *params);
+void help_h(char *params);
+void id_h(char *params);
+void idn_h(char *params);
+void ifc_h();
+void llo_h(char *params);
+void loc_h(char *params);
+void lon_h(char *params);
+void macro_h(char *params);
+void ppoll_h();
+void prom_h(char *params);
+void read_h(char *params);
+void ren_h(char *params);
+void repeat_h(char *params);
+void rst_h();
+void rtmo_h(char *params);
+void save_h();
+void sendmla_h();
+void sendmsa_h(char *params);
+void sendmta_h();
+void sendsec_h(char *params);
+void setvstr_h(char *params);
+void spoll_h(char *params);
+void srqa_h(char *params);
+void srq_h();
+void stat_h(char *params);
+void tct_h(char *params);
+void ton_h(char *params);
+void trg_h(char *params);
+void unlisten_h();
+void untalk_h();
+void verb_h();
+void ver_h(char *params);
+void xdiag_h(char *params);
+void addPbuf(char c);
+void attnRequired();
+bool device_unl_h();
+bool device_unt_h();
+void execCmd(char *buffr, uint8_t dsize);
+void execGpibCmd(uint8_t gpibcmd);
+void flushPbuf();
+void getCmd(char *buffr);
+bool isCmd(char *buffr);
+bool isIdnQuery(char *buffr);
+void lonMode();
+uint8_t parseInput(char c);
+void sendToInstrument(char *buffr, uint8_t dsize);
+uint8_t serialIn_h();
+void showPrompt();
+void tonMode();
+void hflags_h(char * params);
+void fndl_h(char *params);
+void send_h(char *params);
+void printDbPinout();
+void printCtrlPinout();
+void printDbPinout();
+void printCtrlPinout();
+void printPin(const __FlashStringHelper* pinid, uint8_t pin);
+void showFlag(const __FlashStringHelper* flag);
 
 /*************************************/
 /***** MACRO STRUCTRURES SECTION *****/
