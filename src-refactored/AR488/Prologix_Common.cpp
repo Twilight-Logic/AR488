@@ -89,7 +89,7 @@ const char cmd06desc[] PROGMEM = "\tSet character to append to USB output when E
 const char cmd07desc[] PROGMEM = "\tEnable/Disable appending user specified character to USB output on EOI detection";
 const char cmd08desc[] PROGMEM = "\t\tShow/set interface ID information: id (shows all); id name; id serial; id verstr";
 const char cmd09desc[] PROGMEM = "\t\tSet the interface mode (1=controller; 0=device)";
-const char cmd10desc[] PROGMEM = "\tRead timeout specified between 1 - 3000 milliseconds";
+const char cmd10desc[] PROGMEM = "\tRead timeout specified between 1 - 32000 milliseconds";
 const char cmd11desc[] PROGMEM = "\t\tReset the controller";
 const char cmd12desc[] PROGMEM = "\t\tDisplay firmware version";
 const char cmd13desc[] PROGMEM = "\tToggle verbose (human readable) mode";
